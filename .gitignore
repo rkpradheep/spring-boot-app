@@ -1,0 +1,6 @@
+**/target
+/logs
+/custom
+nohup.out
+/uploads
+/build

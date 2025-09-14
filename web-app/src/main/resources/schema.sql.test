@@ -1,0 +1,153 @@
+CREATE TABLE IF NOT EXISTS User (
+    Id BIGINT NOT NULL,
+    Name VARCHAR(255) NOT NULL,
+    Password VARCHAR(255) NOT NULL,
+    RoleType INT NOT NULL,
+    PRIMARY KEY (Id)
+);
+
+
+CREATE TABLE IF NOT EXISTS AuthToken (
+    Id BIGINT NOT NULL,
+    Token LONGTEXT NOT NULL,
+    UserId BIGINT NOT NULL,
+    PRIMARY KEY (Id)
+);
+
+CREATE TABLE IF NOT EXISTS SessionManagement (
+    Id BIGINT NOT NULL,
+    UserId BIGINT NOT NULL,
+    ExpiryTime BIGINT NOT NULL,
+    SessionId LONGTEXT NOT NULL,
+    PRIMARY KEY (Id)
+);
+
+CREATE TABLE IF NOT EXISTS ChatUser (
+    Id BIGINT NOT NULL,
+    Name VARCHAR(255) NOT NULL,
+    PRIMARY KEY (Id)
+);
+
+CREATE TABLE IF NOT EXISTS ChatUserDetail (
+    Id BIGINT NOT NULL,
+    ChatUserId BIGINT NOT NULL,
+    Message TEXT NOT NULL,
+    PRIMARY KEY (Id),
+    FOREIGN KEY (ChatUserId) REFERENCES ChatUser(Id) ON DELETE CASCADE
+);
+
+
+CREATE TABLE IF NOT EXISTS Job (
+    Id BIGINT NOT NULL,
+    TaskName VARCHAR(255) NOT NULL,
+    Data LONGTEXT NOT NULL,
+    ScheduledTime BIGINT NOT NULL,
+    DayInterval INT NOT NULL,
+    IsRecurring TINYINT NOT NULL,
+    PRIMARY KEY (Id)
+);
+
+CREATE TABLE IF NOT EXISTS HttpLog (
+    Id BIGINT NOT NULL,
+    Url VARCHAR(255) NOT NULL,
+    Method VARCHAR(255) NOT NULL,
+    IP VARCHAR(255),
+    Parameters TEXT,
+    RequestHeaders TEXT,
+    ResponseHeaders TEXT,
+    RequestData LONGTEXT,
+    ResponseData LONGTEXT,
+    ThreadName VARCHAR(255) NOT NULL,
+    CreatedTime BIGINT NOT NULL,
+    EntityType TINYINT NOT NULL,
+    StatusCode INT,
+    IsOutgoing TINYINT NOT NULL,
+    PRIMARY KEY (Id)
+);
+
+CREATE TABLE IF NOT EXISTS BatchTable (
+    AccountId BIGINT NOT NULL,
+    BatchStart BIGINT NOT NULL,
+    PRIMARY KEY (AccountId)
+);
+
+CREATE TABLE IF NOT EXISTS Configuration (
+    Id BIGINT NOT NULL,
+    CKey VARCHAR(255) NOT NULL,
+    CValue LONGTEXT NOT NULL,
+    PRIMARY KEY (Id)
+);
+
+CREATE TABLE IF NOT EXISTS BuildMonitor (
+    Id BIGINT NOT NULL,
+    Status VARCHAR(50) NOT NULL,
+    StartTime BIGINT NOT NULL,
+    LastUpdateTime BIGINT NOT NULL,
+    TotalProducts INT NOT NULL,
+    CompletedProducts INT NOT NULL,
+    PRIMARY KEY (Id)
+);
+
+CREATE TABLE IF NOT EXISTS BuildProduct (
+    Id BIGINT NOT NULL,
+    BuildMonitorId BIGINT NOT NULL,
+    ProductName VARCHAR(100) NOT NULL,
+    BuildId BIGINT,
+    Status VARCHAR(50) NOT NULL,
+    StartTime BIGINT,
+    EndTime BIGINT,
+    Duration BIGINT,
+    ErrorMessage TEXT,
+    MilestoneVersion VARCHAR(100),
+    ChannelUrl TEXT,
+    OrderIndex INT NOT NULL,
+    CreatedTime BIGINT NOT NULL,
+    UpdatedTime BIGINT NOT NULL,
+    PRIMARY KEY (Id),
+    FOREIGN KEY (BuildMonitorId) REFERENCES BuildMonitor(Id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS lnk_User_AuthToken ON AuthToken(UserId);
+CREATE INDEX IF NOT EXISTS lnk_Users_SessionManagement ON SessionManagement(UserId);
+CREATE INDEX IF NOT EXISTS chatuserdetails_fk1 ON ChatUserDetail(ChatUserId);
+
+CREATE INDEX IF NOT EXISTS idx_buildmonitor_status ON BuildMonitor(Status);
+CREATE INDEX IF NOT EXISTS idx_buildmonitor_last_update_time ON BuildMonitor(LastUpdateTime);
+
+CREATE INDEX IF NOT EXISTS idx_buildproduct_monitor_id ON BuildProduct(BuildMonitorId);
+CREATE INDEX IF NOT EXISTS idx_buildproduct_status ON BuildProduct(Status);
+CREATE INDEX IF NOT EXISTS idx_buildproduct_build_id ON BuildProduct(BuildId);
+CREATE INDEX IF NOT EXISTS idx_buildproduct_order_index ON BuildProduct(BuildMonitorId, OrderIndex);
+
+CREATE TABLE IF NOT EXISTS WorkflowInstance (
+    ReferenceID VARCHAR(255) PRIMARY KEY,
+    WorkflowName VARCHAR(255) NOT NULL,
+    CurrentState VARCHAR(255) NOT NULL,
+    Status VARCHAR(50) NOT NULL,
+    Context TEXT, -- JSON context data
+    StartTime BIGINT NOT NULL,
+    EndTime BIGINT,
+    LastUpdateTime BIGINT NOT NULL,
+    ErrorMessage TEXT,
+    Variables TEXT -- JSON variables data
+);
+
+CREATE TABLE IF NOT EXISTS WorkflowEvent (
+    Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    ReferenceID VARCHAR(255) NOT NULL,
+    EventType VARCHAR(255) NOT NULL,
+    Payload TEXT, -- JSON payload data
+    Timestamp BIGINT NOT NULL,
+    Source VARCHAR(255),
+    CorrelationId VARCHAR(255),
+    FOREIGN KEY (ReferenceID) REFERENCES WorkflowInstance(ReferenceID) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflowinstance_id ON WorkflowInstance(Id);
+CREATE INDEX IF NOT EXISTS idx_workflowinstance_status ON WorkflowInstance(Status);
+CREATE INDEX IF NOT EXISTS idx_workflowinstance_workflow_name ON WorkflowInstance(WorkflowName);
+CREATE INDEX IF NOT EXISTS idx_workflowinstance_start_time ON WorkflowInstance(StartTime);
+CREATE INDEX IF NOT EXISTS idx_workflowinstance_build_monitor_id ON WorkflowInstance(BuildMonitorId);
+CREATE INDEX IF NOT EXISTS idx_workflowevent_instance_id ON WorkflowEvent(InstanceId);
+CREATE INDEX IF NOT EXISTS idx_workflowevent_workflow_instance_id ON WorkflowEvent(WorkflowInstanceId);
+CREATE INDEX IF NOT EXISTS idx_workflowevent_timestamp ON WorkflowEvent(Timestamp);

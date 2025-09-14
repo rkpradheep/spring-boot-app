@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Stats Runner</title>
+    <meta charset="utf-8" />
+    <meta name="viewport"  content="initial-scale=0.8,user-scalable=no"/>
+    <link rel="stylesheet" href="css/loading.css" />
+    <link rel="stylesheet" href="css/navbar.css">
+</head>
+<script src="/js/common.js"></script>
+<script src="/js/stats.js"></script>
+<script src="/js/navbar.js" defer></script>
+<style>
+    body {
+              margin: 0;
+              padding: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-direction: column;
+              height: auto;
+          }
+          html {
+              overflow: auto;
+          }
+        button {
+            background-color: rgba(76, 175, 80);
+            border: none;
+            color: white;
+            padding: 5px 12px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            -webkit-transition-duration: 0.4s; /* Safari */
+            transition-duration: 0.4s;
+            border-radius: 10px
+        }
+
+        button:hover {
+            background-color: rgba(76, 175, 80, 0.8)
+        }
+         .fixTableHead {
+              max-height: 400px;
+              margin-left: 130px;
+              overflow:auto;
+              max-width: 70%;
+          }
+
+          .fixTableHead thead th {
+              position: sticky;
+              top: 0;
+          }
+          table {
+              border-collapse: collapse;
+          }
+
+          th,
+          td {
+              padding: 8px 15px;
+              border: 2px solid #529432;
+          }
+          th {
+              background: #abdd93;
+          }
+          td {
+            max-width: 500px;
+            word-wrap: break-word;
+         }
+
+          tr:nth-child(even) {
+              background-color: #dddddd;
+          }
+
+
+        @media(min-width:1000px)
+        {
+        #formSection
+        {
+            min-width:600px;
+        }
+        }
+</style>
+<body>
+<nav id="sidebar" class="sidebar close">
+    <header>
+        <span id="toggle">☰</span>
+    </header>
+    <br>
+    <a href="javascript:void(0)" id="closebtn" style="display:none" class="closebtn" onclick="closeNav()">×</a>
+    <br>
+    <div class="menu-bar">
+        <div class="menu">
+            <ul class="menu-links">
+                <li class="nav-link">
+                    <a href="/app">
+                        <i class='bx bx--home-alt icon'></i>
+                        <span class="text nav-text">Home</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/snakegame" target="_blank">
+                        <i class='bx fxemoji--snake icon'></i>
+                        <span class="text nav-text">Snake Game</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/freessl">
+                        <i class='bx material-symbols--shield-lock-outline icon'></i>
+                        <span class="text nav-text">Free SSL</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/chat.html">
+                        <i class='bx quill--chat icon'></i>
+                        <span class="text nav-text">Text Chat</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/webrtc.html">
+                        <i class='bx icon-park-solid--phone-video-call icon'></i>
+                        <span class="text nav-text">Video Chat</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/jobs.html">
+                        <i class='bx eos-icons--cronjob icon'></i>
+                        <span class="text nav-text">Scheduler</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/stream.html">
+                        <i class='bx ri--broadcast-line icon'></i>
+                        <span class="text nav-text">Broadcast</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/live.html">
+                        <i class='bx icon-park-outline--receiver icon'></i>
+                        <span class="text nav-text">Subscribe</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/tokenGen">
+                        <i class='bx logos--oauth icon'></i>
+                        <span class="text nav-text">Oauth Tool</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/network">
+                        <i class='bx ant-design--api-outlined icon'></i>
+                        <span class="text nav-text">API Tool</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/hotswap">
+                        <i class='bx devicon--java icon'></i>
+                        <span class="text nav-text">JVM HotSwap</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/csv" style="background-color:var(--primary-color);"  onclick="return false;">
+                        <i class='bx iwwa--csv icon' style="color:var(--sidebar-color);"></i>
+                        <span class="text nav-text">CSV Parser</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/commandExecutor">
+                        <i class='bx mdi--powershell icon'></i>
+                        <span class="text nav-text">Shell</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/admin/dbtool.html">
+                        <i class='bx clarity--administrator-line icon'></i>
+                        <span class="text nav-text">Admin</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="bottom-content">
+            <li class="">
+                <a href="/logout">
+                    <i class='bx bx--log-out icon'></i>
+                    <span class="text nav-text">Logout</span>
+                </a>
+            </li>
+        </div>
+    </div>
+</nav>
+
+<p style="margin-top: 50px">
+    <label><input type="radio" name="inputType" id="xmlRadio" checked onclick="toggleInputType('xml')"> XML Configuration</label>
+    <label style="margin-left: 20px;"><input type="radio" name="inputType" id="formRadio" onclick="toggleInputType('form')"> Form</label>
+</p>
+
+<div id="configuration" style="margin-top: 20px">
+    <textarea spellcheck="false" id="configuration_area" name="configuration" rows="20" cols="70" style="font-size: 18px; color: white; background-color: black;max-width: 80vw;overflow:auto;padding-left: 5px; padding-right: 5px;">
+<?xml version="1.0"?>
+
+    <!--
+    Placeholders :  ${RequestNo}, ${Col_0}, ${Col_1} etc
+    <header name="Name" placeholder="true">data/user</header>
+    -->
+
+    <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="stats-meta.xsd">
+
+    <is-test>true</is-test>
+    <skip-first-request-data-row>false</skip-first-request-data-row>
+    <disable-parallel-calls>true</disable-parallel-calls>
+
+    <url></url>
+
+    <method></method>
+
+    <headers>
+    </headers>
+
+    <raw-request-headers>
+    </raw-request-headers>
+
+    <params>
+    </params>
+
+    <json-body>
+    </json-body>
+
+    <request-batch-size>48</request-batch-size>
+
+    <request-batch-interval>62</request-batch-interval>
+
+    <response>
+        <header name="Request No">${RequestNo}</header>
+    </response>
+
+   <placeholder-handler></placeholder-handler>
+
+</configuration>
+    </textarea>
+</div>
+
+<div id="formSection" style="display:none; margin-top: 20px; max-height: 500px; overflow-y: auto;">
+    <form id="statsForm" style="background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 24px; max-width: 850px; margin: 0 auto;">
+        <div style="margin-bottom: 16px;">
+            <label style="font-weight:600;">is-test
+                <input type="checkbox" id="isTest" name="isTest" style="margin-left:10px;" checked>
+            </label>
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label style="font-weight:600;">skip-first-request-data-row
+                <input type="checkbox" id="skipFirstRequestDataRow" name="skipFirstRequestDataRow" style="margin-left:10px;">
+            </label>
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label style="font-weight:600;">disable-parallel-calls
+                <input type="checkbox" id="disableParallelCalls" name="disableParallelCalls" style="margin-left:10px;">
+            </label>
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label style="font-weight:600;">URL</label><br>
+            <input type="text" id="url" name="url" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label style="font-weight:600;">Method</label><br>
+            <input type="text" id="method" name="method" style="width: 200px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label style="font-weight:600;">Request Headers</label><br>
+            <textarea id="headers" name="headers" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></textarea>
+        </div>
+<!--        <div style="margin-bottom: 16px;">-->
+<!--            <label style="font-weight:600;">Raw Request Headers</label><br>-->
+<!--            <textarea id="rawRequestHeaders" name="rawRequestHeaders" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></textarea>-->
+<!--        </div>-->
+        <div style="margin-bottom: 16px;">
+            <label style="font-weight:600;">Params</label><br>
+            <textarea id="params" name="params" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;" placeholder="param_name1:${Col_0}&#10;param_name2:abc"></textarea>
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label style="font-weight:600;">JSON Body</label><br>
+            <textarea id="jsonBody" name="jsonBody" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;"></textarea>
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label style="font-weight:600;">Request Batch Size</label><br>
+            <input type="number" id="requestBatchSize" name="requestBatchSize" min="1" value="48" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label style="font-weight:600;">Request Batch Interval</label><br>
+            <input type="number" id="requestBatchInterval" name="requestBatchInterval" min="0" value="62" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label style="font-weight:600;">Response</label><br>
+            <textarea id="response" name="response" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; resize: vertical; overflow: auto; max-height: 200px; min-height: 60px;" placeholder="Request No:${RequestNo}&#10;Response:${Response}&#10;Message:${Response}.message&#10;{OrgOwner}:${Response}.users(For Placeholder)"></textarea>
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label style="font-weight:600;">Placeholder Handler</label><br>
+            <input type="text" id="placeholderHandler" name="placeholderHandler" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+        </div>
+    </form>
+</div>
+<br/>
+<br/>
+CSV Request Data
+<br/>
+<br/>
+<input type="file" id="requestData" style="position: sticky;">
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;OR<br/><br/>
+PLAIN CSV TEXT<br/><br/>
+<textarea id="requestDataText" rows="10" cols="70" style="font-size: 18px; color: white; background-color: black;max-width: 80vw;overflow:auto;padding-left: 5px; padding-right: 5px;"></textarea>
+<br/>
+<button onclick="initiateStats()" style="position: sticky;">Initiate Stats</button>
+<br/>
+<br/>
+<br/>
+<br/>
+<input type="text" id="statsId" placeholder="Request Id" style="position: sticky;">
+<button onclick="downloadRawResponse()" style="position: sticky;"> Download Raw Response Report </button>
+<button onclick="downloadCSVResponse()" style="position: sticky;">  Download CSV Report </button>
+<button onclick="loadStats()" style="position: sticky;"> Load Stats </button>
+<div class="loading" id="loading" style="display:none">Loading&#8230;</div>
+<br />
+<p id="total"></p><br/>
+<div id="outputContainer" class="fixTableHead"><table id="output"></table></div>
+<br/>
+<br/>
+
+<script>
+    function toggleInputType(type) {
+        if(type === 'xml') {
+            document.getElementById('configuration').style.display = '';
+            document.getElementById('formSection').style.display = 'none';
+        } else {
+            document.getElementById('configuration').style.display = 'none';
+            document.getElementById('formSection').style.display = '';
+        }
+    }
+</script>
+
+</body>
+</html>

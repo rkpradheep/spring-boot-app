@@ -1,0 +1,204 @@
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport"  content="initial-scale=0.8,user-scalable=no"/>
+    <link rel="stylesheet" href="/css/network.css">
+    <link rel="stylesheet" href="css/loading.css">
+    <link rel="stylesheet" href="css/navbar.css" />
+    <title>API Tool</title>
+</head>
+<body>
+<nav id="sidebar" class="sidebar close">
+    <header>
+        <span id="toggle">☰</span>
+    </header>
+    <br>
+    <a href="javascript:void(0)" id="closebtn" style="display:none" class="closebtn" onclick="closeNav()">×</a>
+    <br>
+    <div class="menu-bar">
+        <div class="menu">
+            <ul class="menu-links">
+                <li class="nav-link">
+                    <a href="/app">
+                        <i class='bx bx--home-alt icon'></i>
+                        <span class="text nav-text">Home</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/snakegame" target="_blank">
+                        <i class='bx fxemoji--snake icon'></i>
+                        <span class="text nav-text">Snake Game</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/freessl">
+                        <i class='bx material-symbols--shield-lock-outline icon'></i>
+                        <span class="text nav-text">Free SSL</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/chat.html">
+                        <i class='bx quill--chat icon'></i>
+                        <span class="text nav-text">Text Chat</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/webrtc.html">
+                        <i class='bx icon-park-solid--phone-video-call icon'></i>
+                        <span class="text nav-text">Video Chat</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/jobs.html">
+                        <i class='bx eos-icons--cronjob icon'></i>
+                        <span class="text nav-text">Scheduler</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/stream.html">
+                        <i class='bx ri--broadcast-line icon'></i>
+                        <span class="text nav-text">Broadcast</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/live.html">
+                        <i class='bx icon-park-outline--receiver icon'></i>
+                        <span class="text nav-text">Subscribe</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/tokenGen">
+                        <i class='bx logos--oauth icon'></i>
+                        <span class="text nav-text">Oauth Tool</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/network" style="background-color:var(--primary-color);"  onclick="return false;">
+                        <i class='bx ant-design--api-outlined icon' style="color:var(--sidebar-color);"></i>
+                        <span class="text nav-text">API Tool</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/hotswap">
+                        <i class='bx devicon--java icon'></i>
+                        <span class="text nav-text">JVM HotSwap</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/csv">
+                        <i class='bx iwwa--csv icon'></i>
+                        <span class="text nav-text">CSV Parser</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/commandExecutor">
+                        <i class='bx mdi--powershell icon'></i>
+                        <span class="text nav-text">Shell</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/admin/dbtool.html">
+                        <i class='bx clarity--administrator-line icon'></i>
+                        <span class="text nav-text">Admin</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="bottom-content">
+            <li class="">
+                <a href="/logout">
+                    <i class='bx bx--log-out icon'></i>
+                    <span class="text nav-text">Logout</span>
+                </a>
+            </li>
+        </div>
+    </div>
+</nav>
+
+<div class="loading" id="loading" style="display:none">Loading…</div>
+<div class="container">
+    <h1>Online API Tool</h1>
+    <a href="/stats" target="_blank">Run Stats</a>
+    <br/>
+    <br/>
+    <label for="apiUrl">API URL:</label>
+    <input type="text" id="apiUrl" placeholder="Enter API URL" required="">
+
+    <label for="apiMethod">HTTP Method:</label>
+    <select id="apiMethod" onchange="changeMethod()">
+        <option value="GET">GET</option>
+        <option value="PUT">PUT</option>
+        <option value="POST">POST</option>
+        <option value="DELETE">DELETE</option>
+    </select>
+
+    <label for="apiParams">Parameters:</label>
+    <textarea id="apiParams" placeholder="Key and Value should be separated by :&#10;Use new line for multiple parameters&#10;&#10;Example : &#10;param_name1:param_value1&#10;param_name2:param_value2" rows="5"></textarea>
+
+    <label for="headers">Headers:</label>
+    <textarea id="headers" placeholder="Key and Value should be separated by :&#10;Use new line for multiple headers&#10;&#10;Example : &#10;key1:value1&#10;key2:value2" rows="5"></textarea>
+
+
+    <input type="checkbox" id="proxyEnable" onchange="enableProxy()" style="width:10px;cursor:pointer">
+    <label for="proxyEnable" style="display: inline-block"> Enable Proxy</label> <br>
+
+    <div id="showProxy" style="display: none;">
+        <p>Proxy Details : </p>
+        <input type="text" id="proxy_ip" style="width:150px" placeholder="Proxy IP">
+        <input type="text" id="proxy_port" style="width:150px" placeholder="Proxy Port"><br>
+        <input type="text" id="proxy_user_name" style="width:150px" placeholder="Proxy User Name">
+        <input type="password" id="proxy_password" style="width:150px" placeholder="Proxy Password"><br>
+    </div>
+
+
+
+    <input type="checkbox" id="bodyEnable" onchange="enableBody()" style="width:10px;cursor:pointer" disabled="true">
+    <label for="bodyEnable" style="display:inline-block"> Enable Body</label> <br>
+
+    <div id="showBody" style="display: none;">
+        <label for="body">Body</label>
+        <select id="body" onchange="changeBody()">
+            <option value="json">RAW JSON</option>
+            <option value="form">MULTIPART FORM DATA</option>
+            <option value="formUrlEncoded">FORM URL-ENCODED</option>
+        </select>
+
+        <label for="jsonPayload" id="jsonLabel">JSON Payload:</label>
+        <textarea id="jsonPayload" placeholder="Enter json" rows="5"></textarea>
+
+        <p id="formUrlEncodedDataLabel" style="display:none">Form Url-Encoded:</p>
+        <div id="formUrlEncodedData" style="display:none">
+            <textarea id="formUrlEncodedValues" placeholder="Key and Value should be separated by :&#10;Use new line for multiple keys&#10;&#10;Example : &#10;key1:value1&#10;key2:value2" rows="5"></textarea>
+        </div>
+
+        <p id="formLabel" style="display:none">Multipart Form Data:</p><br>
+        <div id="formData" style="display:none">
+            <label for="textData">Text :</label>
+            <textarea id="textData" placeholder="Key and Value should be separated by :&#10;Use new line for multiple keys&#10;&#10;Example : &#10;key1:value1&#10;key2:value2" rows="5"></textarea>
+            <p>File :</p>
+            <div style="text-align:right">
+                <button type="button" onclick="addFile()">ADD</button>
+                <button type="button" onclick="removeFile()">REMOVE</button>
+            </div>
+            <div id="fileData">
+                <input type="text" id="fileKey1" style="width:100px" placeholder="Key Name">
+                <input type="file" id="fileValue1" style="width:250px" name="files"><br>
+            </div>
+        </div>
+    </div>
+
+    <label for="concurrencyCalls">Concurrent Call(s) :</label>
+    <input type="text" id="concurrencyCalls" value="1" style="width:50px">
+
+    <button type="button" onclick="makeApiRequest()">Make Request</button> <br>
+    <div style="text-align:right">
+        <button onclick="copyAll()"> Copy Response </button>
+        <button onclick="downloadResponse()"> Download Response </button>
+    </div>
+    <textarea readonly="" id="output" name="output" rows="10" cols="100" style="font-size:18px;color:white;background-color:black "></textarea>
+</div>
+
+<script src="/js/network.js"></script>
+<script src="/js/common.js"></script>
+<script src="js/navbar.js"></script>
+
+</body></html>

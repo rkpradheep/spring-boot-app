@@ -1,0 +1,144 @@
+<html lang="en">
+<head>
+    <title>Let's Chat</title>
+    <meta charset="utf-8" />
+    <meta name="viewport"  content="initial-scale=0.8,user-scalable=no"/>
+    <link rel='stylesheet' href='css/navbar.css'>
+    <link rel="stylesheet" href="css/chat.css" />
+</head>
+<body>
+<nav id="sidebar" class="sidebar close">
+    <header>
+        <span id="toggle">☰</span>
+    </header>
+    <br>
+    <a href="javascript:void(0)" id="closebtn" style="display:none" class="closebtn" onclick="closeNav()">×</a>
+    <br>
+    <div class="menu-bar">
+        <div class="menu">
+            <ul class="menu-links">
+                <li class="nav-link">
+                    <a href="/app">
+                        <i class='bx bx--home-alt icon'></i>
+                        <span class="text nav-text">Home</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/snakegame" target="_blank">
+                        <i class='bx fxemoji--snake icon'></i>
+                        <span class="text nav-text">Snake Game</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/freessl">
+                        <i class='bx material-symbols--shield-lock-outline icon'></i>
+                        <span class="text nav-text">Free SSL</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/chat.html" style="background-color:var(--primary-color);"  onclick="return false;">
+                        <i class='bx quill--chat icon' style="color:var(--sidebar-color);"></i>
+                        <span class="text nav-text">Text Chat</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/webrtc.html">
+                        <i class='bx icon-park-solid--phone-video-call icon'></i>
+                        <span class="text nav-text">Video Chat</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/jobs.html">
+                        <i class='bx eos-icons--cronjob icon'></i>
+                        <span class="text nav-text">Scheduler</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/stream.html">
+                        <i class='bx ri--broadcast-line icon'></i>
+                        <span class="text nav-text">Broadcast</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/live.html">
+                        <i class='bx icon-park-outline--receiver icon'></i>
+                        <span class="text nav-text">Subscribe</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/tokenGen">
+                        <i class='bx logos--oauth icon'></i>
+                        <span class="text nav-text">Oauth Tool</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/network">
+                        <i class='bx ant-design--api-outlined icon'></i>
+                        <span class="text nav-text">API Tool</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/hotswap">
+                        <i class='bx devicon--java icon'></i>
+                        <span class="text nav-text">JVM HotSwap</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/csv">
+                        <i class='bx iwwa--csv icon'></i>
+                        <span class="text nav-text">CSV Parser</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/commandExecutor">
+                        <i class='bx mdi--powershell icon'></i>
+                        <span class="text nav-text">Shell</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/admin/dbtool.html">
+                        <i class='bx clarity--administrator-line icon'></i>
+                        <span class="text nav-text">Admin</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="bottom-content">
+            <li class="">
+                <a href="/logout">
+                    <i class='bx bx--log-out icon'></i>
+                    <span class="text nav-text">Logout</span>
+                </a>
+            </li>
+        </div>
+    </div>
+</nav>
+
+<audio id="incomingSound" preload="auto">
+    <source src="../resources/message.mp3" type="audio/mpeg">
+</audio>
+<div id="wrapper">
+    <div id="menu">
+        <p><a id="leave" onclick="leave()" style="display:none">Leave Chat</a></p>
+        &nbsp&nbsp&nbsp<input type="text" style="border-radius: 7px; padding: 4px 6px" id="name" placeholder="Your name" onkeydown="joinNow(event)"/>&nbsp&nbsp&nbsp
+        <p><a id="join" onclick="join()" style="display:block">Join Chat</a></p>
+    </div>
+
+    <div id="chatbox">
+    </div>
+
+    <form name="message" action="" autocomplete="off" onkeydown="return event.key!='Enter';">
+        <input name="usermsg" type="text" id="chbox" style="outline:none" onkeydown="if(event.key=='Enter')sendMsg();"/>
+        <input type="file" id="file" name="files" disabled style="" multiple>
+        <input type="button" onclick="sendMsg()" id="send" style="background-image: url('../resources/send.png');background-size:100% 100%;width: 50px;height: 50px;
+   border: none;cursor: pointer;" value=""/>
+        <br><p id="filename" style="position:absolute;margin-left:10px;margin-top:70px;font-weight:bold;color:green"></p>
+        <br><p id="cancel" style="position:absolute;margin-left:10px;margin-top:90px;font-weight:bold;color:red;cursor:pointer;display:none" onclick="cancelFileUpload()">[ Cancel Upload ]</p>
+    </form>
+</div>
+</body>
+<script src="js/chat.js"></script>
+<script src="js/navbar.js"></script>
+<script src="js/common.js"></script>
+
+</html>

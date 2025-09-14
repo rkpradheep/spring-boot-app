@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+    }
+    .screen {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+    }
+    #initial-screen {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:active {
+      background-color: #3e8e41;
+    }
+    input {
+      padding: 10px;
+      font-size: 18px;
+      border: 2px solid #4CAF50;
+      border-radius: 10px;
+    }
+    #game-container {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    #game-screen {
+      width: 90%;
+      height: 70%;
+      background-color: #000;
+      border: 2px solid #4CAF50;
+      margin-bottom: 20px;
+    }
+    #controls {
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      grid-template-rows: repeat(2, 60px);
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+    }
+    #controls button {
+      width: 60px;
+      height: 60px;
+      font-size: 18px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 4px #999;
+      cursor: pointer;
+    }
+    #controls button:active {
+      background-color: #3e8e41;
+      box-shadow: 0 2px #666;
+      transform: translateY(2px);
+    }
+    #up {
+      grid-column: 2;
+      grid-row: 1;
+    }
+    #left {
+      grid-column: 1;
+      grid-row: 2;
+    }
+    #down {
+      grid-column: 2;
+      grid-row: 2;
+    }
+    #right {
+      grid-column: 3;
+      grid-row: 2;
+    }
+    @media (min-width: 768px) {
+      #game-screen {
+        width: 600px;
+        height: 600px;
+      }
+      #controls{
+      display:none
+      }
+    }
+
+     #game-code {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+.result-box {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 150px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 16px;
+    z-index: 10;
+}
+
+   @media (max-width: 600px) {
+    .result-box {
+        top: 50px;
+        right: 18px;
+        }
+    }
+
+    </style>
+    <link rel="stylesheet" href="css/loading.css" />
+</head>
+<body>
+<div class="loading" id="loading" style="display:none">Loading&#8230;</div>
+<div id="initial-screen" class="screen">
+    <button id="create-game">Create Game</button>
+    <button id="join-game-button">Join Game</button>
+    <div id="join-game-container" style="display: none;">
+        <input type="text" id="join-game-code" placeholder="Enter game code">
+        <button id="join-game">Join</button>
+    </div>
+</div>
+
+<div id="game-container" class="screen">
+    <div id="game-code"></div>
+    <div id="game-screen">
+        <div id="result-box" class="result-box"></div>
+        <canvas id="canvas"></canvas>
+    </div>
+    <div id="controls">
+        <button id="up">&uarr;</button>
+        <button id="left">&larr;</button>
+        <button id="down">&darr;</button>
+        <button id="right">&rarr;</button>
+    </div>
+</div>
+
+<script src="js/snakegame.js"></script>
+<script src="/js/common.js"></script>
+</body>
+</html>

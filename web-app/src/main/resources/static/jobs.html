@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport"  content="initial-scale=0.8,user-scalable=no"/>
+    <meta charset="UTF-8">
+    <link rel='stylesheet' href='css/navbar.css'>
+    <link rel="stylesheet" href="css/loading.css">
+    <script src="js/common.js"></script>
+    <title>Task Manager</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0;
+            color: #555;
+        }
+
+        select, input, textarea {
+            padding: 8px;
+            margin: 5px 0;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 15%;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 200px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #data {
+            resize: vertical;
+        }
+
+        @media (max-width: 600px) {
+            select, input, textarea, #data, button {
+                width: 70%;
+            }
+        }
+
+          .prompt-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .prompt-box {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            text-align: center;
+        }
+
+        .prompt-buttons {
+            margin-top: 20px;
+        }
+
+        .prompt-buttons button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .prompt-buttons button:hover {
+            background-color: #007BFF;
+            color: white;
+        }
+
+        .prompt-buttons button:last-child:hover {
+            background-color: #dc3545;
+            color: white;
+        }
+
+.epoch-label {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+    margin-bottom: 0;
+}
+
+#timestampDisplay {
+    font-family: monospace;
+    background-color: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    min-width: 100px;
+    text-align: center;
+}
+
+
+    </style>
+</head>
+<body>
+<nav id="sidebar" class="sidebar close">
+    <header>
+        <span id="toggle">☰</span>
+    </header>
+    <br>
+    <a href="javascript:void(0)" id="closebtn" style="display:none" class="closebtn" onclick="closeNav()">×</a>
+    <br>
+    <div class="menu-bar">
+        <div class="menu">
+            <ul class="menu-links">
+                <li class="nav-link">
+                    <a href="/app">
+                        <i class='bx bx--home-alt icon'></i>
+                        <span class="text nav-text">Home</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/snakegame" target="_blank">
+                        <i class='bx fxemoji--snake icon'></i>
+                        <span class="text nav-text">Snake Game</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/freessl">
+                        <i class='bx material-symbols--shield-lock-outline icon'></i>
+                        <span class="text nav-text">Free SSL</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/chat.html">
+                        <i class='bx quill--chat icon'></i>
+                        <span class="text nav-text">Text Chat</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/webrtc.html">
+                        <i class='bx icon-park-solid--phone-video-call icon'></i>
+                        <span class="text nav-text">Video Chat</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/jobs.html" style="background-color:var(--primary-color);"  onclick="return false;">
+                        <i class='bx eos-icons--cronjob icon' style="color:var(--sidebar-color);"></i>
+                        <span class="text nav-text">Scheduler</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/stream.html">
+                        <i class='bx ri--broadcast-line icon'></i>
+                        <span class="text nav-text">Broadcast</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/live.html">
+                        <i class='bx icon-park-outline--receiver icon'></i>
+                        <span class="text nav-text">Subscribe</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/tokenGen">
+                        <i class='bx logos--oauth icon'></i>
+                        <span class="text nav-text">Oauth Tool</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/network">
+                        <i class='bx ant-design--api-outlined icon'></i>
+                        <span class="text nav-text">API Tool</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/hotswap">
+                        <i class='bx devicon--java icon'></i>
+                        <span class="text nav-text">JVM HotSwap</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/csv">
+                        <i class='bx iwwa--csv icon'></i>
+                        <span class="text nav-text">CSV Parser</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/commandExecutor">
+                        <i class='bx mdi--powershell icon'></i>
+                        <span class="text nav-text">Shell</span>
+                    </a>
+                </li>
+                <li class="nav-link">
+                    <a href="/admin/dbtool.html">
+                        <i class='bx clarity--administrator-line icon'></i>
+                        <span class="text nav-text">Admin</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="bottom-content">
+            <li class="">
+                <a href="/logout">
+                    <i class='bx bx--log-out icon'></i>
+                    <span class="text nav-text">Logout</span>
+                </a>
+            </li>
+        </div>
+    </div>
+</nav>
+<div class="loading" id="loading" style="display:none">Loading…</div>
+<div class="prompt-overlay" id="promptOverlay">
+    <div class="prompt-box">
+        <p>Please enter the OTP sent to your "from email"</p><br>
+        <input type="text" style="width:150px" id="otp_value">
+        <div class="prompt-buttons">
+            <button onclick="submitPrompt()">SUBMIT</button>
+        </div>
+    </div>
+</div>
+<h1><b>Scheduler</b></h1>
+<br />
+<br />
+<label for="task">Task</label>
+<select id="task" onchange="handleFields()"></select><br><br>
+<div class="container">
+    <input type="checkbox" id="is_recurring" onchange="showOrHideRecurring()" style="width:10px;cursor:pointer">&nbsp;&nbsp;
+    <label for="is_recurring" style="display: inline-block"> Is Recurring</label>
+</div>
+<div id="recurring_info" style="display:none">
+    <label for="day_interval">Day Interval</label>
+    <select id="day_interval" style="width: 150px;"></select><br><br>
+</div>
+<label for="date">Execution Date & Time</label>
+<input type="datetime-local" id="date" step="1">
+<p class="epoch-label">
+    Epoch Milliseconds: <span id="timestampDisplay"></span><br><br>
+</p>
+
+<div id="emailTask" style="display:none">
+    <input type="text" id="subject"  placeholder="Subject" style="width:300px"/><br>
+    <input type="text" id="fromAddress" placeholder="From Address"  style="width:300px"/><br>
+    <input type="text" id="toAddress" placeholder="To Address"  style="width:300px"/><br>
+    <textarea id="emailMessage" rows="5" cols="30" placeholder="Compose your message" style="width:300px"></textarea><br><br>
+</div>
+<button style="cursor:pointer;" onclick="addJob(null)">SCHEDULE</button>
+<script src="js/jobs.js"></script>
+<script src="js/common.js"></script>
+<script src="js/navbar.js"></script>
+</body>
+</html>

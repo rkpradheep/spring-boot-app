@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>CSV Parser</title>
+    <meta charset="utf-8" />
+    <meta name="viewport"  content="initial-scale=0.8,user-scalable=no"/>
+    <link rel="stylesheet" href="css/loading.css" />
+    <link rel="stylesheet" href="css/navbar.css">
+</head>
+<script src="/js/common.js"></script>
+<script src="/js/stats.js"></script>
+<style>
+    body {
+              margin: 0;
+              padding: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-direction: column;
+              height: auto;
+          }
+          html {
+              overflow: auto;
+          }
+        button {
+            background-color: rgba(76, 175, 80);
+            border: none;
+            color: white;
+            padding: 5px 12px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            -webkit-transition-duration: 0.4s; /* Safari */
+            transition-duration: 0.4s;
+            border-radius: 10px
+        }
+
+        button:hover {
+            background-color: rgba(76, 175, 80, 0.8)
+        }
+         .fixTableHead {
+              max-height: 400px;
+              margin-left: 130px;
+              overflow:auto;
+          }
+
+          .fixTableHead thead th {
+              position: sticky;
+              top: 0;
+          }
+          table {
+              border-collapse: collapse;
+          }
+          th,
+          td {
+              padding: 8px 15px;
+              border: 2px solid #529432;
+          }
+          th {
+              background: #abdd93;
+          }
+
+          tr:nth-child(even) {
+              background-color: #dddddd;
+          }
+</style>
+<body>
+<br/>
+<br/>
+<br/>
+<br/>
+<input type="text" id="statsId" placeholder="Request Id" style="position: sticky;">
+<button onclick="loadStats()" style="position: sticky;"> Refresh Stats </button>
+<button onclick="downloadCSVResponse()" style="position: sticky;">  Download Stats </button>
+<div class="loading" id="loading" style="display:none">Loading&#8230;</div>
+<br />
+<p id="total"></p><br/>
+<div id="outputContainer" class="fixTableHead"><table id="output"></table></div>
+<br/>
+<br/>
+<script>
+</script>
+
+</body>
+</html>

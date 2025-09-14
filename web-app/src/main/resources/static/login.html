@@ -1,0 +1,35 @@
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0;" />
+    <title>Login Page</title>
+    <link rel="stylesheet" href="css/login.css" />
+    <link rel="stylesheet" href="css/loading.css">
+</head>
+<script src="js/common.js"></script>
+<div id="snackbar"></div>
+<div class="container">
+    <div class="loading" id="loading" style="display:none">Loading…</div>
+    <div class="screen">
+        <div class="screen__content">
+            <form class="login" onsubmit="return false">
+                <div class="login__field">
+                    <h3>USER LOGIN</h3>
+                </div>
+                <div class="login__field">
+                    <input type="text" class="login__input" id="name" placeholder="User name / Email" value="test">
+                </div>
+                <div class="login__field">
+                    <input type="password" id="password" class="login__input" placeholder="Password" value="test@123">
+                </div>
+                <button class="button login__submit" onclick="login()">
+                    <span class="button__text">Log In Now</span>
+                </button>
+            </form>
+        </div>
+        <div class="screen__background">
+            <span class="screen__background__shape screen__background__shape1"></span>
+        </div>
+    </div>
+</div>
+<script src="js/login.js"></script>
+</html>

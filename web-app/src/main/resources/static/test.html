@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+</head>
+<body>
+<script>
+async function a(){
+try{
+ var devices = await navigator.mediaDevices.enumerateDevices();
+ alert(devices[2].kind)
+ }
+ catch(error){
+ alert(error)
+ }
+ }
+ a()
+</script>
+</body>
+</html>

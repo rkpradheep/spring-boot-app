@@ -1,0 +1,39 @@
+<style>
+    body {
+              margin: 0;
+              padding: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              flex-direction: column;
+          }
+
+</style>
+<script>
+
+    function fetchLogs(){
+    fetch( "/api/v1/payout/httplogs?log_id=" + document.getElementById('log_id').value + "&zsid=" + document.getElementById('zsid').value , {
+         method: "GET",
+    })
+    .then(response =>
+    {
+      return response.text();
+    }
+    ).then(data=> {
+      document.getElementById('output').innerHTML = JSON.stringify(JSON.parse(data), null, 2)
+      document.getElementById('response').style.display = "block"
+    }).catch(error => {
+       console.log(error)
+       alert("Something went wrong. Server might be down");
+    });
+
+    }
+</script>
+<input type="text" id="zsid" placeholder="ZSID"><br>
+<input type="text" id="log_id" placeholder="Log ID"><br>
+<button onclick="fetchLogs()">FETCH</button> <br><br>
+
+<div id="response" style="display:none">
+    <textarea readonly id="output" name="output" rows="20" cols="70"></textarea>
+</div>

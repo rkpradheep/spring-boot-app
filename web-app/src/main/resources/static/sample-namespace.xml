@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<rkp:configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://rkpradheep.com stats-meta-namespace.xsd" xmlns:rkp="http://rkpradheep.com">
+
+	<rkp:url>https://abc.com/account/details</rkp:url>
+
+	<rkp:method>GET</rkp:method>
+
+	<rkp:headers>
+		<user-agent>Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36</user-agent>
+	</rkp:headers>
+
+	<rkp:params>
+		<request_id placeholder="true">Col_0</request_id>
+	</rkp:params>
+
+	<rkp:input-file-path>/home/data.csv</rkp:input-file-path>
+
+	<rkp:output-file-path>/home/output.csv</rkp:output-file-path>
+
+	<rkp:request-count>45</rkp:request-count>
+
+	<rkp:sleep-seconds>50</rkp:sleep-seconds>
+
+	<rkp:placeholder-handler></rkp:placeholder-handler>
+
+	<rkp:response>
+		<rkp:headers>
+			<rkp:header>S.NO</rkp:header>
+			<rkp:header>Name</rkp:header>
+		</rkp:headers>
+		<rkp:rows>
+			<s.no>${request_no}</s.no>
+			<zsid>${params[account_id]}</zsid>
+			<account-name>data/account/name</account-name>
+		</rkp:rows>
+	</rkp:response>
+</rkp:configuration>

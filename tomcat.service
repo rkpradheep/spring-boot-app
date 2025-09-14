@@ -1,0 +1,20 @@
+[Unit]
+Description=Apache Tomcat Web Application Container
+After=network.target
+Requires=mariadb.service
+
+[Service]
+Type=forking
+
+Environment="APP_SERVER_HOME=/home/pradheep_rk_it/spring-boot-app"
+ExecStart=/home/pradheep_rk_it/spring-boot-app/run.sh
+ExecStop=/home/pradheep_rk_it/spring-boot-app/shutdown.sh
+
+User=root
+Group=root
+UMask=0007
+RestartSec=10
+Restart=always
+
+[Install]
+WantedBy=multi-userEntity.target

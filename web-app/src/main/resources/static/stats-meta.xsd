@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+<xs:element name="configuration">
+  <xs:complexType>
+    <xs:all>
+      <xs:element name="url">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+           <xs:pattern value="(\s|\n)*http(s?)://(.|\n)*"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="method">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="GET"/>
+            <xs:enumeration value="PUT"/>
+            <xs:enumeration value="POST"/>
+            <xs:enumeration value="DELETE"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="input-file-path" type="xs:string" minOccurs="0"/>
+      <xs:element name="output-file-path" type="xs:string" minOccurs="0"/>
+      <xs:element name="request-batch-size" type="xs:unsignedInt"/>
+      <xs:element name="request-batch-interval" type="xs:unsignedInt"/>
+      <xs:element name="placeholder-handler" type="xs:string" minOccurs="0"/>
+      <xs:element name="json-body" type="xs:string" minOccurs="0"/>
+      <xs:element name="is-test" type="xs:boolean" minOccurs="0"/>
+      <xs:element name="skip-first-request-data-row" type="xs:boolean" minOccurs="0"/>
+      <xs:element name="disable-parallel-calls" type="xs:boolean" minOccurs="0"/>
+      <xs:element name="headers" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+             <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="raw-request-headers" type="xs:string" minOccurs="0"/>
+      <xs:element name="params" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="response">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="header" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:simpleContent>
+                  <xs:extension base="xs:string">
+                    <xs:attribute name="name" type="xs:string" use="required"/>
+                    <xs:attribute name="placeholder" type="xs:boolean"/>
+                  </xs:extension>
+                </xs:simpleContent>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+</xs:schema>

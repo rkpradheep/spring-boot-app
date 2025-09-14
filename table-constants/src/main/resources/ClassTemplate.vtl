@@ -1,0 +1,16 @@
+package $pkg;
+
+public final class $tableMeta.formattedTableName
+{
+    private $tableMeta.formattedTableName ()
+    {
+    }
+
+    public static final String TABLE = "$tableMeta.tableName" ;
+
+#foreach( $cName in $tableMeta.columnList )
+    public static final String ${cName.toUpperCase().replaceAll("_", "")} = "$cName" ;
+#end
+}
+
+

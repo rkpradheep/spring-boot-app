@@ -1,0 +1,56 @@
+<html>
+<header>
+    <meta name="viewport"  content="initial-scale=0.8,user-scalable=no"/>
+</header>
+<body>
+<style>
+</style>
+<div>
+    <div style="text-align:right; width:80%">
+        <button onclick="join(true)" style="position:fixed;top:0"> RESTART </button>
+    </div>
+    <br/>
+    <textarea id="logs" cols="150" rows="50" style="background-color:#2b2b2b;color:white;width: 100%;" readonly></textarea>
+</div>
+<script>
+var socket;
+function join(isManual) {
+    if(socket)
+    {
+        if (socket.readyState !== WebSocket.CLOSED) {
+        alert("Live log is already running")
+        return;
+        }
+    }
+    var url = "ws://";
+    if (window.location.origin.includes('https'))
+        url = "wss://";
+    url = url + window.location.host + "/api/v1/admin/live/logs";
+    socket = new WebSocket(url);
+    socket.addEventListener('open', function(event) {
+        joined = true;
+        if(isManual)
+        {
+            alert("Live log started");
+        }
+    });
+    socket.addEventListener("error", (event) => {
+        joined = false;
+        console.log(event);
+    });
+    socket.addEventListener('close', function(event) {
+        console.log(event)
+        joined = false;
+    });
+    socket.addEventListener('message', function(event) {
+        incoming(event.data);
+    });
+}
+
+function incoming(msg) {
+    document.getElementById("logs").innerHTML = document.getElementById("logs").innerHTML + msg;
+}
+join(false);
+</script>
+</body>
+</html>
