@@ -31,6 +31,7 @@ import org.springframework.web.util.pattern.PathPattern;
 import org.springframework.web.util.pattern.PathPatternParser;
 
 import com.server.framework.common.AppContextHolder;
+import com.server.framework.common.AppProperties;
 import com.server.framework.service.HttpLogService;
 
 import com.server.framework.common.CommonService;
@@ -45,7 +46,7 @@ public class SecurityUtil
 
 	public static String getUploadsPath()
 	{
-		return CommonService.HOME_PATH + "/uploads";
+		return AppProperties.getProperty("uploads.dir", System.getProperty("user.dir") + "/uploads");
 	}
 
 	public static UserEntity getCurrentUser()

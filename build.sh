@@ -63,23 +63,48 @@ echo "############## Build started ##############\n"
 echo "JAVA_HOME : ${JAVA_HOME}"
 
 
-# Find and stop Spring Boot app more safely
-SPRING_PID=$(ps aux | grep "root-app-0.0.1-SNAPSHOT.jar" | grep -v grep | awk '{print $2}' | head -n 1)
-if [ -n "$SPRING_PID" ]; then
-  echo "Stopping Spring Boot app (PID: $SPRING_PID)..."
-  kill -TERM $SPRING_PID
-  sleep 3
-  # Force kill only if still running
-  if kill -0 $SPRING_PID 2>/dev/null; then
-    echo "Force stopping Spring Boot app..."
-    kill -9 $SPRING_PID
-  fi
-  sleep 2
-fi
+sh shutdown.sh || { echo "Failed to shutdown existing server"; exit 1; }
+
+mkdir -p "build" || { echo "Failed to create build directory"; exit 1; }
 
 ./mvnw clean package -DskipTests || { echo "Maven build failed"; exit 1; }
 
-sh run.sh
+if [ -f "build/spring-boot-web-app.jar" ]; then
+  JAR_PATH="build/spring-boot-web-app.jar"
+else
+  echo "spring-boot-web-app.jar not found after build" && exit 1
+fi
 
+ZIP_PATH="build/SpringBootApp.zip"
+rm -f "$ZIP_PATH"
+
+cp run.sh build
+
+
+sedi() {
+  if sed --version >/dev/null 2>&1; then
+    # GNU sed (likely Linux)
+    sed -i "$@"
+  else
+    # BSD sed (macOS)
+    sed -i '' "$@"
+  fi
+}
+
+if [ -f "custom/application-custom.properties" ]; then
+  echo "Found application-custom.properties, reading JAVA_OPTS from it."
+  JAVA_OPTS_CUSTOM_VALUE=$(grep "^java.opts=" custom/application-custom.properties | sed 's/^java.opts=//')
+  sedi 's|JAVA_OPTS_CUSTOM_VALUE=|JAVA_OPTS_CUSTOM_VALUE="'"$JAVA_OPTS_CUSTOM_VALUE"'"|' build/run.sh
+fi
+
+
+zip -jq "$ZIP_PATH" "$JAR_PATH" build/run.sh shutdown.sh set_variables.sh instrumentation/target/instrumentation.jar protocol/target/protocol.jar || { echo "Failed to create SpringBootApp.zip"; exit 1; }
+
+rm -f "build/spring-boot-web-app.jar"
+rm -f "build/run.sh"
 
 echo "${GREEN}############## Build completed ##############${NC}\n"
+
+
+sh deploy.sh $(pwd)/build
+

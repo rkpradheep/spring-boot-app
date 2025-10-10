@@ -4,6 +4,8 @@ import com.server.framework.common.DateUtil;
 import com.server.framework.common.CommonService;
 import com.server.chat.service.ChatUserDetailService;
 import com.server.chat.service.ChatUserService;
+import com.server.framework.security.SecurityUtil;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
@@ -186,16 +188,12 @@ public class ChatWebSocketHandler implements WebSocketHandler {
     private void writeFile(WebSocketSession session) throws IOException {
         ByteBuffer byteBuffer = sessionIdVsChunkedData.get(session.getId());
         byte[] byteArray = byteBuffer.array();
-        
-        new File(CommonService.HOME_PATH + "/build/webapps/ROOT/uploads").mkdirs();
-        FileOutputStream fileOutputStream = new FileOutputStream(CommonService.HOME_PATH + "/build/webapps/ROOT/uploads/" + sessionIdVsFileName.get(session.getId()));
+
+        new File(SecurityUtil.getUploadsPath()).mkdirs();
+        FileOutputStream fileOutputStream = new FileOutputStream(SecurityUtil.getUploadsPath().concat("/") + sessionIdVsFileName.get(session.getId()));
         fileOutputStream.write(byteArray);
         fileOutputStream.close();
-        
-        new File(CommonService.HOME_PATH + "/uploads").mkdirs();
-        fileOutputStream = new FileOutputStream(CommonService.HOME_PATH + "/uploads/" + sessionIdVsFileName.get(session.getId()));
-        fileOutputStream.write(byteArray);
-        fileOutputStream.close();
+
         
         String msg = "<a  target='_blank' href='/uploads/" + sessionIdVsFileName.get(session.getId()) + "'>" + sessionIdVsFileName.get(session.getId()) + "</a></br></br>";
         sessionIdVsFileName.remove(session.getId());

@@ -31,7 +31,7 @@ public class RefreshManager
 	{
 		LOGGER.info("Starting Refresh Manager with thread count: " + AppProperties.getProperty("job.thread.count"));
 		queue = new DelayQueue<>();
-		int threadCount = Integer.parseInt(AppProperties.getProperty("job.thread.count"));
+		int threadCount = Integer.parseInt(AppProperties.getProperty("job.thread.count", "2"));
 		executor = new ThreadPoolExecutor(threadCount, threadCount, 1L, TimeUnit.MINUTES, queue, new CustomThreadFactory("refresh-manager-"), new ThreadPoolExecutor.CallerRunsPolicy());
 		executor.prestartAllCoreThreads();
 	}

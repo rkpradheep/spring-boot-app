@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml" />
-    
-    <!-- Custom file appender with custom formatter -->
+
     <appender name="CUSTOM_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>logs/app.log</file>
         <layout class="com.server.framework.common.CustomLogFormatter" />
@@ -13,14 +12,13 @@
             <totalSizeCap>3GB</totalSizeCap>
         </rollingPolicy>
     </appender>
-    
-    <!-- Console appender with custom formatter -->
-    <appender name="CUSTOM_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <layout class="com.server.framework.common.CustomLogFormatter" />
-    </appender>
+
+<!--    <appender name="CUSTOM_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">-->
+<!--        <layout class="com.server.framework.common.CustomLogFormatter" />-->
+<!--    </appender>-->
     
     <root level="INFO">
         <appender-ref ref="CUSTOM_FILE" />
-        <appender-ref ref="CUSTOM_CONSOLE" />
+<!--        <appender-ref ref="CUSTOM_CONSOLE" />-->
     </root>
 </configuration>

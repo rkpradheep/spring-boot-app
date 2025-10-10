@@ -31,7 +31,7 @@ import org.json.JSONObject;
 import com.google.gson.Gson;
 
 public class CommonService {
-    public static final String HOME_PATH = System.getenv("APP_SERVER_HOME") != null ? System.getenv("APP_SERVER_HOME") : System.getProperty("user.home") + "/spring-boot-app";
+    public static final String HOME_PATH = System.getenv("APP_SERVER_HOME");
 
     private static final Logger LOGGER = Logger.getLogger(CommonService.class.getName());
     private static final Gson GSON = new Gson();

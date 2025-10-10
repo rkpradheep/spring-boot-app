@@ -1,16 +1,16 @@
-#!/bin/sh
+#!/bin/bash
+
 
 echo "APP_SERVER_HOME : ${APP_SERVER_HOME}"
 
 . $APP_SERVER_HOME/set_variables.sh
 
-echo > $APP_SERVER_HOME/nohup.out
-exec > $APP_SERVER_HOME/nohup.out 2>&1
+exec > "$APP_SERVER_HOME/nohup.out" 2>&1
 
 echo "APP_SERVER_HOME : ${APP_SERVER_HOME}"
 
 
-echo "##############" $(date +"%Y-%m-%d %r") " ==>  STARTING TOMCAT APPLICATION ##############\n\n\n"
+echo "##############" $(date +"%Y-%m-%d %r") " ==> STARTING SPRING BOOT ##############"
 
 setupMysql() {
 
@@ -57,26 +57,26 @@ cd $APP_SERVER_HOME
 
 sh shutdown.sh
 
-JAR_FILE="build/spring-boot-web-app.jar"
+JAR_FILE="$APP_SERVER_HOME/spring-boot-web-app.jar"
 
 if [ ! -f "$JAR_FILE" ]; then
   echo "JAR file not found: $JAR_FILE"
-  ls -l root-app/target || true
   exit 1m
 fi
 
-JAVA_OPTS="-Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes= -Duser.timezone=Asia/Kolkata -javaagent:instrumentation/target/instrumentation.jar --add-exports=java.base/sun.net.www.protocol.http=ALL-UNNAMED --add-exports=java.base/sun.net.www.protocol.https=ALL-UNNAMED --add-exports=java.base/sun.net.www.http=ALL-UNNAMED -Djava.protocol.handler.pkgs=com.server.protocol -Xbootclasspath/a:protocol/target/protocol.jar"
+JAVA_OPTS="-Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes= -Duser.timezone=Asia/Kolkata -javaagent:instrumentation.jar --add-exports=java.base/sun.net.www.protocol.http=ALL-UNNAMED --add-exports=java.base/sun.net.www.protocol.https=ALL-UNNAMED --add-exports=java.base/sun.net.www.http=ALL-UNNAMED -Djava.protocol.handler.pkgs=com.server.protocol -Xbootclasspath/a:protocol.jar"
 
-# Read JAVA_OPTS from application-custom.properties if it exists, otherwise use default
-if [ -f "custom/application-custom.properties" ]; then
-  echo "Found application-custom.properties, reading JAVA_OPTS from it."
-  JAVA_OPTS_CUSTOM_VALUE=$(grep "^java.opts=" custom/application-custom.properties | sed 's/^java.opts=//')
-  if [ -n "$JAVA_OPTS_CUSTOM_VALUE" ]; then
-    JAVA_OPTS="$JAVA_OPTS_CUSTOM_VALUE -Dspring.profiles.active=custom"
-  fi
+
+#Placeholder
+JAVA_OPTS_CUSTOM_VALUE=
+
+if [ -n "$JAVA_OPTS_CUSTOM_VALUE" ]; then
+  JAVA_OPTS=$JAVA_OPTS_CUSTOM_VALUE
 fi
+
 
 echo "Using JAVA_OPTS: $JAVA_OPTS"
 nohup $JAVA_HOME/bin/java $JAVA_OPTS -jar "$JAR_FILE" &
 
-echo "\n\n\n##############" $(date +"%Y-%m-%d %r") " ==> TOMCAT STARTED ##############\n\n\n"
+
+echo "##############" $(date +"%Y-%m-%d %r") " ==> SPRING BOOT STARTED ##############"
