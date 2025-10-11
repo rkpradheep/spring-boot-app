@@ -1,6 +1,8 @@
 package com.server.zoho.controller;
 
+import com.server.framework.error.AppException;
 import com.server.framework.workflow.WorkflowEngine;
+import com.server.zoho.ZohoService;
 import com.server.zoho.workflow.model.BuildEventType;
 import com.server.framework.workflow.model.WorkflowInstance;
 import com.server.framework.workflow.model.WorkflowState;
@@ -47,6 +49,7 @@ public class BuildWorkflowController
 	{
 		try
 		{
+			ZohoService.doAuthentication();
 			IntegService.BuildResponse response = integService.scheduleBuilds(request.getProductNames());
 
 			Map<String, Object> data = new HashMap<>();
@@ -55,6 +58,10 @@ public class BuildWorkflowController
 			data.put("workflowEngine", "Workflow");
 
 			return ResponseEntity.ok(ApiResponseBuilder.success(response.getText(), data));
+		}
+		catch(AppException appException)
+		{
+			throw appException;
 		}
 		catch(Exception e)
 		{

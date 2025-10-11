@@ -2,6 +2,7 @@ package com.server.framework.common;
 
 import jakarta.annotation.PostConstruct;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
@@ -81,7 +82,7 @@ public class AppProperties
 	private static <T> T getProperty(String key, Class<T> targetType, T defaultValue)
 	{
 		String value = _getProperty(key);
-		return value != null ? targetType.cast(convert(value, targetType)) : defaultValue;
+		return StringUtils.isNotEmpty(value) ? targetType.cast(convert(value, targetType)) : defaultValue;
 	}
 
 	private static String _getProperty(String key)

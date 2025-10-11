@@ -49,9 +49,12 @@ if [ "$os_name" = "Darwin" ]; then
     sdk use java 17.0.14-zulu
     setupMysql
 else
-  export JAVA_HOME=/opt/java/zulu$JAVA_VERSION
+  if [ -d "/opt/java/zulu$JAVA_VERSION" ]; then
+    export JAVA_HOME=/opt/java/zulu$JAVA_VERSION
+  else
+    export JAVA_HOME=/home/sas/rkp/jdk
+  fi
 fi
-
 
 cd $APP_SERVER_HOME
 

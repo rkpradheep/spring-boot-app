@@ -1,5 +1,6 @@
 package com.server.zoho;
 
+import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.AppProperties;
 import com.server.framework.common.DateUtil;
 import com.server.framework.common.CommonService;
@@ -7,15 +8,18 @@ import com.server.framework.error.AppException;
 import com.server.framework.http.HttpService;
 import com.server.framework.http.HttpContext;
 import com.server.framework.security.SecurityUtil;
+import com.server.framework.service.ConfigurationService;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -89,6 +93,13 @@ public class ZohoService
 		String currentUserEmail = getCurrentUserEmail();
 		if(StringUtils.isNotEmpty(currentUserEmail))
 		{
+			String allowedUsers = AppContextHolder.getBean(ConfigurationService.class).getValue("zoho.critical.operation.allowed.users").orElse(AppProperties.getProperty("zoho.critical.operation.allowed.users"));
+			boolean isValidUser = Arrays.stream(allowedUsers.split(",")).map(String::trim).anyMatch(currentUserEmail::equals);
+			if(!isValidUser)
+			{
+				LOGGER.log(Level.SEVERE, "User " + currentUserEmail + " does not have access to perform this operation");
+				throw new AppException("access_denied", "User " + currentUserEmail + " does not have access to perform this operation");
+			}
 			return;
 		}
 

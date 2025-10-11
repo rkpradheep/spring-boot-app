@@ -233,7 +233,7 @@ public class ZohoController
 					+ "; Path=/;"
 					+ "Max-Age=1800;";
 				httpResponse.setHeader("Set-Cookie", tokenHeader);
-				message = "Authentication is success. Please try updating now.";
+				message = "Authentication is success. Please try now.";
 
 			}
 		}

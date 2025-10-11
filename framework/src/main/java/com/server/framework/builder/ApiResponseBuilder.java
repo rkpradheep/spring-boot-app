@@ -122,4 +122,14 @@ public class ApiResponseBuilder {
                 .errorCode(errorCode)
                 .build();
     }
+
+    public static Map<String, Object> error(String message, String errorCode, int statusCode, Object data) {
+        return create()
+            .success(false)
+            .statusCode(statusCode)
+            .message(message)
+            .errorCode(errorCode)
+            .data(data)
+            .build();
+    }
 }

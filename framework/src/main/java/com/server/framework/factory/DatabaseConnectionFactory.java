@@ -22,9 +22,6 @@ public class DatabaseConnectionFactory
 
 	public Connection createConnection(String server, String ip, String db, String user, String password) throws SQLException
 	{
-		LOGGER.log(Level.INFO, "Creating database connection for server: {0}, ip: {1}, db: {2}",
-			new Object[] {server, ip, db});
-
 		try
 		{
 			return databaseService.getConnection(server, ip, db, user, password);
@@ -51,7 +48,6 @@ public class DatabaseConnectionFactory
 			connectionParams.getUsername(),
 			connectionParams.getPassword()
 		);
-
 
 		return connection;
 	}

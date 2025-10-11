@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.server.framework.common.AppProperties;
 import com.server.framework.security.SecurityUtil;
 
 
@@ -25,8 +26,8 @@ final class RateLimiterRegistry
 
 	RateLimiter forKey(String key)
 	{
-		long customerCapacity = SecurityUtil.isRequestFromLoopBackAddress() ? 1000 : capacity;
-		long customerRefillTokens = SecurityUtil.isRequestFromLoopBackAddress() ? 1000 : refillTokens;
+		long customerCapacity = SecurityUtil.isRequestFromLoopBackAddress() ? 1000 : AppProperties.getProperty("environment").equals("zoho") ? 100 : capacity;
+		long customerRefillTokens = SecurityUtil.isRequestFromLoopBackAddress() ? 1000: AppProperties.getProperty("environment").equals("zoho") ? 100 : refillTokens;
 		return buckets.computeIfAbsent(key, k -> {
 			switch(algorithm)
 			{

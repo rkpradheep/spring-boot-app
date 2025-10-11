@@ -17,6 +17,17 @@ export APP_SERVER_HOME=$(pwd)
 
 . ./set_variables.sh
 
+#Default
+if [ -n "$1" ]; then
+  CUSTOM_DIR="$(pwd)/$1"
+else
+  CUSTOM_DIR="$(pwd)/custom"
+fi
+
+export CUSTOM_DIR=$CUSTOM_DIR
+
+echo "CUSTOM_DIR : ${CUSTOM_DIR}"
+
 setupMysql() {
 
 MACHINE_NAME="podman-machine-default"
@@ -91,9 +102,9 @@ sedi() {
   fi
 }
 
-if [ -f "custom/application-custom.properties" ]; then
+if [ -f "$CUSTOM_DIR/application-custom.properties" ]; then
   echo "Found application-custom.properties, reading JAVA_OPTS from it."
-  JAVA_OPTS_CUSTOM_VALUE=$(grep "^java.opts=" custom/application-custom.properties | sed 's/^java.opts=//')
+  JAVA_OPTS_CUSTOM_VALUE=$(grep "^java.opts=" $CUSTOM_DIR/application-custom.properties | sed 's/^java.opts=//')
   sedi 's|JAVA_OPTS_CUSTOM_VALUE=|JAVA_OPTS_CUSTOM_VALUE="'"$JAVA_OPTS_CUSTOM_VALUE"'"|' build/run.sh
 fi
 
@@ -104,7 +115,6 @@ rm -f "build/spring-boot-web-app.jar"
 rm -f "build/run.sh"
 
 echo "${GREEN}############## Build completed ##############${NC}\n"
-
 
 sh deploy.sh $(pwd)/build
 

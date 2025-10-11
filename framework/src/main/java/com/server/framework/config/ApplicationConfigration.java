@@ -1,9 +1,12 @@
 package com.server.framework.config;
 
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.catalina.connector.Connector;
 import org.apache.commons.lang3.StringUtils;
@@ -32,6 +35,8 @@ public class ApplicationConfigration implements WebMvcConfigurer
 {
 	@Autowired
 	private AppProperties appProperties;
+
+	private static final Logger LOGGER = Logger.getLogger(ApplicationConfigration.class.getName());
 
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry)
@@ -76,13 +81,17 @@ public class ApplicationConfigration implements WebMvcConfigurer
 	@Bean
 	public TomcatProtocolHandlerCustomizer<?> protocolHandlerCustomizer()
 	{
+		int corePoolSize = AppProperties.getIntProperty("tomcat.threadpool.corePoolSize", 10);
+		int maxPoolSize = AppProperties.getIntProperty("tomcat.threadpool.maxPoolSize", 50);
+		int keepAliveTime = AppProperties.getIntProperty("tomcat.threadpool.keepAliveSeconds", 60);
+		int queueCapacity = AppProperties.getIntProperty("tomcat.threadpool.queueCapacity", 100);
 		return protocolHandler -> {
 			ThreadPoolExecutor customExecutor = new ThreadPoolExecutor(
-				10, // corePoolSize
-				50, // maximumPoolSize
-				60, // keepAliveTime
+				corePoolSize,
+				maxPoolSize,
+				keepAliveTime,
 				TimeUnit.SECONDS,
-				new LinkedBlockingQueue<>(100)
+				new LinkedBlockingQueue<>(queueCapacity)
 			);
 			customExecutor.setThreadFactory(new CustomThreadFactory("tomcat-http-"));
 
@@ -93,9 +102,16 @@ public class ApplicationConfigration implements WebMvcConfigurer
 	@Bean
 	public WebServerFactoryCustomizer<TomcatServletWebServerFactory> servletContainer()
 	{
+		Integer httpPort = AppProperties.getIntProperty("server.http.port", null);
+		if(Objects.isNull(httpPort))
+		{
+			return factory -> {};
+		}
+
+		LOGGER.log(Level.INFO, "HTTP Listening on port: {0}", httpPort + "");
 		return factory -> {
 			Connector connector = new Connector(TomcatServletWebServerFactory.DEFAULT_PROTOCOL);
-			connector.setPort(AppProperties.getIntProperty("server.http.port", 8080));
+			connector.setPort(httpPort);
 			factory.addAdditionalTomcatConnectors(connector);
 		};
 	}

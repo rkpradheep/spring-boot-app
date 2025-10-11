@@ -13,7 +13,8 @@
 	<packaging>jar</packaging>
 	<name>instrumentation</name>
 	<description>Lightweight instrumentation agent for performance monitoring</description>
-	<version>${app.version}</version>
+	<version>0.0.1-SNAPSHOT</version>
+
 
 	<dependencies>
 		<dependency>

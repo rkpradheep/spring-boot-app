@@ -119,7 +119,6 @@ public class SASController
 
 			if(isEncrypted)
 			{
-				ensureSessionKeys(httpRequest, response);
 				sasService.handleDecryption(httpRequest, credentials);
 			}
 

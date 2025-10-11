@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 
+import com.server.framework.common.AppProperties;
+
 @Controller
 public class PageController
 {
@@ -39,7 +41,7 @@ public class PageController
 	@GetMapping("/zoho/build-tool")
 	public String zohoBuildUpdate()
 	{
-		return "forward:/zoho/workflow-manager.html";
+		return AppProperties.getProperty("environment").equals("zoho") ? "forward:/zoho/workflow-manager-internal.html" : "forward:/zoho/workflow-manager.html";
 	}
 
 	@GetMapping("/admin/login")
@@ -141,7 +143,7 @@ public class PageController
 	@GetMapping("/zoho/oauth-tool")
 	public String zohoOAuthTool()
 	{
-		return "forward:/zoho/tokenGen.html";
+		return AppProperties.getProperty("environment").equals("zoho") ? "forward:/zoho/tokenGenInternal.html"  : "forward:/zoho/tokenGen.html";
 	}
 
 	@GetMapping("/tokenGenCustom")

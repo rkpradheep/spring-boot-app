@@ -57,11 +57,11 @@ public class InstrumentationService implements ClassFileTransformer
 			endBlock.append("jakarta.servlet.http.HttpServletRequest httpServletRequest = ((jakarta.servlet.http.HttpServletRequest) request);");
 			endBlock.append("jakarta.servlet.http.HttpServletResponse httpServletResponse = ((jakarta.servlet.http.HttpServletResponse) response);");
 			endBlock.append("String requestURI = httpServletRequest.getRequestURI().replaceFirst(httpServletRequest.getContextPath(), \"\");");
-			endBlock.append("boolean isResource = com.server.framework.security.SecurityUtil.isResourceUri(requestURI);");
+			endBlock.append("boolean isResource = com.server.framework.security.SecurityUtil.isResourceFetchRequest(httpServletRequest);");
 			endBlock.append("if(!isResource){");
 			endBlock.append("LOGGER.info(\"Request completed in \" + ((endTime - startTime)/1000f) + \" second(s)\");");
 			endBlock.append("}");
-			endBlock.append("} catch (Exception e) { /* ignore reflection errors */ }");
+			endBlock.append("} catch (Exception e) {LOGGER.log(java.util.logging.Level.INFO,\"Exception occurred- \" + e.toString()); }");
 
 			m.insertAfter(endBlock.toString());
 

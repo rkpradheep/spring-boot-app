@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>protocol</artifactId>
-    <version>${app.version}</version>
+    <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>protocol</name>
     <description>Custom URL stream handlers for HTTP/HTTPS protocols</description>

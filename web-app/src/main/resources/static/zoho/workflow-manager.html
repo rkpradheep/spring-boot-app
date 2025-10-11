@@ -1069,15 +1069,20 @@
                     body: JSON.stringify(requestData)
                 });
 
-                const data = await response.json();
+                const responseJSON = await response.json();
 
-                if (data.success) {
-                    showAlert(`${data.message}`, 'success');
+                if (responseJSON.success) {
+                    showAlert(`${responseJSON.message}`, 'success');
                     clearForm();
                     loadWorkflowInstances();
                     loadWorkflowStatistics();
                 } else {
-                    showAlert(`Failed to start workflow: ${data.message}`, 'error');
+                    if(responseJSON.error_code == "reauth_required")
+                    {
+                      handleZohoAuth(responseJSON.data.auth_uri)
+                      return;
+                     }
+                    showAlert(`Failed to start workflow: ${responseJSON.message}`, 'error');
                 }
 
             } catch (error) {
@@ -1723,6 +1728,15 @@
                 return `${seconds}s`;
             }
         }
+
+        function handleZohoAuth(authURI)
+{
+                              let screenX = screen.width / 2 - 325;
+                              let screenY = screen.height / 2 - 400;
+                              var popupOptions = "width=650,height=750,top="+ screenY + ",left=" + screenX;
+                              window.open(authURI, "Authentication", popupOptions);
+
+}
     </script>
 </body>
 </html>

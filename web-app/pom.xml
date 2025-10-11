@@ -13,19 +13,19 @@
 	<packaging>jar</packaging>
 	<name>web-app</name>
 	<description>Web application module</description>
-	<version>${app.version}</version>
+	<version>0.0.1-SNAPSHOT</version>
 
 	<dependencies>
 	<dependency>
 		<groupId>com.server</groupId>
 		<artifactId>framework</artifactId>
-		<version>${app.version}</version>
+		<version>0.0.1-SNAPSHOT</version>
 	</dependency>
 
 	<dependency>
 		<groupId>com.server</groupId>
 		<artifactId>table-constants</artifactId>
-		<version>${app.version}</version>
+		<version>0.0.1-SNAPSHOT</version>
 
 </dependency>
 	</dependencies>
@@ -74,7 +74,7 @@
 							<outputDirectory>${project.build.outputDirectory}</outputDirectory>
 							<resources>
 								<resource>
-									<directory>${project.basedir}/../custom</directory>
+									<directory>${env.CUSTOM_DIR}</directory>
 									<includes>
 										<include>*.*</include>
 									</includes>

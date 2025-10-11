@@ -13,7 +13,8 @@
 	<packaging>jar</packaging>
 	<name>framework</name>
 	<description>Core framework module with security, persistence, and common utilities</description>
-	<version>${app.version}</version>
+	<version>0.0.1-SNAPSHOT</version>
+
 
 	<dependencies>
 

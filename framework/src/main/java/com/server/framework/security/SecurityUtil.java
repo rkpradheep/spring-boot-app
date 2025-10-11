@@ -9,11 +9,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -34,13 +37,24 @@ import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.AppProperties;
 import com.server.framework.service.HttpLogService;
 
-import com.server.framework.common.CommonService;
 import com.server.framework.entity.UserEntity;
 import com.server.framework.http.FormData;
+import com.server.framework.user.RoleEnum;
 
 public class SecurityUtil
 {
 	private static final Logger LOGGER = Logger.getLogger(SecurityUtil.class.getName());
+	private static final String BEARER_PREFIX = "Bearer ";
+
+	public static final List<String> SKIP_AUTHENTICATION_ENDPOINTS = Arrays.asList(
+		"/_app/health", "/api/v1/(admin/)?authenticate", "/login(\\.html)?",
+		"((/(resources|css|js|uploads)/.*)|/favicon.ico)", "/api/v1/jobs", "/payoutlogs",
+		"/api/v1/payout/httplogs", "/api/v1/admin/live/logs", "/.well-known/.*",
+		"(/dbtool(.(html|jsp))?|/sasstats|/api/v1/(sas|zoho)/.*)", "/csv", "((/api/v1)?/zoho/.*)", "(/zoho)",
+		"/hotswap", "/network", "/livelogs", "/freessl", "/snakegame", "/stats", "(/api/v1/patterns/.*|design_patterns-uri.html)"
+	);
+	public static final Function<String, Boolean> IS_SKIP_AUTHENTICATION_ENDPOINTS = requestURI ->
+		SKIP_AUTHENTICATION_ENDPOINTS.stream().anyMatch(requestURI::matches);
 
 	static final Set<String> VALID_ENDPOINTS = new HashSet<>();
 
@@ -57,6 +71,11 @@ public class SecurityUtil
 	public static HttpServletRequest getCurrentRequest()
 	{
 		return SecurityFilter.CURRENT_REQUEST_TL.get();
+	}
+
+	public static String getCurrentRequestURI()
+	{
+		return getCurrentRequest().getRequestURI();
 	}
 
 	public static boolean isRequestFromLoopBackAddress()
@@ -90,14 +109,15 @@ public class SecurityUtil
 		return getCurrentUser() != null;
 	}
 
-	public static boolean canSkipAuthentication(String requestURI)
+	public static boolean canSkipAuthentication()
 	{
-		return SecurityFilter.IS_SKIP_AUTHENTICATION_ENDPOINTS.apply(requestURI);
+		return IS_SKIP_AUTHENTICATION_ENDPOINTS.apply(getCurrentRequest().getRequestURI());
 	}
 
-	public static boolean isAdminCall(String requestURI)
+	public static boolean isAdminCall()
 	{
-		return requestURI != null && requestURI.startsWith("/api/v1/admin") || requestURI.startsWith("/admin");
+		String requestURI = getCurrentRequestURI();
+		return requestURI.startsWith("/api/v1/admin") || requestURI.startsWith("/admin") || (AppProperties.getProperty("environment").equals("zoho") && getCurrentRequestURI().startsWith("/livelogs"));
 	}
 
 	public static String getAuthToken()
@@ -124,6 +144,29 @@ public class SecurityUtil
 	public static String getSessionId()
 	{
 		return getCookieValue("iam_token");
+	}
+
+	public static boolean isRestApi()
+	{
+		return isRestApi(getCurrentRequest());
+	}
+
+	public static boolean isRestApi(HttpServletRequest request)
+	{
+		return request.getRequestURI().startsWith("/api/");
+	}
+
+	public static boolean isAdminUser()
+	{
+		return isLoggedIn() && getCurrentUser().getRoleType() == RoleEnum.ADMIN.getType();
+	}
+
+	public static String extractBearer()
+	{
+		String auth = getCurrentRequest().getHeader("Authorization");
+		if(StringUtils.isEmpty(auth))
+			return null;
+		return auth.startsWith(BEARER_PREFIX) ? auth.substring(BEARER_PREFIX.length()).trim() : null;
 	}
 
 	public static String getCookieValue(String cookieName)
@@ -197,7 +240,7 @@ public class SecurityUtil
 			return parsedPattern.matches(PathContainer.parsePath(path));
 		});
 
-		return isValid || resourceLoader.getResource("classpath:/static" + path).exists() || (path.matches("/uploads/.*") && resourceLoader.getResource("file:" + SecurityUtil.getUploadsPath() + "/" + path.split("/")[2]).exists());
+		return isValid || (isResourceFetchRequest() && resourceLoader.getResource("classpath:/static" + path).exists()) || (path.matches("/uploads/.*") && resourceLoader.getResource("file:" + getUploadsPath() + "/" + path.split("/")[2]).exists());
 	}
 
 	public static boolean isValidTomcatWebSocketEndPoint(String endPoint)
@@ -239,9 +282,29 @@ public class SecurityUtil
 		return false;
 	}
 
-	public static boolean isResourceUri(String endPoint)
+	public static boolean isHealthCheckRequest()
 	{
-		return endPoint.matches("(/(((resources|css|js|uploads)/.*)|favicon.ico))");
+		return StringUtils.equals(getCurrentRequest().getRequestURI(), "/_app/health");
+	}
+
+	public static boolean isResourceFetchRequest()
+	{
+		return isResourceFetchRequest(getCurrentRequest());
+	}
+
+	public static boolean isResourceFetchRequest(HttpServletRequest request)
+	{
+		return request.getRequestURI().matches("(/(((resources|css|js|uploads)/.*)|favicon.ico))|(\\.(html|css|js|png|jpeg|avif|mp3|mp4)$)");
+	}
+
+	public static boolean isLoginRequest()
+	{
+		return getCurrentRequestURI().equals("/login");
+	}
+
+	public static boolean isH2ConsoleRequest()
+	{
+		return AppProperties.getBoolean("spring.h2.console.enabled") && getCurrentRequest().getRequestURI().matches(AppProperties.getProperty("spring.h2.console.path") + "(/.*)?");
 	}
 
 	public static boolean setDisableHttpLog(boolean disableHttpLog)

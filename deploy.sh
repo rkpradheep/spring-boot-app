@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "############## Deployment started ##############\n"
+echo "############## Deployment started ##############"
 
 
 ZIP_FILE_PATH=$1
@@ -28,7 +28,7 @@ bash run.sh
 appHealth="false"
 attempt=0
 maxAttempt=3
-pollingInterval=5
+pollingInterval=10
 timeout=$((maxAttempt * pollingInterval))
 
 
@@ -38,7 +38,7 @@ echo "Max attempts: $maxAttempt, Polling interval: ${pollingInterval}s, Timeout:
 
 while [ "$appHealth" != "true" ] && [ $attempt -lt $maxAttempt ]; do
     attempt=$((attempt + 1))
-    echo "Health check attempt $attempt/$maxAttempt..."
+    echo "######## Health check attempt $attempt/$maxAttempt ######## "
 
     curl_output=$(curl -s -X GET http://localhost:80/_app/health 2>&1)
     curl_exit_code=$?
@@ -64,11 +64,11 @@ done
 
 
 
-if [ $attempt -eq $maxAttempt ] && [ $appHealth != "true" ]; then
+if [ $attempt -eq $maxAttempt ] && [ "$appHealth" != "true" ]; then
     echo "ERROR: Application failed to start within ${timeout} seconds (${maxAttempt} attempts)"
     echo "Please check the application logs for startup errors"
     exit 1
 fi
 
 
-echo "\n############## Deployment completed ##############"
+echo "############## Deployment completed ##############"

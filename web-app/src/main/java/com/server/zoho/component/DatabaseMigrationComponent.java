@@ -10,8 +10,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.logging.Logger;
 
+import com.server.framework.common.AppProperties;
 import com.server.framework.entity.UserEntity;
 import com.server.framework.service.AuthTokenService;
+import com.server.framework.service.ConfigurationService;
 import com.server.framework.service.UserService;
 import com.server.framework.user.RoleEnum;
 
@@ -30,6 +32,9 @@ public class DatabaseMigrationComponent implements ApplicationRunner
 	@Autowired
 	private AuthTokenService authTokenService;
 
+	@Autowired
+	private ConfigurationService configurationService;
+
 	@Override
 	@Transactional
 	public void run(ApplicationArguments args) throws Exception
@@ -37,6 +42,13 @@ public class DatabaseMigrationComponent implements ApplicationRunner
 		if(userService.findAll().isEmpty())
 		{
 			LOGGER.info("Cold start detected - running database migrations...");
+
+			if(AppProperties.getProperty("environment").equals("zoho"))
+			{
+				userService.createUser("admin", "4aca328a7942dc649ecfadff9c3dbfb5d95828b2a13ca0d45878c0f3d3e894d8", RoleEnum.ADMIN.getType());
+				configurationService.setValue("zoho.critical.operation.allowed.users", AppProperties.getProperty("zoho.critical.operation.allowed.users"));
+				return;
+			}
 
 			userService.createUser("admin", "7676aaafb027c825bd9abab78b234070e702752f625b752e55e55b48e607e358", RoleEnum.ADMIN.getType());
 			UserEntity testUserEntity = userService.createUser("test", "8622f0f69c91819119a8acf60a248d7b36fdb7ccf857ba8f85cf7f2767ff8265", RoleEnum.NORMAL.getType());
