@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Build Workflow</title>
+    <title>Build Tool</title>
     <style>
         * {
             margin: 0;
@@ -330,6 +330,11 @@
         }
 
         .product-status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .product-status-cancelled {
             background: #f8d7da;
             color: #721c24;
         }
@@ -855,7 +860,7 @@
 <body>
 <div class="container">
     <div class="header">
-        <p>Build Workflow</p>
+        <p>Build Tool</p>
     </div>
 
     <div class="content">
@@ -884,10 +889,10 @@
         <div class="section">
             <h2 class="section-title">
                 <span class="icon"></span>
-                Workflow Instances
+                Builds
             </h2>
             <div class="loading" id="workflowsLoading">
-                <div>Loading workflow instances...</div>
+                <div>Loading builds...</div>
             </div>
             <div class="workflow-instances" id="workflowInstances">
             </div>
@@ -901,7 +906,7 @@
 <div id="workflowDetailsModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Workflow Details</h2>
+            <h2>Build Details</h2>
             <span class="close" onclick="closeWorkflowModal()">&times;</span>
         </div>
         <div class="modal-body" id="modalBody">
@@ -920,13 +925,7 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         populateProductSelection();
-<!--        loadWorkflowStatistics();-->
         loadWorkflowInstances();
-
-        /* setInterval(() => {
-            loadWorkflowStatistics();
-            loadWorkflowInstances();
-        }, 30000); */
     });
 
     function populateProductSelection() {
@@ -1022,8 +1021,6 @@
         }
 
         try {
-            setButtonLoading('startWorkflowBtn', 'Starting Workflow...', true);
-
             const requestData = {
                 productNames: selectedProducts
             };
@@ -1055,8 +1052,6 @@
         } catch (error) {
             console.error('Error starting workflow:', error);
             showAlert('Error starting workflow. Please try again.', 'error');
-        } finally {
-            setButtonLoading('startWorkflowBtn', '🏭 Start Build Workflow', false);
         }
     }
 
@@ -1102,7 +1097,7 @@
         container.innerHTML = '';
 
         if (instances.length === 0) {
-            container.innerHTML = '<div style="text-align: center; color: #6c757d; padding: 40px;">No workflow instances found</div>';
+            container.innerHTML = '<div style="text-align: center; color: #6c757d; padding: 40px;">No builds found</div>';
             return;
         }
 
@@ -1126,6 +1121,8 @@
             </div>
             <div class="instance-details">
                 <div><strong>Workflow:</strong> ${instance.workflowName}</div>
+                ${instance.createdBy ? `<div><strong>Started By:</strong> ${instance.createdBy}</div>` : ''}
+                ${instance.lastModifiedBy ? `<div><strong>Last Modified By:</strong> ${instance.lastModifiedBy}</div>` : ''}
                 <div><strong>Current State:</strong> ${instance.currentState}</div>
                 <div><strong>Started:</strong> ${formatTimestamp(instance.startTime)}</div>
                 ${instance.endTime ? `<div><strong>Completed:</strong> ${formatTimestamp(instance.endTime)}</div>` : ''}
@@ -1136,13 +1133,13 @@
                 <div class="product-status-loading">Loading product status...</div>
             </div>
             <div class="instance-actions">
+                ${instance.status.toLowerCase() === 'running' ? `<button class="btn btn-danger" onclick="stopWorkflow('${instance.instanceId}')">Stop</button>` : ''}
                 ${canRetry ? `<button class="btn btn-danger" onclick="retryWorkflow('${instance.instanceId}')">Retry</button>` : ''}
             </div>
         `;
 
-        if (instance.status.toLowerCase() === 'running' || instance.status.toLowerCase() === 'completed') {
             loadProductStatus(instance.instanceId);
-        }
+
 
         return card;
     }
@@ -1152,7 +1149,7 @@
             case 'running': return 'status-running';
             case 'completed': return 'status-completed';
             case 'failed': return 'status-failed';
-            case 'suspended': return 'status-suspended';
+            case 'cancelled': return 'status-cancelled';
             default: return 'status-running';
         }
     }
@@ -1357,7 +1354,6 @@
 
         const productsHtml = products.map(product => {
             const statusClass = getProductStatusClass(product.status);
-            const statusIcon = getProductStatusIcon(product.status);
             const progressClass = getProductProgressClass(product.status, currentState);
 
             return `
@@ -1391,6 +1387,7 @@
     function getProductStatusClass(status) {
         switch (status?.toLowerCase()) {
             case 'pending': return 'product-status-pending';
+            case 'cancelled': return 'product-status-cancelled';
             case 'started': return 'product-status-started';
             case 'build_success': return 'product-status-success';
             case 'milestone_created': return 'product-status-milestone';
@@ -1399,20 +1396,6 @@
             case 'milestone_failed': return 'product-status-failed';
             case 'channel_failed': return 'product-status-failed';
             default: return 'product-status-unknown';
-        }
-    }
-
-    function getProductStatusIcon(status) {
-        switch (status?.toLowerCase()) {
-            case 'pending': return '⏳';
-            case 'started': return '🏗️';
-            case 'build_success': return '✅';
-            case 'milestone_created': return '🎯';
-            case 'channel_mapped': return '🎉';
-            case 'build_failed': return '❌';
-            case 'milestone_failed': return '❌';
-            case 'channel_failed': return '❌';
-            default: return '❓';
         }
     }
 
@@ -1430,36 +1413,30 @@
         }
     }
 
-    function getProductProgressBar(productStatus, currentState) {
-        const steps = ['Build', 'Milestone', 'Channel'];
-        let currentStep = 0;
 
-        switch (productStatus?.toLowerCase()) {
-            case 'started': currentStep = 0; break;
-            case 'build_success': currentStep = 1; break;
-            case 'milestone_created': currentStep = 2; break;
-            case 'channel_mapped': currentStep = 3; break;
-            default: currentStep = 0;
+    async function stopWorkflow(instanceId) {
+        if (!confirm('Are you sure you want to stop this workflow?')) {
+            return;
         }
 
-        return `
-            <div class="progress-steps">
-                ${steps.map((step, index) => {
-                    let stepClass = 'step';
-                    if (index < currentStep) stepClass += ' completed';
-                    else if (index === currentStep) stepClass += ' current';
+        try {
+            const response = await fetch(`${apiBase}/build/stop/${instanceId}`, {
+                method: 'POST'
+            });
 
-                    return `<div class="${stepClass}">${step}</div>`;
-                }).join('')}
-            </div>
-        `;
-    }
+            const data = await response.json();
 
-    async function refreshProductStatus(instanceId) {
-        const container = document.getElementById(`productStatus-${instanceId}`);
-        if (container) {
-            container.innerHTML = '<div class="product-status-loading">Refreshing...</div>';
-            await loadProductStatus(instanceId);
+            if (data.success) {
+                showAlert('Workflow stop initiated successfully', 'success');
+                loadWorkflowInstances();
+                loadWorkflowStatistics();
+            } else {
+                showAlert(`Failed to stop workflow: ${data.message}`, 'error');
+            }
+
+        } catch (error) {
+            console.error('Error stopping workflow:', error);
+            showAlert('Error stopping workflow', 'error');
         }
     }
 
@@ -1469,7 +1446,6 @@
         }
 
         try {
-            setButtonLoading(`retryBtn-${instanceId}`, 'Retrying...', true);
 
             const response = await fetch(`${apiBase}/instances/${instanceId}/retry`, {
                 method: 'POST'
@@ -1488,40 +1464,7 @@
         } catch (error) {
             console.error('Error retrying workflow:', error);
             showAlert('Error retrying workflow', 'error');
-        } finally {
-            setButtonLoading(`retryBtn-${instanceId}`, '🔄 Retry', false);
         }
-    }
-
-    async function deleteWorkflow(instanceId) {
-        if (!confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`${apiBase}/instances/${instanceId}`, {
-                method: 'DELETE'
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                showAlert('Workflow deleted successfully', 'success');
-                loadWorkflowInstances();
-                loadWorkflowStatistics();
-            } else {
-                showAlert(`Failed to delete workflow: ${data.message}`, 'error');
-            }
-
-        } catch (error) {
-            console.error('Error deleting workflow:', error);
-            showAlert('Error deleting workflow', 'error');
-        }
-    }
-
-    function refreshWorkflows() {
-        loadWorkflowStatistics();
-        loadWorkflowInstances();
     }
 
     async function loadFailedWorkflows() {
@@ -1567,14 +1510,13 @@
 
         card.innerHTML = `
             <div class="instance-header">
-                <div class="instance-id">Workflow #${workflow.instanceId}</div>
+                <div class="instance-id">Build #${workflow.instanceId}</div>
                 <div class="status-badge ${statusClass}">${statusText}</div>
             </div>
             <div class="instance-details">
                 <div><strong>Failed At:</strong> ${formatTimestamp(workflow.endTime)}</div>
                 <div><strong>Current State:</strong> ${workflow.currentState}</div>
-                <div><strong>Workflow Status:</strong> ${workflow.status}</div>
-                <div><strong>Build Monitor ID:</strong> ${workflow.buildMonitorId || 'N/A'}</div>
+                <div><strong>Status:</strong> ${workflow.status}</div>
                 <div><strong>Error:</strong> <span style="color: #dc3545; font-size: 0.9rem;">${workflow.errorMessage || 'Unknown error'}</span></div>
             </div>
             <div class="instance-actions">
@@ -1582,7 +1524,7 @@
                     👁️ View Details
                 </button>
                 <button class="btn btn-success" onclick="retryFailedWorkflow('${workflow.instanceId}')">
-                    🔄 Retry Workflow
+                    🔄 Retry
                 </button>
             </div>
         `;
@@ -1592,7 +1534,7 @@
 
     async function retryFailedWorkflow(workflowId) {
         try {
-            showAlert(`Retrying workflow #${workflowId}...`, 'info');
+            showAlert(`Retrying Build #${workflowId}...`, 'info');
 
             const response = await fetch(`${apiBase}/retry/${workflowId}`, {
                 method: 'POST',
@@ -1610,11 +1552,11 @@
                 //     loadWorkflowStatistics();
                 // }, 2000);
             } else {
-                showAlert(`Error retrying workflow: ${data.message}`, 'error');
+                showAlert(`Error retrying build: ${data.message}`, 'error');
             }
         } catch (error) {
-            console.error('Error retrying workflow:', error);
-            showAlert('Failed to retry workflow', 'error');
+            console.error('Error retrying build:', error);
+            showAlert('Failed to retry build', 'error');
         }
     }
 

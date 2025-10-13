@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import javax.sql.DataSource;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.logging.Logger;
 
@@ -37,7 +38,7 @@ public class DatabaseService
 	public Connection getConnection(String jdbcUrl, String user, String password) throws SQLException
 	{
 
-		Connection connection = java.sql.DriverManager.getConnection(jdbcUrl, user, password);
+		Connection connection = DriverManager.getConnection(jdbcUrl, user, password);
 		connection.setAutoCommit(false);
 		return connection;
 	}

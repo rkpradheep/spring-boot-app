@@ -1,6 +1,7 @@
 package com.server.framework.workflow.model;
 
-public enum WorkflowState {
+public enum WorkflowStatus
+{
     RUNNING,    // Workflow is currently executing
     COMPLETED,  // Workflow completed successfully
     FAILED,     // Workflow failed and can be retried

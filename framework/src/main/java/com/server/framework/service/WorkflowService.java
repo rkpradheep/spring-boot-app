@@ -6,7 +6,7 @@ import com.server.framework.repository.WorkflowEventRepository;
 import com.server.framework.repository.WorkflowInstanceRepository;
 import com.server.framework.workflow.model.WorkflowEvent;
 import com.server.framework.workflow.model.WorkflowInstance;
-import com.server.framework.workflow.model.WorkflowState;
+import com.server.framework.workflow.model.WorkflowStatus;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -95,7 +95,7 @@ public class WorkflowService
 		}
 	}
 
-	public List<WorkflowInstance> getInstancesByStatus(WorkflowState status)
+	public List<WorkflowInstance> getInstancesByStatus(WorkflowStatus status)
 	{
 		try
 		{
@@ -215,6 +215,13 @@ public class WorkflowService
 		entity.setStartTime(instance.getStartTime());
 		entity.setEndTime(instance.getEndTime());
 		entity.setErrorMessage(instance.getErrorMessage());
+		entity.setCreatedBy(instance.getCreatedBy());
+		entity.setLastModifiedBy(instance.getLastModifiedBy());
+	}
+
+	public List<WorkflowInstanceEntity> findRunningInstances()
+	{
+		return workflowInstanceRepository.findRunningInstances();
 	}
 
 	private WorkflowInstanceEntity convertToEntity(WorkflowInstance instance)
@@ -223,7 +230,9 @@ public class WorkflowService
 			instance.getReferenceID(),
 			instance.getWorkflowName(),
 			instance.getCurrentState(),
-			instance.getStatus().name()
+			instance.getStatus().name(),
+			instance.getCreatedBy(),
+			instance.getLastModifiedBy()
 		);
 
 		entity.setContextFromObject(instance.getContext());
@@ -243,13 +252,15 @@ public class WorkflowService
 		instance.setReferenceID(entity.getReferenceID());
 		instance.setWorkflowName(entity.getWorkflowName());
 		instance.setCurrentState(entity.getCurrentState());
-		instance.setStatus(WorkflowState.valueOf(entity.getStatus()));
+		instance.setStatus(WorkflowStatus.valueOf(entity.getStatus()));
 		instance.setContext(entity.getContextAsObject());
 		instance.setVariables(entity.getVariablesAsMap());
 		instance.setStartTime(entity.getStartTime());
 		instance.setEndTime(entity.getEndTime());
 		instance.setLastUpdateTime(entity.getLastUpdateTime());
 		instance.setErrorMessage(entity.getErrorMessage());
+		instance.setCreatedBy(entity.getCreatedBy());
+		instance.setLastModifiedBy(entity.getLastModifiedBy());
 
 		List<WorkflowEvent> events = getEventsForInstance(entity.getReferenceID());
 		instance.setEventHistory(events);
@@ -265,6 +276,7 @@ public class WorkflowService
 		event.setTimestamp(entity.getTimestamp());
 		return event;
 	}
+
 
 	public static class WorkflowStatistics
 	{

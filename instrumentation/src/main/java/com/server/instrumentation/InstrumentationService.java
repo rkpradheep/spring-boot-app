@@ -27,7 +27,7 @@ public class InstrumentationService implements ClassFileTransformer
 	public static void premain(String agentArgs, Instrumentation inst)
 	{
 		LOGGER.info("[Agent] In premain method");
-		inst.addTransformer(new InstrumentationService("com.server.framework.security.SecurityFilter", "doFilter"));
+		inst.addTransformer(new InstrumentationService("com.server.framework.security.SecurityFilter", "_doFilter"));
 	}
 
 	@Override

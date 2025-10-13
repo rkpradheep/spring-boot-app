@@ -33,6 +33,6 @@ public interface WorkflowInstanceRepository extends JpaRepository<WorkflowInstan
 
     long countByWorkflowName(String workflowName);
 
-    @Query("SELECT w FROM WorkflowInstance w WHERE w.status = 'RUNNING' AND w.lastUpdateTime < :thresholdTime")
-    List<WorkflowInstanceEntity> findStaleRunningInstances(@Param("thresholdTime") Long thresholdTime);
+    @Query("SELECT w FROM WorkflowInstance w WHERE w.status = 'RUNNING'")
+    List<WorkflowInstanceEntity> findRunningInstances();
 }

@@ -11,7 +11,7 @@ import com.server.framework.workflow.definition.WorkflowTransition;
 import com.server.framework.workflow.executor.WorkflowExecutor;
 import com.server.framework.workflow.model.WorkflowEvent;
 import com.server.framework.workflow.model.WorkflowInstance;
-import com.server.framework.workflow.model.WorkflowState;
+import com.server.framework.workflow.model.WorkflowStatus;
 
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +34,7 @@ import java.util.logging.Logger;
 
 	@Autowired private JobService jobService;
 
-	public void scheduleWorkflow(String workflowName, String ReferenceId, Object context) throws Exception
+	public void scheduleWorkflow(String workflowName, String ReferenceId, Object context, String createdBy) throws Exception
 	{
 		LOGGER.info("Starting workflow: " + workflowName + " with instance ID: " + ReferenceId);
 
@@ -49,9 +49,11 @@ import java.util.logging.Logger;
 		instance.setWorkflowName(workflowName);
 		instance.setCurrentState(definition.getInitialState());
 		instance.setContext(context);
-		instance.setStatus(WorkflowState.RUNNING);
+		instance.setStatus(WorkflowStatus.RUNNING);
 		instance.setStartTime(System.currentTimeMillis());
 		instance.setLastUpdateTime(System.currentTimeMillis());
+		instance.setCreatedBy(createdBy);
+		instance.setLastModifiedBy(createdBy);
 
 		workflowService.saveInstance(instance);
 
@@ -77,7 +79,7 @@ import java.util.logging.Logger;
 
 		if(validTransitions.isEmpty())
 		{
-			instance.setStatus(WorkflowState.FAILED);
+			instance.setStatus(WorkflowStatus.FAILED);
 			workflowService.saveInstance(instance);
 			LOGGER.warning("No valid transitions found for state: " + instance.getCurrentState() + " and event: " + event.getEventType());
 			return;
@@ -100,13 +102,13 @@ import java.util.logging.Logger;
 
 		WorkflowInstance instance = instanceOpt.get();
 
-		if(instance.getStatus() != WorkflowState.FAILED)
+		if(instance.getStatus() != WorkflowStatus.FAILED)
 		{
 			LOGGER.warning("Cannot retry workflow instance that is not in FAILED state: " + instanceId);
 			return;
 		}
 
-		instance.setStatus(WorkflowState.RUNNING);
+		instance.setStatus(WorkflowStatus.RUNNING);
 		instance.setLastUpdateTime(System.currentTimeMillis());
 		instance.setErrorMessage(null);
 
@@ -119,13 +121,19 @@ import java.util.logging.Logger;
 	{
 		try
 		{
+			if(instance.getStatus() == WorkflowStatus.SUSPENDED || instance.getStatus() == WorkflowStatus.CANCELLED || instance.getStatus() == WorkflowStatus.COMPLETED)
+			{
+				LOGGER.info("Skipping the process. Workflow instance is in terminal state: " + instance.getStatus());
+				return;
+			}
+
 			WorkflowDefinition definition = findWorkflowDefinition(instance.getWorkflowName());
 			WorkflowStep currentStep = definition.getStep(instance.getCurrentState());
 
 			if(currentStep == null)
 			{
 				LOGGER.warning("No step definition found for state: " + instance.getCurrentState());
-				instance.setStatus(WorkflowState.FAILED);
+				instance.setStatus(WorkflowStatus.FAILED);
 				instance.setErrorMessage("No step definition found for state: " + instance.getCurrentState());
 				workflowService.saveInstance(instance);
 				return;
@@ -147,7 +155,7 @@ import java.util.logging.Logger;
 			LOGGER.severe("Error executing step for instance " + instance.getReferenceID() + ": " + e.getMessage());
 			LOGGER.log(java.util.logging.Level.SEVERE, "Exception in executeStep", e);
 
-			instance.setStatus(WorkflowState.FAILED);
+			instance.setStatus(WorkflowStatus.FAILED);
 			instance.setErrorMessage("Step execution failed: " + e.getMessage());
 			instance.setLastUpdateTime(System.currentTimeMillis());
 			workflowService.saveInstance(instance);
@@ -163,14 +171,12 @@ import java.util.logging.Logger;
 			instance.setCurrentState(transition.getToState());
 			instance.setLastUpdateTime(System.currentTimeMillis());
 
-			instance.addEventToHistory(event);
-
 			workflowService.saveEvent(event, instance.getReferenceID());
 
 			if(transition.isTerminal())
 			{
-				WorkflowState workflowState = event.getEventType().equals(WorkFlowCommonEventType.WORKFLOW_FAILED.getValue()) ? WorkflowState.FAILED : WorkflowState.COMPLETED;
-				instance.setStatus(workflowState);
+				WorkflowStatus workflowStatus = event.getEventType().equals(WorkFlowCommonEventType.WORKFLOW_FAILED.getValue()) ? WorkflowStatus.FAILED : WorkflowStatus.COMPLETED;
+				instance.setStatus(workflowStatus);
 				instance.setEndTime(System.currentTimeMillis());
 			}
 
@@ -187,7 +193,7 @@ import java.util.logging.Logger;
 			LOGGER.severe("Error executing transition for instance " + instance.getReferenceID() + ": " + e.getMessage());
 			LOGGER.log(java.util.logging.Level.SEVERE, "Exception in executeTransition", e);
 
-			instance.setStatus(WorkflowState.FAILED);
+			instance.setStatus(WorkflowStatus.FAILED);
 			instance.setErrorMessage("Transition execution failed: " + e.getMessage());
 			instance.setLastUpdateTime(System.currentTimeMillis());
 			workflowService.saveInstance(instance);
@@ -209,7 +215,7 @@ import java.util.logging.Logger;
 		return workflowService.getAllInstances();
 	}
 
-	public List<WorkflowInstance> getInstancesByStatus(WorkflowState status)
+	public List<WorkflowInstance> getInstancesByStatus(WorkflowStatus status)
 	{
 		return workflowService.getInstancesByStatus(status);
 	}

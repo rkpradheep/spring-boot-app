@@ -8,12 +8,17 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import com.server.framework.common.AppProperties;
+import com.server.framework.common.CommonService;
+import com.server.framework.entity.LockEntity;
 import com.server.framework.entity.UserEntity;
+import com.server.framework.repository.LockRepository;
 import com.server.framework.service.AuthTokenService;
 import com.server.framework.service.ConfigurationService;
+import com.server.framework.service.LockService;
 import com.server.framework.service.UserService;
 import com.server.framework.user.RoleEnum;
 
@@ -35,6 +40,9 @@ public class DatabaseMigrationComponent implements ApplicationRunner
 	@Autowired
 	private ConfigurationService configurationService;
 
+	@Autowired
+	private LockRepository lockRepository;
+
 	@Override
 	@Transactional
 	public void run(ApplicationArguments args) throws Exception
@@ -42,6 +50,8 @@ public class DatabaseMigrationComponent implements ApplicationRunner
 		if(userService.findAll().isEmpty())
 		{
 			LOGGER.info("Cold start detected - running database migrations...");
+
+			lockRepository.save(new LockEntity(LockService.COMMON_LOCK_NAME));
 
 			if(AppProperties.getProperty("environment").equals("zoho"))
 			{
@@ -54,6 +64,10 @@ public class DatabaseMigrationComponent implements ApplicationRunner
 			UserEntity testUserEntity = userService.createUser("test", "8622f0f69c91819119a8acf60a248d7b36fdb7ccf857ba8f85cf7f2767ff8265", RoleEnum.NORMAL.getType());
 
 			authTokenService.createToken(testUserEntity, "8622f0f69c91819119a8acf60a248d7b36fdb7ccf857ba8f85cf7f2767ff8265");
+		}
+		if(Objects.isNull(lockRepository.findByName(LockService.COMMON_LOCK_NAME)))
+		{
+			lockRepository.save(new LockEntity(LockService.COMMON_LOCK_NAME));
 		}
 	}
 

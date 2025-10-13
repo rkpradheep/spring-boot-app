@@ -17,11 +17,12 @@ export APP_SERVER_HOME=$(pwd)
 
 . ./set_variables.sh
 
-#Default
+
+DEFAULT_CUSTOM_DIR="$(pwd)/custom"
 if [ -n "$1" ]; then
   CUSTOM_DIR="$(pwd)/$1"
 else
-  CUSTOM_DIR="$(pwd)/custom"
+  CUSTOM_DIR=${DEFAULT_CUSTOM_DIR}
 fi
 
 export CUSTOM_DIR=$CUSTOM_DIR
@@ -116,5 +117,6 @@ rm -f "build/run.sh"
 
 echo "${GREEN}############## Build completed ##############${NC}\n"
 
-sh deploy.sh $(pwd)/build
-
+if [ $CUSTOM_DIR == $DEFAULT_CUSTOM_DIR ]; then
+  sh deploy.sh $(pwd)/build
+fi

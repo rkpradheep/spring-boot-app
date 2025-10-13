@@ -1,11 +1,14 @@
 package com.server.zoho.controller;
 
+import com.server.framework.entity.WorkflowInstanceEntity;
 import com.server.framework.error.AppException;
+import com.server.framework.service.LockService;
 import com.server.framework.workflow.WorkflowEngine;
+import com.server.framework.workflow.definition.WorkFlowCommonEventType;
 import com.server.zoho.ZohoService;
 import com.server.zoho.workflow.model.BuildEventType;
 import com.server.framework.workflow.model.WorkflowInstance;
-import com.server.framework.workflow.model.WorkflowState;
+import com.server.framework.workflow.model.WorkflowStatus;
 import com.server.framework.workflow.model.WorkflowEvent;
 import com.server.framework.service.WorkflowService;
 import com.server.zoho.IntegService;
@@ -14,9 +17,12 @@ import com.server.zoho.entity.BuildProductEntity;
 import com.server.zoho.service.BuildMonitorService;
 import com.server.zoho.service.BuildProductService;
 import com.server.framework.builder.ApiResponseBuilder;
+import com.server.zoho.workflow.model.BuildProductStatus;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -44,12 +50,27 @@ public class BuildWorkflowController
 	@Autowired
 	BuildProductService buildProductService;
 
+	@Autowired LockService lockService;
+
+	@Autowired WorkflowService workflowService;
+
+	@Transactional
 	@PostMapping("/build/start")
 	public ResponseEntity<Map<String, Object>> startBuildWorkflow(@RequestBody BuildWorkflowRequest request)
 	{
 		try
 		{
 			ZohoService.doAuthentication();
+			lockService.acquireCommonLock();
+
+			List<WorkflowInstanceEntity> workflowInstances = workflowService.findRunningInstances();
+			if(!workflowInstances.isEmpty())
+			{
+				return ResponseEntity.badRequest().body(ApiResponseBuilder.error(
+					"A build workflow is already running. Please wait for it to complete before starting a new one.",
+					HttpStatus.BAD_REQUEST.value()
+				));
+			}
 			IntegService.BuildResponse response = integService.scheduleBuilds(request.getProductNames());
 
 			Map<String, Object> data = new HashMap<>();
@@ -66,6 +87,72 @@ public class BuildWorkflowController
 		catch(Exception e)
 		{
 			return ResponseEntity.badRequest().body(ApiResponseBuilder.error("Error starting build workflow: " + e.getMessage(), 400));
+		}
+	}
+
+	@Transactional
+	@PostMapping("/build/stop/{workflowId}")
+	public ResponseEntity<Map<String, Object>> stopBuildWorkflow(@PathVariable("workflowId") String workflowId)
+	{
+		try
+		{
+			ZohoService.doAuthentication();
+			lockService.acquireCommonLock();
+
+			Optional<WorkflowInstance> instanceOpt = workflowEngine.getInstance(workflowId);
+
+			if(instanceOpt.isEmpty())
+			{
+				return ResponseEntity.badRequest().body(ApiResponseBuilder.error(
+					"Workflow instance not found",
+					404
+				));
+			}
+			WorkflowInstance instance = instanceOpt.get();
+
+			if(instance.getStatus() != WorkflowStatus.RUNNING)
+			{
+				return ResponseEntity.badRequest().body(ApiResponseBuilder.error(
+					"Cannot stop a workflow that is not running. Current status: " + instance.getStatus(),
+					400
+				));
+			}
+
+			instance.setStatus(WorkflowStatus.CANCELLED);
+			instance.setLastModifiedBy(ZohoService.getCurrentUserEmail());
+			instance.setCurrentState(WorkFlowCommonEventType.WORKFLOW_CANCELLED.getValue());
+			workflowService.saveInstance(instance);
+
+			workflowService.saveEvent(new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_CANCELLED), instance.getReferenceID());
+
+			Optional<BuildMonitorEntity> buildMonitorEntity = buildMonitorService.getById(Long.parseLong(instance.getReferenceID()));
+			if(buildMonitorEntity.isPresent())
+			{
+				BuildMonitorEntity monitor = buildMonitorEntity.get();
+				monitor.setStatus("CANCELLED");
+				monitor.updateLastUpdateTime();
+				buildMonitorService.save(monitor);
+
+				List<BuildProductEntity> buildProducts = buildProductService.getProductsForMonitor(monitor.getId());
+				for(BuildProductEntity buildProduct : buildProducts)
+				{
+					if(buildProduct.getStatus().equals(BuildProductStatus.PENDING.getName()))
+					{
+						buildProduct.setErrorMessage("Build cancelled by user " + ZohoService.getCurrentUserEmail());
+						buildProduct.markAsCancelled();
+						buildProductService.save(buildProduct);
+					}
+				}
+			}
+
+			return ResponseEntity.ok(ApiResponseBuilder.create().message(
+				"Workflow cancellation initiated successfully"
+			).build());
+
+		}
+		catch(Exception e)
+		{
+			throw new AppException("Error stopping workflow: ");
 		}
 	}
 
@@ -178,7 +265,7 @@ public class BuildWorkflowController
 
 			WorkflowInstance instance = instanceOpt.get();
 
-			if(instance.getStatus() == WorkflowState.RUNNING)
+			if(instance.getStatus() == WorkflowStatus.RUNNING)
 			{
 				return ResponseEntity.badRequest().body(ApiResponseBuilder.error(
 					"Cannot delete a running workflow. Please wait for it to complete or fail.",
@@ -302,7 +389,7 @@ public class BuildWorkflowController
 
 			WorkflowInstance instance = instanceOpt.get();
 
-			if(instance.getStatus() != WorkflowState.FAILED && !(instance.getStatus() == WorkflowState.COMPLETED && "WORKFLOW_FAILED".equals(instance.getCurrentState())))
+			if(instance.getStatus() != WorkflowStatus.FAILED && !(instance.getStatus() == WorkflowStatus.COMPLETED && "WORKFLOW_FAILED".equals(instance.getCurrentState())))
 			{
 				return ResponseEntity.badRequest().body(ApiResponseBuilder.error(
 					"Workflow is not in FAILED state or COMPLETED with WORKFLOW_FAILED. Current status: " +
@@ -310,6 +397,11 @@ public class BuildWorkflowController
 					400
 				));
 			}
+
+			instance.setStatus(WorkflowStatus.RUNNING);
+			instance.setLastModifiedBy(ZohoService.getCurrentUserEmail());
+
+			workflowService.saveInstance(instance);
 
 			WorkflowEvent retryEvent = new WorkflowEvent(BuildEventType.RETRY_REQUESTED);
 
@@ -349,6 +441,8 @@ public class BuildWorkflowController
 		response.put("canRetry", instance.canRetry());
 		response.put("variables", instance.getVariables());
 		response.put("eventHistory", instance.getEventHistory());
+		response.put("createdBy", instance.getCreatedBy());
+		response.put("lastModifiedBy", instance.getLastModifiedBy());
 
 		return response;
 	}

@@ -2,6 +2,9 @@ package com.server.zoho;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang3.StringUtils;
@@ -20,6 +23,7 @@ import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -31,7 +35,11 @@ import java.util.stream.Collectors;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSocketFactory;
 
+import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.AppProperties;
 import com.server.framework.common.CommonService;
 import com.server.framework.error.AppException;
@@ -65,6 +73,83 @@ public class ZohoController
 		{
 			Map<String, Object> response = ApiResponseBuilder.error("Failed to generate ISC data: " + e.getMessage(), 400);
 			return ResponseEntity.badRequest().body(response);
+		}
+	}
+
+	@PostMapping("/zoho/mark-as-test-org")
+	public ResponseEntity<Map<String, Object>> markAsTestOrg(@RequestParam(name = "service") String service, @RequestParam(name = "dc") String dc, @RequestParam(name = "zsid") String zsid)
+	{
+		return markAsPaidOrTestOrg(service, dc, zsid, false);
+	}
+
+	@PostMapping("/zoho/mark-as-paid-org")
+	public ResponseEntity<Map<String, Object>> markAsPaidOrg(@RequestParam(name = "service") String service, @RequestParam(name = "dc") String dc, @RequestParam(name = "zsid") String zsid)
+	{
+		return markAsPaidOrTestOrg(service, dc, zsid, true);
+	}
+
+	public ResponseEntity<Map<String, Object>> markAsPaidOrTestOrg(String service, String dc, String zsid, boolean isPaidOrgMarking)
+	{
+		try
+		{
+			if(StringUtils.isEmpty(zsid))
+			{
+				throw new AppException("ZSID is required");
+			}
+
+			String queryKey = isPaidOrgMarking ? "markaspaidorg" : "markastestorg";
+			String query = AppProperties.getProperty("sas." + service + "." + queryKey + ".query").replace("{ZSID}", zsid);
+			Map<String, Object> serviceCredentials = (Map<String, Object>) AppContextHolder.getBean(SASController.class).getServicesCredentials(null).get(service + "-" + dc);
+			JSONObject credentials = new JSONObject()
+				.put("service", service)
+				.put("dc", dc)
+				.put("zsid", zsid)
+				.put("server", serviceCredentials.get("server"))
+				.put("ip", serviceCredentials.get("ip"))
+				.put("user", serviceCredentials.get("user"))
+				.put("password", serviceCredentials.get("password"))
+				.put("query", query);
+
+			AppContextHolder.getBean(SASController.class).handleSasRequest(credentials);
+
+			if(service.equals("books"))
+			{
+				String key = isPaidOrgMarking ? "AST_".concat(zsid).concat("_1") : "OST_".concat(zsid);
+				deleteKeyFromRedis(service, dc, key);
+			}
+
+			String successMessage = "Marked as test org successfully";
+			successMessage = isPaidOrgMarking ? "Marked as paid org successfully" : successMessage;
+			Map<String, Object> response = ApiResponseBuilder.create().message(successMessage).build();
+			return ResponseEntity.ok(response);
+		}
+		catch(Exception e)
+		{
+			String errorMessage = isPaidOrgMarking ? "Failed to mark as paid org: " : "Failed to mark as test org: ";
+			Map<String, Object> response = ApiResponseBuilder.error(errorMessage + e.getMessage(), 400);
+			return ResponseEntity.badRequest().body(response);
+		}
+	}
+
+	private void deleteKeyFromRedis(String service, String dc, String key)
+	{
+		JedisPoolConfig jedisConfig = new JedisPoolConfig();
+		jedisConfig.setMaxTotal(1);
+		jedisConfig.setMaxWait(Duration.ofSeconds(5));
+		String concat = "redis.".concat(service).concat("-").concat(dc);
+		String ip = AppProperties.getProperty(concat.concat(".ip"));
+		String user = AppProperties.getProperty(concat.concat(".user"));
+		String password = AppProperties.getProperty(concat.concat(".password"));
+		try(JedisPool jedisPool = new JedisPool(jedisConfig, ip, 6379, 5000, 5000, user, password, 14, null, false, null, null, null))
+		{
+			try(Jedis jedis = jedisPool.getResource())
+			{
+				Map val = jedis.hgetAll(key);
+				if(Objects.nonNull(val) && !val.isEmpty())
+				{
+					jedis.del(key);
+				}
+			}
 		}
 	}
 

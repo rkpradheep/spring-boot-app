@@ -74,45 +74,55 @@ public class SecurityFilter implements Filter
 
 		try
 		{
-			HttpServletResponse httpResponse = (HttpServletResponse) response;
-
-			initializeThreadLocals(request);
-			setResponseHeaders(httpResponse);
-
-			if(SecurityUtil.isHealthCheckRequest())
-			{
-				chain.doFilter(request, response);
-				return;
-			}
-
-			logRequest();
-
-			if(!validateEndpoint(httpResponse))
-				return;
-
-			if(!handleRateLimit(httpResponse))
-				return;
-
-			UserEntity userEntity = authenticateUser();
-			CURRENT_USER_TL.set(userEntity);
-
-			setThreadName();
-
-			if(handleEnvironmentRedirects(httpResponse))
-				return;
-
-			if(shouldSkipAuthentication())
-			{
-				handleSkipAuthentication(httpResponse, chain);
-				return;
-			}
-
-			handleAuthentication(httpResponse, chain);
+			//Instrumentation code start
+			_doFilter(request, response, chain);
+			//Instrumentation code end
 		}
 		finally
 		{
 			cleanupThreadLocals(oldThreadName);
 		}
+	}
+
+	// Extracted method to allow easier instrumentation
+	private void _doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException
+	{
+		HttpServletResponse httpResponse = (HttpServletResponse) response;
+
+		initializeThreadLocals(request);
+		setResponseHeaders(httpResponse);
+
+		setThreadName();
+
+		if(SecurityUtil.isHealthCheckRequest())
+		{
+			chain.doFilter(request, response);
+			return;
+		}
+
+		logRequest();
+
+		if(!validateEndpoint(httpResponse))
+			return;
+
+		if(!handleRateLimit(httpResponse))
+			return;
+
+		UserEntity userEntity = authenticateUser();
+		CURRENT_USER_TL.set(userEntity);
+
+		setThreadName();
+
+		if(handleEnvironmentRedirects(httpResponse))
+			return;
+
+		if(shouldSkipAuthentication())
+		{
+			handleSkipAuthentication(httpResponse, chain);
+			return;
+		}
+
+		handleAuthentication(httpResponse, chain);
 	}
 
 	private void initializeThreadLocals(ServletRequest request)
@@ -193,13 +203,16 @@ public class SecurityFilter implements Filter
 
 	private void setThreadName()
 	{
+		String userDetails = "";
 		if(!SecurityUtil.isResourceFetchRequest() && SecurityUtil.isLoggedIn())
 		{
 			String currentUserName = SecurityUtil.getCurrentUser().getName();
 			String currentUserId = SecurityUtil.getCurrentUser().getId().toString();
-			String newThreadName = Thread.currentThread().getName() + "/" + currentUserName + "-" + currentUserId;
-			Thread.currentThread().setName(newThreadName);
+			userDetails = "/" + currentUserName + "-" + currentUserId;
 		}
+
+		String newThreadName = Thread.currentThread().getName() + SecurityUtil.getCurrentRequestURI() + userDetails;
+		Thread.currentThread().setName(newThreadName);
 	}
 
 	private boolean shouldSkipAuthentication()

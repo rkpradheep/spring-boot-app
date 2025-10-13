@@ -158,6 +158,17 @@
         <button onclick="generateIsc()">GENERATE ISC</button>
         <p id="isc" style="color:red;cursor:pointer" onclick="copyToClipboard(document.getElementById('isc').innerHTML)"></p>
         <br>
+        <select id="test_org_products">
+            <option value="payout-local">PAYOUT LOCAL</option>
+            <option value="books-local">BOOKS LOCAL</option>
+            <option value="payout-csez">PAYOUT CSEZ</option>
+        </select>&nbsp;&nbsp;ZSID &nbsp;&nbsp;<input type="text" id="test_org_zsid"/> <button onclick="markAsTestOrPaidOrg(false)">Mark As Test Org</button>
+        <br>
+        <select id="paid_org_products">
+            <option value="books-local">BOOKS LOCAL</option>
+        </select>&nbsp;&nbsp;ZSID &nbsp;&nbsp;<input type="text" id="paid_org_zsid"/> <button onclick="markAsTestOrPaidOrg(true)">Mark As Paid Org</button>
+        <br>
+        <br>
         <br>
          Product &nbsp;
         <select id="ear_product">
@@ -1114,6 +1125,36 @@ function handleZohoAuth(authURI)
                             }
 
                             document.getElementById("isc").innerText= res.data || JSON.parse(data).data
+                        })
+                        .catch((error) => {
+                            hideElement("loading");
+                            console.log(error);
+                            alert("Something went wrong. Please try again later.");
+                        });
+
+        }
+
+        function markAsTestOrPaidOrg(isPaidOrgMarking)
+        {
+
+                    unHideElement("loading");
+                    var endpoint = "/api/v1/zoho/mark-as-test-org" + "?service=" + getElementValue("test_org_products").split("-")[0] +"&dc=" + getElementValue("test_org_products").split("-")[1] + "&zsid=" + getElementValue("test_org_zsid")
+                    endpoint = isPaidOrgMarking ?  "/api/v1/zoho/mark-as-paid-org" + "?service=" + getElementValue("paid_org_products").split("-")[0] +"&dc=" + getElementValue("paid_org_products").split("-")[1] + "&zsid=" + getElementValue("paid_org_zsid") : endpoint;
+                    var res;
+                    fetch(endpoint, {
+                      method: "POST"
+                        })
+                        .then((response) => {
+                            hideElement("loading");
+                            return response.text();
+                        })
+                        .then((data) => {
+                            res = JSON.parse(data)
+                            if(handleRedirection(res))
+                            {
+                                return;
+                            }
+                           alert(res.message)
                         })
                         .catch((error) => {
                             hideElement("loading");

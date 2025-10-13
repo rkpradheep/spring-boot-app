@@ -14,7 +14,7 @@ import com.server.framework.service.JobService;
 import com.server.framework.service.WorkflowService;
 import com.server.framework.workflow.WorkflowEngine;
 import com.server.framework.workflow.model.WorkflowInstance;
-import com.server.framework.workflow.model.WorkflowState;
+import com.server.framework.workflow.model.WorkflowStatus;
 
 @Component
 @Scope("prototype")
@@ -54,7 +54,7 @@ public class WorkFlowTask implements Task
 			return;
 		}
 
-		if(workflowInstance.get().getStatus() == WorkflowState.COMPLETED || workflowInstance.get().getStatus() == WorkflowState.FAILED)
+		if(workflowInstance.get().getStatus() == WorkflowStatus.COMPLETED || workflowInstance.get().getStatus() == WorkflowStatus.FAILED)
 		{
 			LOGGER.info("Workflow instance " + instanceId + " is already in terminal state: " + workflowInstance.get().getStatus());
 			return;

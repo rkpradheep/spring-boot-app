@@ -33,14 +33,9 @@ public interface BuildProductRepository extends JpaRepository<BuildProductEntity
     @Query("SELECT COUNT(bp) FROM BuildProduct bp WHERE bp.buildMonitorId = :buildMonitorId AND bp.status IN ('SUCCESS', 'FAILED', 'ERROR')")
     long countCompletedProducts(@Param("buildMonitorId") Long buildMonitorId);
 
-
     @Modifying
     @Transactional
     void deleteByBuildMonitorId(Long buildMonitorId);
-
-
-    @Query("SELECT bp FROM BuildProduct bp WHERE bp.status = 'STARTED' AND bp.startTime < :thresholdTime")
-    List<BuildProductEntity> findStaleInProgressProducts(@Param("thresholdTime") Long thresholdTime);
 
     Optional<BuildProductEntity> findByBuildId(Long buildId);
 }

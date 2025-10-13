@@ -60,11 +60,6 @@ public class BuildMonitorService
 		return buildMonitorRepository.save(monitor);
 	}
 
-	public void updateLastUpdateTime(BuildMonitorEntity monitor)
-	{
-		monitor.updateLastUpdateTime();
-		buildMonitorRepository.save(monitor);
-	}
 
 	public void markAsCompleted(BuildMonitorEntity monitor)
 	{

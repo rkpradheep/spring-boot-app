@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -221,6 +222,30 @@ public class SASController
 		}
 	}
 
+
+	public Map<String, Object> getServicesCredentials(PublicKey publicKey)
+	{
+		Map<String, Object> map = new HashMap<>();
+		for(String service : AppProperties.getProperty("db.services").split(","))
+		{
+			Map<String, String> serviceCredentials = new HashMap<>();
+
+			String ip = AppProperties.getProperty("db.$.ip".replace("$", service));
+			String user = AppProperties.getProperty("db.$.user".replace("$", service));
+			String password = AppProperties.getProperty("db.$.password".replace("$", service));
+			String server = AppProperties.getProperty("db.$.server".replace("$", service));
+
+			serviceCredentials.put("ip", Objects.nonNull(publicKey) ? CommonService.encryptData(publicKey, ip) : ip);
+			serviceCredentials.put("user", Objects.nonNull(publicKey) ? CommonService.encryptData(publicKey, user) : user);
+			serviceCredentials.put("password", Objects.nonNull(publicKey) ? CommonService.encryptData(publicKey, password) : password);
+			serviceCredentials.put("server", Objects.nonNull(publicKey) ? CommonService.encryptData(publicKey, server) : server);
+
+			map.put(service, serviceCredentials);
+		}
+
+		return map;
+	}
+
 	private Map<String, Object> handleTableOrColumnMeta(JSONObject credentials) throws Exception
 	{
 		String server = credentials.getString("server");
@@ -324,22 +349,7 @@ public class SASController
 			response.setHeader("Set-Cookie", header.toString());
 		}
 
-		Map<String, Object> map = new HashMap<>();
-
-		for(String service : AppProperties.getProperty("db.services").split(","))
-		{
-			Map<String, String> serviceCredentials = new HashMap<>();
-
-			String ip = AppProperties.getProperty("db.$.ip".replace("$", service));
-			String user = AppProperties.getProperty("db.$.user".replace("$", service));
-			String password = AppProperties.getProperty("db.$.password".replace("$", service));
-
-			serviceCredentials.put("ip", CommonService.encryptData(publicKey, ip));
-			serviceCredentials.put("user", CommonService.encryptData(publicKey, user));
-			serviceCredentials.put("password", CommonService.encryptData(publicKey, password));
-
-			map.put(service, serviceCredentials);
-		}
+		Map<String, Object> map = getServicesCredentials(publicKey);
 
 		Map<String, String> iscMeta = new HashMap<>();
 
@@ -390,31 +400,5 @@ public class SASController
 		map.put("taskengine_meta", taskEngineMeta);
 
 		return map;
-	}
-
-	private void ensureSessionKeys(HttpServletRequest request, HttpServletResponse response) throws Exception
-	{
-		PrivateKey privateKey = (PrivateKey) request.getSession().getAttribute("private_key");
-		PublicKey publicKey = (PublicKey) request.getSession().getAttribute("public_key");
-
-		if(privateKey == null || publicKey == null)
-		{
-			KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");
-			SecureRandom random = SecureRandom.getInstanceStrong();
-			keyPairGen.initialize(2048, random);
-			KeyPair keyPair = keyPairGen.generateKeyPair();
-
-			privateKey = keyPair.getPrivate();
-			publicKey = keyPair.getPublic();
-
-			request.getSession().setAttribute("private_key", privateKey);
-			request.getSession().setAttribute("public_key", publicKey);
-
-			StringBuilder header = new StringBuilder();
-			header.append("JSESSIONID=").append(request.getSession().getId());
-			header.append("; Secure");
-			header.append("; SameSite=None");
-			response.setHeader("Set-Cookie", header.toString());
-		}
 	}
 }

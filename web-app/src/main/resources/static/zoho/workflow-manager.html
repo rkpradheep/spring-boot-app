@@ -1175,6 +1175,7 @@
                     <button class="btn" onclick="refreshProductStatus('${instance.instanceId}')">
                         🔄 Refresh Status
                     </button>
+                    ${instance.status.toLowerCase() === 'running' ? `<button class="btn btn-danger" onclick="stopWorkflow('${instance.instanceId}')">Stop</button>` : ''}
                     ${canRetry ? `<button class="btn btn-danger" onclick="retryWorkflow('${instance.instanceId}')">🔄 Retry</button>` : ''}
                     <button class="btn btn-danger" onclick="deleteWorkflow('${instance.instanceId}')" style="background-color: #dc3545; color: white;">
                         🗑️ Delete
@@ -1182,9 +1183,8 @@
                 </div>
             `;
 
-            if (instance.status.toLowerCase() === 'running' || instance.status.toLowerCase() === 'completed') {
                 loadProductStatus(instance.instanceId);
-            }
+
 
             return card;
         }
@@ -1505,6 +1505,32 @@
             if (container) {
                 container.innerHTML = '<div class="product-status-loading">Refreshing...</div>';
                 await loadProductStatus(instanceId);
+            }
+        }
+
+        async function stopWorkflow(instanceId) {
+            if (!confirm('Are you sure you want to stop this workflow?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiBase}/build/stop/${instanceId}`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Workflow stop initiated successfully', 'success');
+                    loadWorkflowInstances();
+                    loadWorkflowStatistics();
+                } else {
+                    showAlert(`Failed to stop workflow: ${data.message}`, 'error');
+                }
+
+            } catch (error) {
+                console.error('Error stopping workflow:', error);
+                showAlert('Error stopping workflow', 'error');
             }
         }
 

@@ -90,6 +90,10 @@ public class ZohoService
 
 	public static void doAuthentication() throws Exception
 	{
+		if(SecurityUtil.getCurrentRequestURI().equals("/api/v1/zoho/mark-as-test-org") || SecurityUtil.getCurrentRequestURI().equals("/api/v1/zoho/mark-as-paid-org"))
+		{
+			return;
+		}
 		String currentUserEmail = getCurrentUserEmail();
 		if(StringUtils.isNotEmpty(currentUserEmail))
 		{

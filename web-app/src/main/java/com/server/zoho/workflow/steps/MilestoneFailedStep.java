@@ -6,6 +6,7 @@ import com.server.zoho.service.BuildProductService;
 import com.server.framework.workflow.model.WorkflowEvent;
 import com.server.framework.workflow.model.WorkflowInstance;
 import com.server.framework.workflow.definition.WorkFlowCommonEventType;
+import com.server.zoho.workflow.model.BuildProductStatus;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -41,7 +42,7 @@ public class MilestoneFailedStep extends WorkflowStep
 		if(productId != null)
 		{
 			Optional<BuildProductEntity> productOpt = buildProductService.getById(productId);
-			productOpt.ifPresent(product -> buildProductService.markBuildFailed(product, "MILESTONE_FAILED", errorMessage));
+			productOpt.ifPresent(product -> buildProductService.markBuildFailed(product, BuildProductStatus.MILESTONE_FAILED.getName(), errorMessage));
 		}
 
 		return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED, Map.of("error", "Milestone creation failed: " + errorMessage));

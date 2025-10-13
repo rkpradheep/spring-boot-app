@@ -2,6 +2,7 @@ package com.server.zoho.service;
 
 import com.server.zoho.entity.BuildProductEntity;
 import com.server.zoho.repository.BuildProductRepository;
+import com.server.zoho.workflow.model.BuildProductStatus;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -101,7 +102,7 @@ public class BuildProductService
 
 	public void markChannelMapped(BuildProductEntity buildProductEntity, String channelUrl)
 	{
-		buildProductEntity.setStatus("CHANNEL_MAPPED");
+		buildProductEntity.setStatus(BuildProductStatus.CHANNEL_MAPPED.getName());
 		buildProductEntity.setChannelUrl(channelUrl);
 		buildProductEntity.updateUpdatedTime();
 		buildProductRepository.save(buildProductEntity);
@@ -120,120 +121,4 @@ public class BuildProductService
 		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as STARTED");
 	}
 
-	public boolean areAllProductsCompleted(Long buildMonitorId)
-	{
-		List<BuildProductEntity> products = getProductsForMonitor(buildMonitorId);
-		return products.stream().allMatch(p -> "CHANNEL_MAPPED".equals(p.getStatus()));
-	}
-
-	public boolean areAllProductsFailed(Long buildMonitorId)
-	{
-		List<BuildProductEntity> products = getProductsForMonitor(buildMonitorId);
-		return products.stream().allMatch(p ->
-			"FAILED".equals(p.getStatus()) ||
-				"MILESTONE_FAILED".equals(p.getStatus()) ||
-				"CHANNEL_FAILED".equals(p.getStatus())
-		);
-	}
-
-	public BuildMonitorStats getBuildStats(Long buildMonitorId)
-	{
-		long total = buildProductRepository.countByBuildMonitorId(buildMonitorId);
-		long completed = buildProductRepository.countCompletedProducts(buildMonitorId);
-		long pending = buildProductRepository.countByBuildMonitorIdAndStatus(buildMonitorId, "PENDING");
-		long inProgress = buildProductRepository.countByBuildMonitorIdAndStatus(buildMonitorId, "STARTED");
-		long success = buildProductRepository.countByBuildMonitorIdAndStatus(buildMonitorId, "SUCCESS");
-		long failed = buildProductRepository.countByBuildMonitorIdAndStatus(buildMonitorId, "FAILED");
-
-		return new BuildMonitorStats(total, completed, pending, inProgress, success, failed);
-	}
-
-	public Optional<BuildProductEntity> findByBuildId(Long buildId)
-	{
-		return buildProductRepository.findByBuildId(buildId);
-	}
-
-	public List<BuildProductEntity> cleanupStaleBuilds()
-	{
-		long oneHourAgo = System.currentTimeMillis() - (60 * 60 * 1000L); // 1 hour ago
-		List<BuildProductEntity> staleProducts = buildProductRepository.findStaleInProgressProducts(oneHourAgo);
-
-		for(BuildProductEntity product : staleProducts)
-		{
-			markBuildFailed(product, "Build became stale (no updates for 1 hour)");
-		}
-
-		if(!staleProducts.isEmpty())
-		{
-			LOGGER.warning("Cleaned up " + staleProducts.size() + " stale builds");
-		}
-
-		return staleProducts;
-	}
-
-	public void deleteBuildMonitor(Long buildMonitorId)
-	{
-		buildProductRepository.deleteByBuildMonitorId(buildMonitorId);
-		LOGGER.info("Deleted all BuildProduct entries for BuildMonitor " + buildMonitorId);
-	}
-
-	public static class BuildMonitorStats
-	{
-		private final long total;
-		private final long completed;
-		private final long pending;
-		private final long inProgress;
-		private final long success;
-		private final long failed;
-
-		public BuildMonitorStats(long total, long completed, long pending, long inProgress, long success, long failed)
-		{
-			this.total = total;
-			this.completed = completed;
-			this.pending = pending;
-			this.inProgress = inProgress;
-			this.success = success;
-			this.failed = failed;
-		}
-
-		public long getTotal()
-		{
-			return total;
-		}
-
-		public long getCompleted()
-		{
-			return completed;
-		}
-
-		public long getPending()
-		{
-			return pending;
-		}
-
-		public long getInProgress()
-		{
-			return inProgress;
-		}
-
-		public long getSuccess()
-		{
-			return success;
-		}
-
-		public long getFailed()
-		{
-			return failed;
-		}
-
-		public double getCompletionPercentage()
-		{
-			return total > 0 ? (double) completed / total * 100 : 0.0;
-		}
-
-		public boolean isCompleted()
-		{
-			return total > 0 && total == completed;
-		}
-	}
 }

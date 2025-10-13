@@ -48,9 +48,17 @@ public class WorkflowInstanceEntity {
     @Column(name = "Variables", columnDefinition = "TEXT")
     private String variables; // JSON string
 
+    @Column(name = "CreatedBy", length = 100)
+    private String createdBy;
+
+    @Column(name = "LastModifiedBy", length = 100)
+    private String lastModifiedBy;
+
     public WorkflowInstanceEntity() {}
 
-    public WorkflowInstanceEntity(String referenceID, String workflowName, String currentState, String status) {
+    public WorkflowInstanceEntity(String referenceID, String workflowName, String currentState, String status, String createdBy, String lastModifiedBy) {
+        this.createdBy = createdBy;
+        this.lastModifiedBy = lastModifiedBy;
         this.referenceID = referenceID;
         this.workflowName = workflowName;
         this.currentState = currentState;
@@ -148,5 +156,17 @@ public class WorkflowInstanceEntity {
             return endTime - startTime;
         }
         return System.currentTimeMillis() - startTime;
+    }
+
+    public String getCreatedBy() { return createdBy; }
+    public String getLastModifiedBy() { return lastModifiedBy; }
+
+    public void setCreatedBy(String createdBy)
+    {
+        this.createdBy = createdBy;
+    }
+    public void setLastModifiedBy(String lastModifiedBy)
+    {
+        this.lastModifiedBy = lastModifiedBy;
     }
 }

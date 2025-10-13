@@ -12,10 +12,12 @@ public class WorkflowInstance
 	private String referenceID;
 	private String workflowName;
 	private String currentState;
-	private WorkflowState status;
+	private WorkflowStatus status;
 	private Object context;
 	private Long startTime;
 	private Long endTime;
+	private String createdBy;
+	private String lastModifiedBy;
 	private Long lastUpdateTime;
 	private String errorMessage;
 	private List<WorkflowEvent> eventHistory;
@@ -27,6 +29,24 @@ public class WorkflowInstance
 		this.variables = new HashMap<>();
 		this.startTime = System.currentTimeMillis();
 		this.lastUpdateTime = System.currentTimeMillis();
+	}
+
+	public void setCreatedBy(String createdBy)
+	{
+		this.createdBy = createdBy;
+	}
+	public String getCreatedBy()
+	{
+		return createdBy;
+	}
+
+	public void setLastModifiedBy(String lastModifiedBy)
+	{
+		this.lastModifiedBy = lastModifiedBy;
+	}
+	public String getLastModifiedBy()
+	{
+		return lastModifiedBy;
 	}
 
 	public String getReferenceID()
@@ -59,12 +79,12 @@ public class WorkflowInstance
 		this.currentState = currentState;
 	}
 
-	public WorkflowState getStatus()
+	public WorkflowStatus getStatus()
 	{
 		return status;
 	}
 
-	public void setStatus(WorkflowState status)
+	public void setStatus(WorkflowStatus status)
 	{
 		this.status = status;
 	}
@@ -139,12 +159,6 @@ public class WorkflowInstance
 		this.variables = variables;
 	}
 
-	public void addEventToHistory(WorkflowEvent event)
-	{
-		this.eventHistory.add(event);
-		this.lastUpdateTime = System.currentTimeMillis();
-	}
-
 	public void setVariable(String key, Object value)
 	{
 		this.variables.put(key, String.valueOf(value));
@@ -171,21 +185,21 @@ public class WorkflowInstance
 
 	public boolean isRunning()
 	{
-		return status == WorkflowState.RUNNING;
+		return status == WorkflowStatus.RUNNING;
 	}
 
 	public boolean isCompleted()
 	{
-		return status == WorkflowState.COMPLETED;
+		return status == WorkflowStatus.COMPLETED;
 	}
 
 	public boolean isFailed()
 	{
-		return status == WorkflowState.FAILED;
+		return status == WorkflowStatus.FAILED;
 	}
 
 	public boolean canRetry()
 	{
-		return status == WorkflowState.FAILED;
+		return status == WorkflowStatus.FAILED;
 	}
 }

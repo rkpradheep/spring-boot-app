@@ -188,7 +188,7 @@ public class IntegService
 			Map<String, Object> context = Map.of("monitorId", monitor.getId(), "productId", firstProduct.getId());
 
 			String referenceID = monitor.getId().toString();
-			workflowEngine.scheduleWorkflow("BuildWorkflow", referenceID, context);
+			workflowEngine.scheduleWorkflow("BuildWorkflow", referenceID, context, ZohoService.getCurrentUserEmail());
 
 			LOGGER.info("Scheduled workflow instance:  for monitor: " + monitor.getId() + " and product: " + firstProduct.getProductName());
 

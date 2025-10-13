@@ -41,7 +41,7 @@ public class PageController
 	@GetMapping("/zoho/build-tool")
 	public String zohoBuildUpdate()
 	{
-		return AppProperties.getProperty("environment").equals("zoho") ? "forward:/zoho/workflow-manager-internal.html" : "forward:/zoho/workflow-manager.html";
+		return AppProperties.getProperty("environment").equals("zoho") || true ? "forward:/zoho/workflow-manager-internal.html" : "forward:/zoho/workflow-manager.html";
 	}
 
 	@GetMapping("/admin/login")
