@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -110,8 +111,7 @@ public class SecurityFilter implements Filter
 
 		UserEntity userEntity = authenticateUser();
 		CURRENT_USER_TL.set(userEntity);
-
-		setThreadName();
+		setUserDetailsInThread();
 
 		if(handleEnvironmentRedirects(httpResponse))
 			return;
@@ -174,7 +174,7 @@ public class SecurityFilter implements Filter
 	private boolean handleEnvironmentRedirects(HttpServletResponse httpResponse) throws IOException
 	{
 		String requestURI = SecurityUtil.getCurrentRequest().getRequestURI();
-		if(AppProperties.getProperty("environment").equals("production") && requestURI.startsWith(ZOHO_PATH))
+		if(AppProperties.getProperty("environment").equals("production") && requestURI.equals("/zoho/db-tool"))
 		{
 			httpResponse.sendRedirect(ROOT_PATH);
 			return true;
@@ -213,6 +213,19 @@ public class SecurityFilter implements Filter
 
 		String newThreadName = Thread.currentThread().getName() + SecurityUtil.getCurrentRequestURI() + userDetails;
 		Thread.currentThread().setName(newThreadName);
+	}
+
+	private void setUserDetailsInThread()
+	{
+		if(!SecurityUtil.isResourceFetchRequest() && SecurityUtil.isLoggedIn())
+		{
+			String currentUserName = SecurityUtil.getCurrentUser().getName();
+			String currentUserId = SecurityUtil.getCurrentUser().getId().toString();
+			String userDetails = "/" + currentUserName + "-" + currentUserId;
+
+			String newThreadName = Thread.currentThread().getName() + userDetails;
+			Thread.currentThread().setName(newThreadName);
+		}
 	}
 
 	private boolean shouldSkipAuthentication()

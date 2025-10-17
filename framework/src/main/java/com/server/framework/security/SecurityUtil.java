@@ -49,9 +49,7 @@ public class SecurityUtil
 	public static final List<String> SKIP_AUTHENTICATION_ENDPOINTS = Arrays.asList(
 		"/_app/health", "/api/v1/(admin/)?authenticate", "/login(\\.html)?",
 		"((/(resources|css|js|uploads)/.*)|/favicon.ico)", "/api/v1/jobs", "/payoutlogs",
-		"/api/v1/payout/httplogs", "/api/v1/admin/live/logs", "/.well-known/.*",
-		"(/dbtool(.(html|jsp))?|/sasstats|/api/v1/(sas|zoho)/.*)", "/csv", "((/api/v1)?/zoho/.*)", "(/zoho)",
-		"/hotswap", "/network", "/livelogs", "/freessl", "/snakegame", "/stats", "(/api/v1/patterns/.*|design_patterns-uri.html)"
+		 "/api/v1/admin/live/logs", "/.well-known/.*","/livelogs", "(.*/(zoho|sas)/.*)"
 	);
 	public static final Function<String, Boolean> IS_SKIP_AUTHENTICATION_ENDPOINTS = requestURI ->
 		SKIP_AUTHENTICATION_ENDPOINTS.stream().anyMatch(requestURI::matches);
@@ -294,7 +292,7 @@ public class SecurityUtil
 
 	public static boolean isResourceFetchRequest(HttpServletRequest request)
 	{
-		return request.getRequestURI().matches("(/(((resources|css|js|uploads)/.*)|favicon.ico))|(\\.(html|css|js|png|jpeg|avif|mp3|mp4)$)");
+		return request.getRequestURI().matches("(/(((resources|css|js|uploads)/.*)|favicon.ico))|(.*\\.(html|css|js|png|jpeg|avif|mp3|mp4)$)");
 	}
 
 	public static boolean isLoginRequest()
