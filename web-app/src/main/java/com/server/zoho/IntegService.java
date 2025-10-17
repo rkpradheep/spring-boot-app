@@ -154,6 +154,21 @@ public class IntegService
 //			if(true)
 //				return buildResponse;
 
+
+
+
+			//Mock for testing server
+//						BuildResponse buildResponse = new BuildResponse(true, "Build has been started successfully", 11723376L, "RUNNING");
+//						buildResponse.setProductId("4670");
+//						buildResponse.setBuildType("FULLBUILD");
+//						buildResponse.setCheckoutLabel("master");
+//						buildResponse.setUrl("https://build.zohocorp.com/zoho/payout_server/webhost/master/Oct_16_2025_1/");
+//
+//						if(true)
+//							return buildResponse;
+
+
+
 			Map<String, ProductConfig> productConfigMap = getProductConfigMap();
 			if(!productConfigMap.containsKey(productName))
 			{

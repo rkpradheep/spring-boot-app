@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Build Workflow</title>
+    <title>Build Tool</title>
     <style>
         * {
             margin: 0;
@@ -330,6 +330,11 @@
         }
 
         .product-status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .product-status-cancelled {
             background: #f8d7da;
             color: #721c24;
         }
@@ -837,15 +842,15 @@
                 margin: 10px;
                 border-radius: 10px;
             }
-            
+
             .content {
                 padding: 20px;
             }
-            
+
             .workflow-instances {
                 grid-template-columns: 1fr;
             }
-            
+
             .workflow-stats {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -853,916 +858,770 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <p>Build Workflow</p>
-        </div>
-
-        <div class="content">
-            <!-- Workflow Statistics -->
-            <div class="section">
-                <h2 class="section-title">
-                    <span class="icon">📊</span>
-                    Workflow Statistics
-                </h2>
-                <div class="workflow-stats" id="workflowStats">
-                    <div class="stat-card">
-                        <div class="stat-number" id="totalWorkflows">-</div>
-                        <div class="stat-label">Total Workflows</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="runningWorkflows">-</div>
-                        <div class="stat-label">Running</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="completedWorkflows">-</div>
-                        <div class="stat-label">Completed</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="failedWorkflows">-</div>
-                        <div class="stat-label">Failed</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Workflow Initiation -->
-            <div class="section">
-                <h2 class="section-title">
-                    <span class="icon">🚀</span>
-                    Start New Workflow
-                </h2>
-                <div class="workflow-form">
-                    <div class="form-group">
-                        <label for="productNames">Select Products for Build Workflow:</label>
-                        <div class="product-selection" id="productSelection">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <div id="selectedProductsDisplay" class="selected-products-display">
-                            <p style="color: #666; font-style: italic;">No products selected</p>
-                        </div>
-                    </div>
-                    
-                    
-                    <button class="btn" id="startWorkflowBtn" onclick="startWorkflow()">
-                        🏭 Start Build Workflow
-                    </button>
-                </div>
-            </div>
-
-            <!-- Active Workflow Instances -->
-            <div class="section">
-                <h2 class="section-title">
-                    <span class="icon">⚡</span>
-                    Active Workflow Instances
-                </h2>
-                <div class="loading" id="workflowsLoading">
-                    <div>Loading workflow instances...</div>
-                </div>
-                <div class="workflow-instances" id="workflowInstances">
-                    <!-- Workflow instances will be populated by JavaScript -->
-                </div>
-            </div>
-
-            <!-- Alerts -->
-            <div id="alertsContainer"></div>
-        </div>
+<div class="container">
+    <div class="header">
+        <p>Build Tool</p>
     </div>
 
-    <!-- Modal for Workflow Details -->
-    <div id="workflowDetailsModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Workflow Details</h2>
-                <span class="close" onclick="closeWorkflowModal()">&times;</span>
-            </div>
-            <div class="modal-body" id="modalBody">
-                <!-- Content will be populated dynamically -->
+    <div class="content">
+
+        <div class="section">
+            <div class="workflow-form">
+                <div class="form-group">
+                    <label for="productNames">Select Products for Build:</label>
+                    <div class="product-selection" id="productSelection">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div id="selectedProductsDisplay" class="selected-products-display">
+                        <p style="color: #666; font-style: italic;">No products selected</p>
+                    </div>
+                </div>
+
+
+                <button class="btn" id="startWorkflowBtn" onclick="startWorkflow()">
+                    Start Build
+                </button>
             </div>
         </div>
+
+        <div class="section">
+            <h2 class="section-title">
+                <span class="icon"></span>
+                Builds &nbsp;&nbsp;
+                <button class="btn" onclick="refresh()" style="font-size: 15px;">
+                    🔄 Refresh
+                </button>
+            </h2>
+            <div class="loading" id="workflowsLoading">
+                <div>Loading builds...</div>
+            </div>
+            <div class="workflow-instances" id="workflowInstances">
+            </div>
+        </div>
+
+        <div id="alertsContainer"></div>
     </div>
+</div>
 
-    <script>
-        const availableProducts = [
-            'payout_mock_configuration', 'payout_common', 'payouts', 'bbps', 'payout_qa', 'payout_server'
-        ];
+<!-- Modal for Workflow Details -->
+<div id="workflowDetailsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Build Details</h2>
+            <span class="close" onclick="closeWorkflowModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <!-- Content will be populated dynamically -->
+        </div>
+    </div>
+</div>
 
-        const apiBase = '/api/v1/zoho/workflow';
-        let selectedProducts = [];
+<script>
+    const availableProducts = [
+        'payout_mock_configuration', 'payout_common', 'payouts', 'bbps', 'payout_qa', 'payout_server'
+    ];
 
-        document.addEventListener('DOMContentLoaded', function() {
-            populateProductSelection();
-            loadWorkflowStatistics();
-            loadWorkflowInstances();
-            
-            /* setInterval(() => {
-                loadWorkflowStatistics();
-                loadWorkflowInstances();
-            }, 30000); */
+    const apiBase = '/api/v1/zoho/workflow';
+    let selectedProducts = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+        populateProductSelection();
+        loadWorkflowInstances();
+    });
+
+    function populateProductSelection() {
+        const container = document.getElementById('productSelection');
+        container.innerHTML = '';
+
+        availableProducts.forEach(product => {
+            const productItem = document.createElement('div');
+            productItem.className = 'product-item';
+            productItem.textContent = product;
+            productItem.dataset.productName = product;
+            productItem.onclick = () => toggleProductSelection(product, productItem);
+            container.appendChild(productItem);
         });
+    }
 
-        function populateProductSelection() {
-            const container = document.getElementById('productSelection');
-            container.innerHTML = '';
-            
-            availableProducts.forEach(product => {
-                const productItem = document.createElement('div');
-                productItem.className = 'product-item';
-                productItem.textContent = product;
-                productItem.dataset.productName = product;
-                productItem.onclick = () => toggleProductSelection(product, productItem);
-                container.appendChild(productItem);
-            });
+    function toggleProductSelection(product, element) {
+        const index = selectedProducts.indexOf(product);
+        if (index > -1) {
+            selectedProducts.splice(index, 1);
+            element.classList.remove('selected');
+            element.querySelector('.order-badge')?.remove();
+        } else {
+            selectedProducts.push(product);
+            element.classList.add('selected');
+
+            const orderBadge = document.createElement('span');
+            orderBadge.className = 'order-badge';
+            orderBadge.textContent = selectedProducts.length;
+            element.appendChild(orderBadge);
         }
 
-        function toggleProductSelection(product, element) {
-            const index = selectedProducts.indexOf(product);
-            if (index > -1) {
-                selectedProducts.splice(index, 1);
+        updateOrderBadges();
+        updateSelectedProductsDisplay();
+    }
+
+    function updateOrderBadges() {
+        document.querySelectorAll('.product-item.selected').forEach((element) => {
+            const product = element.dataset.productName || element.textContent.replace(/\d+$/, '').trim();
+            const orderIndex = selectedProducts.indexOf(product);
+            const badge = element.querySelector('.order-badge');
+            if (badge && orderIndex > -1) {
+                badge.textContent = orderIndex + 1;
+            }
+        });
+    }
+
+    function updateSelectedProductsDisplay() {
+        const displayContainer = document.getElementById('selectedProductsDisplay');
+        if (!displayContainer) return;
+
+        if (selectedProducts.length === 0) {
+            displayContainer.innerHTML = '<p style="color: #666; font-style: italic;">No products selected</p>';
+            return;
+        }
+
+        const orderedList = selectedProducts.map((product, index) =>
+            `<div class="selected-product-item">
+                <span class="order-number">${index + 1}.</span>
+                <span class="product-name">${product}</span>
+                <button class="remove-btn" onclick="removeProduct('${product}')" title="Remove">×</button>
+            </div>`
+        ).join('');
+
+        displayContainer.innerHTML = `
+            <div class="selected-products-header">
+                <strong>Build Order (${selectedProducts.length} products selected):</strong>
+            </div>
+            ${orderedList}
+        `;
+    }
+
+    function removeProduct(product) {
+        const index = selectedProducts.indexOf(product);
+        if (index > -1) {
+            selectedProducts.splice(index, 1);
+
+            const element = document.querySelector(`[data-product-name="${product}"]`);
+            if (element) {
                 element.classList.remove('selected');
                 element.querySelector('.order-badge')?.remove();
-            } else {
-                selectedProducts.push(product);
-                element.classList.add('selected');
-                
-                const orderBadge = document.createElement('span');
-                orderBadge.className = 'order-badge';
-                orderBadge.textContent = selectedProducts.length;
-                element.appendChild(orderBadge);
             }
-            
+
             updateOrderBadges();
             updateSelectedProductsDisplay();
         }
-        
-        function updateOrderBadges() {
-            document.querySelectorAll('.product-item.selected').forEach((element) => {
-                const product = element.dataset.productName || element.textContent.replace(/\d+$/, '').trim();
-                const orderIndex = selectedProducts.indexOf(product);
-                const badge = element.querySelector('.order-badge');
-                if (badge && orderIndex > -1) {
-                    badge.textContent = orderIndex + 1;
-                }
-            });
-        }
-        
-        function updateSelectedProductsDisplay() {
-            const displayContainer = document.getElementById('selectedProductsDisplay');
-            if (!displayContainer) return;
-            
-            if (selectedProducts.length === 0) {
-                displayContainer.innerHTML = '<p style="color: #666; font-style: italic;">No products selected</p>';
-                return;
-            }
-            
-            const orderedList = selectedProducts.map((product, index) => 
-                `<div class="selected-product-item">
-                    <span class="order-number">${index + 1}.</span>
-                    <span class="product-name">${product}</span>
-                    <button class="remove-btn" onclick="removeProduct('${product}')" title="Remove">×</button>
-                </div>`
-            ).join('');
-            
-            displayContainer.innerHTML = `
-                <div class="selected-products-header">
-                    <strong>Build Order (${selectedProducts.length} products selected):</strong>
-                </div>
-                ${orderedList}
-            `;
-        }
-        
-        function removeProduct(product) {
-            const index = selectedProducts.indexOf(product);
-            if (index > -1) {
-                selectedProducts.splice(index, 1);
-                
-                const element = document.querySelector(`[data-product-name="${product}"]`);
-                if (element) {
-                    element.classList.remove('selected');
-                    element.querySelector('.order-badge')?.remove();
-                }
-                
-                updateOrderBadges();
-                updateSelectedProductsDisplay();
-            }
+    }
+
+    async function startWorkflow() {
+        if (selectedProducts.length === 0) {
+            showAlert('Please select at least one product to build', 'error');
+            return;
         }
 
-        async function startWorkflow() {
-            if (selectedProducts.length === 0) {
-                showAlert('Please select at least one product to build', 'error');
-                return;
-            }
-
-            try {
-                setButtonLoading('startWorkflowBtn', 'Starting Workflow...', true);
-
-                const requestData = {
-                    productNames: selectedProducts
-                };
-
-                const response = await fetch(`${apiBase}/build/start`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestData)
-                });
-
-                const responseJSON = await response.json();
-
-                if (responseJSON.success) {
-                    showAlert(`${responseJSON.message}`, 'success');
-                    clearForm();
-                    loadWorkflowInstances();
-                    loadWorkflowStatistics();
-                } else {
-                    if(responseJSON.error_code == "reauth_required")
-                    {
-                      handleZohoAuth(responseJSON.data.auth_uri)
-                      return;
-                     }
-                    showAlert(`Failed to start workflow: ${responseJSON.message}`, 'error');
-                }
-
-            } catch (error) {
-                console.error('Error starting workflow:', error);
-                showAlert('Error starting workflow. Please try again.', 'error');
-            } finally {
-                setButtonLoading('startWorkflowBtn', '🏭 Start Build Workflow', false);
-            }
-        }
-
-        async function loadWorkflowStatistics() {
-            try {
-                const response = await fetch(`${apiBase}/statistics`);
-                const data = await response.json();
-
-                if (data.success) {
-                    const stats = data.data;
-                    document.getElementById('totalWorkflows').textContent = stats.total || 0;
-                    document.getElementById('runningWorkflows').textContent = stats.running || 0;
-                    document.getElementById('completedWorkflows').textContent = stats.completed || 0;
-                    document.getElementById('failedWorkflows').textContent = stats.failed || 0;
-                }
-            } catch (error) {
-                console.error('Error loading workflow statistics:', error);
-            }
-        }
-
-        async function loadWorkflowInstances() {
-            try {
-                showLoading('workflowsLoading', 'Loading workflow instances...');
-
-                const response = await fetch(`${apiBase}/instances/recent`);
-                const data = await response.json();
-
-                if (data.success) {
-                    displayWorkflowInstances(data.data.instances || []);
-                } else {
-                    showAlert('Failed to load workflow instances', 'error');
-                }
-            } catch (error) {
-                console.error('Error loading workflow instances:', error);
-                showAlert('Error loading workflow instances', 'error');
-            } finally {
-                hideLoading('workflowsLoading');
-            }
-        }
-
-        function displayWorkflowInstances(instances) {
-            const container = document.getElementById('workflowInstances');
-            container.innerHTML = '';
-
-            if (instances.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #6c757d; padding: 40px;">No workflow instances found</div>';
-                return;
-            }
-
-            instances.forEach(instance => {
-                const instanceCard = createInstanceCard(instance);
-                container.appendChild(instanceCard);
-            });
-        }
-
-        function createInstanceCard(instance) {
-            const card = document.createElement('div');
-            card.className = 'instance-card';
-
-            const statusClass = getStatusClass(instance.status);
-            const canRetry = instance.canRetry;
-
-            card.innerHTML = `
-                <div class="instance-header">
-                    <div class="instance-id">${instance.instanceId}</div>
-                    <div class="status-badge ${statusClass}">${instance.status}</div>
-                </div>
-                <div class="instance-details">
-                    <div><strong>Workflow:</strong> ${instance.workflowName}</div>
-                    <div><strong>Current State:</strong> ${instance.currentState}</div>
-                    <div><strong>Started:</strong> ${formatTimestamp(instance.startTime)}</div>
-                    ${instance.endTime ? `<div><strong>Completed:</strong> ${formatTimestamp(instance.endTime)}</div>` : ''}
-                    ${instance.duration ? `<div><strong>Duration:</strong> ${formatDuration(instance.duration)}</div>` : ''}
-                    ${instance.errorMessage ? `<div><strong>Error:</strong> ${instance.errorMessage}</div>` : ''}
-                </div>
-                <div class="product-status-container" id="productStatus-${instance.instanceId}">
-                    <div class="product-status-loading">Loading product status...</div>
-                </div>
-                <div class="instance-actions">
-                    <button class="btn" onclick="viewWorkflowDetails('${instance.instanceId}')">
-                        👁️ View Details
-                    </button>
-                    <button class="btn" onclick="refreshProductStatus('${instance.instanceId}')">
-                        🔄 Refresh Status
-                    </button>
-                    ${instance.status.toLowerCase() === 'running' ? `<button class="btn btn-danger" onclick="stopWorkflow('${instance.instanceId}')">Stop</button>` : ''}
-                    ${canRetry ? `<button class="btn btn-danger" onclick="retryWorkflow('${instance.instanceId}')">🔄 Retry</button>` : ''}
-                    <button class="btn btn-danger" onclick="deleteWorkflow('${instance.instanceId}')" style="background-color: #dc3545; color: white;">
-                        🗑️ Delete
-                    </button>
-                </div>
-            `;
-
-                loadProductStatus(instance.instanceId);
-
-
-            return card;
-        }
-
-        function getStatusClass(status) {
-            switch (status.toLowerCase()) {
-                case 'running': return 'status-running';
-                case 'completed': return 'status-completed';
-                case 'failed': return 'status-failed';
-                case 'suspended': return 'status-suspended';
-                default: return 'status-running';
-            }
-        }
-
-        async function viewWorkflowDetails(instanceId) {
-            try {
-                const response = await fetch(`${apiBase}/instances/${instanceId}`);
-                const data = await response.json();
-
-                if (data.success) {
-                    const instance = data.data;
-                    displayWorkflowDetailsModal(instance);
-                } else {
-                    showAlert('Failed to load workflow details', 'error');
-                }
-            } catch (error) {
-                console.error('Error loading workflow details:', error);
-                showAlert('Error loading workflow details', 'error');
-            }
-        }
-
-        function displayWorkflowDetailsModal(instance) {
-            const modalBody = document.getElementById('modalBody');
-            
-            // Build variables display
-            let variablesHtml = '';
-            if (instance.variables && Object.keys(instance.variables).length > 0) {
-                variablesHtml = `
-                    <div class="detail-section">
-                        <div class="detail-section-title">📋 Workflow Variables</div>
-                        <div class="detail-grid">
-                            ${Object.entries(instance.variables).map(([key, value]) => `
-                                <div class="detail-item">
-                                    <div class="detail-label">${key}</div>
-                                    <div class="detail-value">${value || 'N/A'}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Build event history display
-            let eventHistoryHtml = '';
-            if (instance.eventHistory && instance.eventHistory.length > 0) {
-                const eventItems = instance.eventHistory.map(event => {
-                    const eventClass = getEventClass(event.eventType);
-                    const eventIcon = getEventIcon(event.eventType);
-                    
-                    return `
-                        <div class="event-item ${eventClass}">
-                            <div class="event-header">
-                                <div class="event-type">
-                                    <span class="event-icon">${eventIcon}</span>
-                                    ${formatEventType(event.eventType)}
-                                </div>
-                                <div class="event-timestamp">${formatTimestamp(event.timestamp)}</div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-                eventHistoryHtml = `
-                    <div class="detail-section">
-                        <div class="detail-section-title">📜 Event History (${instance.eventHistory.length} events)</div>
-                        <div class="event-timeline">
-                            ${eventItems}
-                        </div>
-                    </div>
-                `;
-            }
-
-            modalBody.innerHTML = `
-                <div class="detail-section">
-                    <div class="detail-section-title">ℹ️ Basic Information</div>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Instance ID</div>
-                            <div class="detail-value">${instance.instanceId}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Workflow Name</div>
-                            <div class="detail-value">${instance.workflowName}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Status</div>
-                            <div class="detail-value">
-                                <span class="status-badge ${getStatusClass(instance.status)}">${instance.status}</span>
-                            </div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Current State</div>
-                            <div class="detail-value">${instance.currentState}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Start Time</div>
-                            <div class="detail-value">${formatTimestamp(instance.startTime)}</div>
-                        </div>
-                        ${instance.endTime ? `
-                        <div class="detail-item">
-                            <div class="detail-label">End Time</div>
-                            <div class="detail-value">${formatTimestamp(instance.endTime)}</div>
-                        </div>
-                        ` : ''}
-                        ${instance.duration ? `
-                        <div class="detail-item">
-                            <div class="detail-label">Duration</div>
-                            <div class="detail-value">${formatDuration(instance.duration)}</div>
-                        </div>
-                        ` : ''}
-                        ${instance.errorMessage ? `
-                        <div class="detail-item" style="grid-column: 1 / -1;">
-                            <div class="detail-label">Error Message</div>
-                            <div class="detail-value" style="color: #e74c3c;">${instance.errorMessage}</div>
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-
-                ${variablesHtml}
-                ${eventHistoryHtml}
-            `;
-
-            // Show the modal
-            document.getElementById('workflowDetailsModal').classList.add('show');
-        }
-
-        function closeWorkflowModal() {
-            document.getElementById('workflowDetailsModal').classList.remove('show');
-        }
-
-        function getEventClass(eventType) {
-            if (eventType.includes('COMPLETED') || eventType.includes('SUCCESS')) {
-                return 'event-completed';
-            } else if (eventType.includes('FAILED') || eventType.includes('ERROR')) {
-                return 'event-failed';
-            }
-            return '';
-        }
-
-        function getEventIcon(eventType) {
-            const iconMap = {
-                'BUILD_STARTED': '🏗️',
-                'BUILD_COMPLETED': '✅',
-                'BUILD_FAILED': '❌',
-                'MILESTONE_CREATION': '🎯',
-                'MILESTONE_COMPLETED': '✅',
-                'MILESTONE_FAILED': '❌',
-                'CHANNEL_MAPPING': '🔗',
-                'CHANNEL_COMPLETED': '✅',
-                'CHANNEL_FAILED': '❌',
-                'NEXT_PRODUCT': '➡️',
-                'WORKFLOW_STARTED': '🚀',
-                'WORKFLOW_COMPLETED': '🎉',
-                'WORKFLOW_FAILED': '💥',
-                'WORKFLOW_SUSPENDED': '⏸️'
+        try {
+            const requestData = {
+                productNames: selectedProducts
             };
-            return iconMap[eventType] || '📌';
-        }
 
-        function formatEventType(eventType) {
-            return eventType.replace(/_/g, ' ')
-                             .toLowerCase()
-                             .replace(/\b\w/g, char => char.toUpperCase());
-        }
+            const response = await fetch(`${apiBase}/build/start`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            });
 
-        // Close modal when clicking outside of it
-        window.onclick = function(event) {
-            const modal = document.getElementById('workflowDetailsModal');
-            if (event.target === modal) {
-                closeWorkflowModal();
-            }
-        }
+            const responseJSON = await response.json();
 
-        async function loadProductStatus(instanceId) {
-            try {
-                const response = await fetch(`${apiBase}/status/${instanceId}`);
-                const data = await response.json();
-
-                const container = document.getElementById(`productStatus-${instanceId}`);
-                if (!container) return;
-
-                if (data.success && data.data.products) {
-                    displayProductStatus(container, data.data.products, data.data.status, data.data.currentState);
-                } else {
-                    container.innerHTML = '<div class="product-status-error">Unable to load product status</div>';
-                }
-            } catch (error) {
-                console.error('Error loading product status:', error);
-                const container = document.getElementById(`productStatus-${instanceId}`);
-                if (container) {
-                    container.innerHTML = '<div class="product-status-error">Error loading product status</div>';
-                }
-            }
-        }
-
-        function displayProductStatus(container, products, workflowStatus, currentState) {
-            if (!products || products.length === 0) {
-                container.innerHTML = '<div class="product-status-empty">No products found</div>';
-                return;
+            if (responseJSON.success) {
+                showAlert(`${responseJSON.message}`, 'success');
+                clearForm();
+                loadWorkflowInstances();
+            } else {
+                if(responseJSON.error_code == "reauth_required")
+                {
+                  handleZohoAuth(responseJSON.data.auth_uri)
+                  return;
+                 }
+                showAlert(`Failed to start workflow: ${responseJSON.message}`, 'error');
             }
 
-            const productsHtml = products.map(product => {
-                const statusClass = getProductStatusClass(product.status);
-                const statusIcon = getProductStatusIcon(product.status);
-                const progressClass = getProductProgressClass(product.status, currentState);
-                
+        } catch (error) {
+            console.error('Error starting workflow:', error);
+            showAlert('Error starting workflow. Please try again.', 'error');
+        }
+    }
+    async function loadWorkflowInstances() {
+        try {
+            showLoading('workflowsLoading', 'Loading workflow instances...');
+
+            const response = await fetch(`${apiBase}/instances/recent`);
+            const data = await response.json();
+
+            if (data.success) {
+                displayWorkflowInstances(data.data.instances || []);
+            } else {
+                showAlert('Failed to load workflow instances', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading workflow instances:', error);
+            showAlert('Error loading workflow instances', 'error');
+        } finally {
+            hideLoading('workflowsLoading');
+        }
+    }
+
+    function displayWorkflowInstances(instances) {
+        const container = document.getElementById('workflowInstances');
+        container.innerHTML = '';
+
+        if (instances.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #6c757d; padding: 40px;">No builds found</div>';
+            return;
+        }
+
+        instances.forEach(instance => {
+            const instanceCard = createInstanceCard(instance);
+            container.appendChild(instanceCard);
+        });
+    }
+
+    function createInstanceCard(instance) {
+        const card = document.createElement('div');
+        card.className = 'instance-card';
+
+        const statusClass = getStatusClass(instance.status);
+        const canRetry = instance.canRetry;
+
+        card.innerHTML = `
+            <div class="instance-header">
+                <div class="instance-id">${instance.instanceId}</div>
+                <div class="status-badge ${statusClass}">${instance.status}</div>
+            </div>
+            <div class="instance-details">
+                <div><strong>Workflow:</strong> ${instance.workflowName}</div>
+                ${instance.createdBy ? `<div><strong>Started By:</strong> ${instance.createdBy}</div>` : ''}
+                ${instance.lastModifiedBy ? `<div><strong>Last Modified By:</strong> ${instance.lastModifiedBy}</div>` : ''}
+                <div><strong>Current State:</strong> ${instance.currentState}</div>
+                <div><strong>Started:</strong> ${formatTimestamp(instance.startTime)}</div>
+                ${instance.endTime ? `<div><strong>Completed:</strong> ${formatTimestamp(instance.endTime)}</div>` : ''}
+                ${instance.duration ? `<div><strong>Duration:</strong> ${formatDuration(instance.duration)}</div>` : ''}
+                ${instance.errorMessage ? `<div><strong>Error:</strong> ${instance.errorMessage}</div>` : ''}
+            </div>
+            <div class="product-status-container" id="productStatus-${instance.instanceId}">
+                <div class="product-status-loading">Loading product status...</div>
+            </div>
+            <div class="instance-actions">
+                ${instance.status.toLowerCase() === 'running' ? `<button class="btn btn-danger" onclick="stopWorkflow('${instance.instanceId}')">Stop</button>` : ''}
+                ${canRetry ? `<button class="btn btn-danger" onclick="retryWorkflow('${instance.instanceId}')">Retry</button>` : ''}
+            </div>
+        `;
+
+            loadProductStatus(instance.instanceId);
+
+
+        return card;
+    }
+
+    function getStatusClass(status) {
+        switch (status.toLowerCase()) {
+            case 'running': return 'status-running';
+            case 'completed': return 'status-completed';
+            case 'failed': return 'status-failed';
+            case 'cancelled': return 'status-cancelled';
+            default: return 'status-running';
+        }
+    }
+
+    async function viewWorkflowDetails(instanceId) {
+        try {
+            const response = await fetch(`${apiBase}/instances/${instanceId}`);
+            const data = await response.json();
+
+            if (data.success) {
+                const instance = data.data;
+                displayWorkflowDetailsModal(instance);
+            } else {
+                showAlert('Failed to load workflow details', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading workflow details:', error);
+            showAlert('Error loading workflow details', 'error');
+        }
+    }
+
+    function displayWorkflowDetailsModal(instance) {
+        const modalBody = document.getElementById('modalBody');
+
+        // Build variables display
+        let variablesHtml = '';
+        if (instance.variables && Object.keys(instance.variables).length > 0) {
+            variablesHtml = `
+                <div class="detail-section">
+                    <div class="detail-section-title">📋 Workflow Variables</div>
+                    <div class="detail-grid">
+                        ${Object.entries(instance.variables).map(([key, value]) => `
+                            <div class="detail-item">
+                                <div class="detail-label">${key}</div>
+                                <div class="detail-value">${value || 'N/A'}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Build event history display
+        let eventHistoryHtml = '';
+        if (instance.eventHistory && instance.eventHistory.length > 0) {
+            const eventItems = instance.eventHistory.map(event => {
+                const eventClass = getEventClass(event.eventType);
+                const eventIcon = getEventIcon(event.eventType);
+
                 return `
-                    <div class="product-status-item ${progressClass}">
-                        <div class="product-info">
-                            <span class="product-name">${product.productName}</span>
-                            <span class="product-status ${statusClass}">
-                                ${statusIcon} ${product.status}
-                            </span>
-                        </div>
-                        <div class="product-details">
-                            ${product.buildId ? `<div class="build-info">Build ID: ${product.buildId}</div>` : ''}
-                            ${product.startTime ? `<div class="time-info">Started: ${formatTimestamp(product.startTime)}</div>` : ''}
-                            ${product.endTime ? `<div class="time-info">Completed: ${formatTimestamp(product.endTime)}</div>` : ''}
-                            ${product.errorMessage ? `<div class="error-info">Error: ${product.errorMessage}</div>` : ''}
-                        </div>
-                        <div class="product-progress">
-                            ${getProductProgressBar(product.status, currentState)}
+                    <div class="event-item ${eventClass}">
+                        <div class="event-header">
+                            <div class="event-type">
+                                <span class="event-icon">${eventIcon}</span>
+                                ${formatEventType(event.eventType)}
+                            </div>
+                            <div class="event-timestamp">${formatTimestamp(event.timestamp)}</div>
                         </div>
                     </div>
                 `;
             }).join('');
 
-            container.innerHTML = `
-                <div class="product-status-header">
-                    <strong>Product Build Status (${products.length} products)</strong>
-                </div>
-                <div class="product-status-list">
-                    ${productsHtml}
+            eventHistoryHtml = `
+                <div class="detail-section">
+                    <div class="detail-section-title">📜 Event History (${instance.eventHistory.length} events)</div>
+                    <div class="event-timeline">
+                        ${eventItems}
+                    </div>
                 </div>
             `;
         }
 
-        function getProductStatusClass(status) {
-            switch (status?.toLowerCase()) {
-                case 'pending': return 'product-status-pending';
-                case 'started': return 'product-status-started';
-                case 'build_success': return 'product-status-success';
-                case 'milestone_created': return 'product-status-milestone';
-                case 'channel_mapped': return 'product-status-completed';
-                case 'build_failed': return 'product-status-failed';
-                case 'milestone_failed': return 'product-status-failed';
-                case 'channel_failed': return 'product-status-failed';
-                default: return 'product-status-unknown';
-            }
-        }
+        modalBody.innerHTML = `
+            <div class="detail-section">
+                <div class="detail-section-title">ℹ️ Basic Information</div>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Instance ID</div>
+                        <div class="detail-value">${instance.instanceId}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Workflow Name</div>
+                        <div class="detail-value">${instance.workflowName}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value">
+                            <span class="status-badge ${getStatusClass(instance.status)}">${instance.status}</span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Current State</div>
+                        <div class="detail-value">${instance.currentState}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Start Time</div>
+                        <div class="detail-value">${formatTimestamp(instance.startTime)}</div>
+                    </div>
+                    ${instance.endTime ? `
+                    <div class="detail-item">
+                        <div class="detail-label">End Time</div>
+                        <div class="detail-value">${formatTimestamp(instance.endTime)}</div>
+                    </div>
+                    ` : ''}
+                    ${instance.duration ? `
+                    <div class="detail-item">
+                        <div class="detail-label">Duration</div>
+                        <div class="detail-value">${formatDuration(instance.duration)}</div>
+                    </div>
+                    ` : ''}
+                    ${instance.errorMessage ? `
+                    <div class="detail-item" style="grid-column: 1 / -1;">
+                        <div class="detail-label">Error Message</div>
+                        <div class="detail-value" style="color: #e74c3c;">${instance.errorMessage}</div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
 
-        function getProductStatusIcon(status) {
-            switch (status?.toLowerCase()) {
-                case 'pending': return '⏳';
-                case 'started': return '🏗️';
-                case 'build_success': return '✅';
-                case 'milestone_created': return '🎯';
-                case 'channel_mapped': return '🎉';
-                case 'build_failed': return '❌';
-                case 'milestone_failed': return '❌';
-                case 'channel_failed': return '❌';
-                default: return '❓';
-            }
-        }
+            ${variablesHtml}
+            ${eventHistoryHtml}
+        `;
 
-        function getProductProgressClass(productStatus, currentState) {
-            if (productStatus === 'build_failed' || productStatus === 'milestone_failed' || productStatus === 'channel_failed') {
-                return 'product-failed';
-            } else if (productStatus === 'channel_mapped') {
-                return 'product-completed';
-            } else if (productStatus === 'build_success' || productStatus === 'milestone_created') {
-                return 'product-in-progress';
-            } else if (productStatus === 'started') {
-                return 'product-current';
+        // Show the modal
+        document.getElementById('workflowDetailsModal').classList.add('show');
+    }
+
+    function closeWorkflowModal() {
+        document.getElementById('workflowDetailsModal').classList.remove('show');
+    }
+
+    function getEventClass(eventType) {
+        if (eventType.includes('COMPLETED') || eventType.includes('SUCCESS')) {
+            return 'event-completed';
+        } else if (eventType.includes('FAILED') || eventType.includes('ERROR')) {
+            return 'event-failed';
+        }
+        return '';
+    }
+
+    function getEventIcon(eventType) {
+        const iconMap = {
+            'BUILD_STARTED': '🏗️',
+            'BUILD_COMPLETED': '✅',
+            'BUILD_FAILED': '❌',
+            'MILESTONE_CREATION': '🎯',
+            'MILESTONE_COMPLETED': '✅',
+            'MILESTONE_FAILED': '❌',
+            'CHANNEL_MAPPING': '🔗',
+            'CHANNEL_COMPLETED': '✅',
+            'CHANNEL_FAILED': '❌',
+            'NEXT_PRODUCT': '➡️',
+            'WORKFLOW_STARTED': '🚀',
+            'WORKFLOW_COMPLETED': '🎉',
+            'WORKFLOW_FAILED': '💥',
+            'WORKFLOW_SUSPENDED': '⏸️'
+        };
+        return iconMap[eventType] || '📌';
+    }
+
+    function formatEventType(eventType) {
+        return eventType.replace(/_/g, ' ')
+                         .toLowerCase()
+                         .replace(/\b\w/g, char => char.toUpperCase());
+    }
+
+    // Close modal when clicking outside of it
+    window.onclick = function(event) {
+        const modal = document.getElementById('workflowDetailsModal');
+        if (event.target === modal) {
+            closeWorkflowModal();
+        }
+    }
+
+    async function loadProductStatus(instanceId) {
+        try {
+            const response = await fetch(`${apiBase}/status/${instanceId}`);
+            const data = await response.json();
+
+            const container = document.getElementById(`productStatus-${instanceId}`);
+            if (!container) return;
+
+            if (data.success && data.data.products) {
+                displayProductStatus(container, data.data.products, data.data.status, data.data.currentState);
             } else {
-                return 'product-pending';
+                container.innerHTML = '<div class="product-status-error">Unable to load product status</div>';
             }
-        }
-
-        function getProductProgressBar(productStatus, currentState) {
-            const steps = ['Build', 'Milestone', 'Channel'];
-            let currentStep = 0;
-            
-            switch (productStatus?.toLowerCase()) {
-                case 'started': currentStep = 0; break;
-                case 'build_success': currentStep = 1; break;
-                case 'milestone_created': currentStep = 2; break;
-                case 'channel_mapped': currentStep = 3; break;
-                default: currentStep = 0;
-            }
-
-            return `
-                <div class="progress-steps">
-                    ${steps.map((step, index) => {
-                        let stepClass = 'step';
-                        if (index < currentStep) stepClass += ' completed';
-                        else if (index === currentStep) stepClass += ' current';
-                        
-                        return `<div class="${stepClass}">${step}</div>`;
-                    }).join('')}
-                </div>
-            `;
-        }
-
-        async function refreshProductStatus(instanceId) {
+        } catch (error) {
+            console.error('Error loading product status:', error);
             const container = document.getElementById(`productStatus-${instanceId}`);
             if (container) {
-                container.innerHTML = '<div class="product-status-loading">Refreshing...</div>';
-                await loadProductStatus(instanceId);
+                container.innerHTML = '<div class="product-status-error">Error loading product status</div>';
             }
         }
+    }
 
-        async function stopWorkflow(instanceId) {
-            if (!confirm('Are you sure you want to stop this workflow?')) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`${apiBase}/build/stop/${instanceId}`, {
-                    method: 'POST'
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showAlert('Workflow stop initiated successfully', 'success');
-                    loadWorkflowInstances();
-                    loadWorkflowStatistics();
-                } else {
-                    showAlert(`Failed to stop workflow: ${data.message}`, 'error');
-                }
-
-            } catch (error) {
-                console.error('Error stopping workflow:', error);
-                showAlert('Error stopping workflow', 'error');
-            }
+    function displayProductStatus(container, products, workflowStatus, currentState) {
+        if (!products || products.length === 0) {
+            container.innerHTML = '<div class="product-status-empty">No products found</div>';
+            return;
         }
 
-        async function retryWorkflow(instanceId) {
-            if (!confirm('Are you sure you want to retry this workflow?')) {
-                return;
-            }
+        const productsHtml = products.map(product => {
+            const statusClass = getProductStatusClass(product.status);
+            const progressClass = getProductProgressClass(product.status, currentState);
 
-            try {
-                setButtonLoading(`retryBtn-${instanceId}`, 'Retrying...', true);
-
-                const response = await fetch(`${apiBase}/instances/${instanceId}/retry`, {
-                    method: 'POST'
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showAlert('Workflow retry initiated successfully', 'success');
-                    loadWorkflowInstances();
-                    loadWorkflowStatistics();
-                } else {
-                    showAlert(`Failed to retry workflow: ${data.message}`, 'error');
-                }
-
-            } catch (error) {
-                console.error('Error retrying workflow:', error);
-                showAlert('Error retrying workflow', 'error');
-            } finally {
-                setButtonLoading(`retryBtn-${instanceId}`, '🔄 Retry', false);
-            }
-        }
-
-        async function deleteWorkflow(instanceId) {
-            if (!confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`${apiBase}/instances/${instanceId}`, {
-                    method: 'DELETE'
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showAlert('Workflow deleted successfully', 'success');
-                    loadWorkflowInstances();
-                    loadWorkflowStatistics();
-                } else {
-                    showAlert(`Failed to delete workflow: ${data.message}`, 'error');
-                }
-
-            } catch (error) {
-                console.error('Error deleting workflow:', error);
-                showAlert('Error deleting workflow', 'error');
-            }
-        }
-
-        function refreshWorkflows() {
-            loadWorkflowStatistics();
-            loadWorkflowInstances();
-        }
-
-        async function loadFailedWorkflows() {
-            try {
-                showAlert('Loading failed workflows...', 'info');
-                
-                const response = await fetch(apiBase + '/failed');
-                const data = await response.json();
-
-                if (data.success) {
-                    showAlert(`Found ${data.data.count} failed workflows`, 'error');
-                    displayFailedWorkflows(data.data.workflows || []);
-                } else {
-                    showAlert(`Error: ${data.message}`, 'error');
-                }
-            } catch (error) {
-                console.error('Error loading failed workflows:', error);
-                showAlert('Failed to load failed workflows', 'error');
-            }
-        }
-
-        function displayFailedWorkflows(workflows) {
-            const container = document.getElementById('workflowInstances');
-            container.innerHTML = '';
-            
-            if (!workflows || workflows.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #6c757d; padding: 40px;">No failed workflows found</div>';
-                return;
-            }
-
-            workflows.forEach(workflow => {
-                const instanceCard = createFailedWorkflowCard(workflow);
-                container.appendChild(instanceCard);
-            });
-        }
-
-        function createFailedWorkflowCard(workflow) {
-            const card = document.createElement('div');
-            card.className = 'instance-card';
-
-            const statusText = workflow.status === 'COMPLETED' ? 'COMPLETED (FAILED)' : 'FAILED';
-            const statusClass = 'status-failed';
-
-            card.innerHTML = `
-                <div class="instance-header">
-                    <div class="instance-id">Workflow #${workflow.instanceId}</div>
-                    <div class="status-badge ${statusClass}">${statusText}</div>
-                </div>
-                <div class="instance-details">
-                    <div><strong>Failed At:</strong> ${formatTimestamp(workflow.endTime)}</div>
-                    <div><strong>Current State:</strong> ${workflow.currentState}</div>
-                    <div><strong>Workflow Status:</strong> ${workflow.status}</div>
-                    <div><strong>Build Monitor ID:</strong> ${workflow.buildMonitorId || 'N/A'}</div>
-                    <div><strong>Error:</strong> <span style="color: #dc3545; font-size: 0.9rem;">${workflow.errorMessage || 'Unknown error'}</span></div>
-                </div>
-                <div class="instance-actions">
-                    <button class="btn" onclick="viewWorkflowDetails('${workflow.instanceId}')">
-                        👁️ View Details
-                    </button>
-                    <button class="btn btn-success" onclick="retryFailedWorkflow('${workflow.instanceId}')">
-                        🔄 Retry Workflow
-                    </button>
+            return `
+                <div class="product-status-item ${progressClass}">
+                    <div class="product-info">
+                        <span class="product-name">${product.productName}</span>
+                        <span class="product-status ${statusClass}">
+                            ${product.status}
+                        </span>
+                    </div>
+                    <div class="product-details">
+                        ${product.buildId ? `<div class="build-info">Build ID: ${product.buildId}</div>` : ''}
+                        ${product.startTime ? `<div class="time-info">Started: ${formatTimestamp(product.startTime)}</div>` : ''}
+                        ${product.endTime ? `<div class="time-info">Completed: ${formatTimestamp(product.endTime)}</div>` : ''}
+                        ${product.errorMessage ? `<div class="error-info">Error: ${product.errorMessage}</div>` : ''}
+                    </div>
                 </div>
             `;
+        }).join('');
 
-            return card;
+        container.innerHTML = `
+            <div class="product-status-header">
+                <strong>Product Build Status (${products.length} products)</strong>
+            </div>
+            <div class="product-status-list">
+                ${productsHtml}
+            </div>
+        `;
+    }
+
+    function getProductStatusClass(status) {
+        switch (status?.toLowerCase()) {
+            case 'pending': return 'product-status-pending';
+            case 'cancelled': return 'product-status-cancelled';
+            case 'started': return 'product-status-started';
+            case 'build_success': return 'product-status-success';
+            case 'milestone_created': return 'product-status-milestone';
+            case 'channel_mapped': return 'product-status-completed';
+            case 'sd_local_build_uploaded': return 'product-status-completed';
+            case 'sd_csez_build_uploaded': return 'product-status-completed';
+            case 'build_failed': return 'product-status-failed';
+            case 'milestone_failed': return 'product-status-failed';
+            case 'channel_failed': return 'product-status-failed';
+            case 'sd_local_build_upload_failed': return 'product-status-failed';
+            case 'sd_csez_build_upload_failed': return 'product-status-failed';
+            default: return 'product-status-unknown';
+        }
+    }
+
+    function getProductProgressClass(productStatus, currentState) {
+        if (productStatus === 'build_failed' || productStatus === 'milestone_failed' || productStatus === 'channel_failed') {
+            return 'product-failed';
+        } else if (productStatus === 'channel_mapped') {
+            return 'product-completed';
+        } else if (productStatus === 'build_success' || productStatus === 'milestone_created') {
+            return 'product-in-progress';
+        } else if (productStatus === 'started') {
+            return 'product-current';
+        } else {
+            return 'product-pending';
+        }
+    }
+
+        async function refresh() {
+           await loadWorkflowInstances();
         }
 
-        async function retryFailedWorkflow(workflowId) {
-            try {
-                showAlert(`Retrying workflow #${workflowId}...`, 'info');
-                
-                const response = await fetch(`${apiBase}/retry/${workflowId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                const data = await response.json();
-
-                if (data.success) {
-                    showAlert(`Workflow #${workflowId} retry initiated successfully`, 'success');
-                    // setTimeout(() => {
-                    //     loadWorkflowInstances();
-                    //     loadWorkflowStatistics();
-                    // }, 2000);
-                } else {
-                    showAlert(`Error retrying workflow: ${data.message}`, 'error');
-                }
-            } catch (error) {
-                console.error('Error retrying workflow:', error);
-                showAlert('Failed to retry workflow', 'error');
-            }
+    async function stopWorkflow(instanceId) {
+        if (!confirm('Are you sure you want to stop this workflow?')) {
+            return;
         }
 
-        function clearForm() {
-            selectedProducts = [];
-            document.querySelectorAll('.product-item').forEach(item => {
-                item.classList.remove('selected');
-                item.querySelector('.order-badge')?.remove();
+        try {
+            const response = await fetch(`${apiBase}/build/stop/${instanceId}`, {
+                method: 'POST'
             });
-            updateSelectedProductsDisplay();
-        }
 
-        function showAlert(message, type) {
-            const alertsContainer = document.getElementById('alertsContainer');
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type}`;
-            alert.innerHTML = message;
-            
-            alertsContainer.appendChild(alert);
-            
-            setTimeout(() => {
-                alert.remove();
-            }, 5000);
-        }
+            const data = await response.json();
 
-        function setButtonLoading(buttonId, text, loading) {
-            const button = document.getElementById(buttonId);
-            if (button) {
-                button.disabled = loading;
-                button.textContent = text;
-            }
-        }
-
-        function showLoading(elementId, text) {
-            const element = document.getElementById(elementId);
-            if (element) {
-                element.innerHTML = `<div>${text}</div>`;
-                element.classList.add('show');
-            }
-        }
-
-        function hideLoading(elementId) {
-            const element = document.getElementById(elementId);
-            if (element) {
-                element.classList.remove('show');
-            }
-        }
-
-        function formatTimestamp(timestamp) {
-            if (!timestamp) return 'N/A';
-            return new Date(timestamp).toLocaleString();
-        }
-
-        function formatDuration(duration) {
-            if (!duration) return 'N/A';
-            
-            const seconds = Math.floor(duration / 1000);
-            const minutes = Math.floor(seconds / 60);
-            const hours = Math.floor(minutes / 60);
-            
-            if (hours > 0) {
-                return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-            } else if (minutes > 0) {
-                return `${minutes}m ${seconds % 60}s`;
+            if (data.success) {
+                showAlert('Workflow stop initiated successfully', 'success');
+                loadWorkflowInstances();
             } else {
-                return `${seconds}s`;
+                showAlert(`Failed to stop workflow: ${data.message}`, 'error');
             }
+
+        } catch (error) {
+            console.error('Error stopping workflow:', error);
+            showAlert('Error stopping workflow', 'error');
+        }
+    }
+
+    async function retryWorkflow(instanceId) {
+        if (!confirm('Are you sure you want to retry this workflow?')) {
+            return;
         }
 
-        function handleZohoAuth(authURI)
+        try {
+
+            const response = await fetch(`${apiBase}/instances/${instanceId}/retry`, {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showAlert('Workflow retry initiated successfully', 'success');
+                loadWorkflowInstances();
+            } else {
+                showAlert(`Failed to retry workflow: ${data.message}`, 'error');
+            }
+
+        } catch (error) {
+            console.error('Error retrying workflow:', error);
+            showAlert('Error retrying workflow', 'error');
+        }
+    }
+
+    async function loadFailedWorkflows() {
+        try {
+            showAlert('Loading failed workflows...', 'info');
+
+            const response = await fetch(apiBase + '/failed');
+            const data = await response.json();
+
+            if (data.success) {
+                showAlert(`Found ${data.data.count} failed workflows`, 'error');
+                displayFailedWorkflows(data.data.workflows || []);
+            } else {
+                showAlert(`Error: ${data.message}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error loading failed workflows:', error);
+            showAlert('Failed to load failed workflows', 'error');
+        }
+    }
+
+    function displayFailedWorkflows(workflows) {
+        const container = document.getElementById('workflowInstances');
+        container.innerHTML = '';
+
+        if (!workflows || workflows.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #6c757d; padding: 40px;">No failed workflows found</div>';
+            return;
+        }
+
+        workflows.forEach(workflow => {
+            const instanceCard = createFailedWorkflowCard(workflow);
+            container.appendChild(instanceCard);
+        });
+    }
+
+    function createFailedWorkflowCard(workflow) {
+        const card = document.createElement('div');
+        card.className = 'instance-card';
+
+        const statusText = workflow.status === 'COMPLETED' ? 'COMPLETED (FAILED)' : 'FAILED';
+        const statusClass = 'status-failed';
+
+        card.innerHTML = `
+            <div class="instance-header">
+                <div class="instance-id">Build #${workflow.instanceId}</div>
+                <div class="status-badge ${statusClass}">${statusText}</div>
+            </div>
+            <div class="instance-details">
+                <div><strong>Failed At:</strong> ${formatTimestamp(workflow.endTime)}</div>
+                <div><strong>Current State:</strong> ${workflow.currentState}</div>
+                <div><strong>Status:</strong> ${workflow.status}</div>
+                <div><strong>Error:</strong> <span style="color: #dc3545; font-size: 0.9rem;">${workflow.errorMessage || 'Unknown error'}</span></div>
+            </div>
+            <div class="instance-actions">
+                <button class="btn" onclick="viewWorkflowDetails('${workflow.instanceId}')">
+                    👁️ View Details
+                </button>
+                <button class="btn btn-success" onclick="retryFailedWorkflow('${workflow.instanceId}')">
+                    🔄 Retry
+                </button>
+            </div>
+        `;
+
+        return card;
+    }
+
+    async function retryFailedWorkflow(workflowId) {
+        try {
+            showAlert(`Retrying Build #${workflowId}...`, 'info');
+
+            const response = await fetch(`${apiBase}/retry/${workflowId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showAlert(`Workflow #${workflowId} retry initiated successfully`, 'success');
+                // setTimeout(() => {
+                //     loadWorkflowInstances();
+                // }, 2000);
+            } else {
+                showAlert(`Error retrying build: ${data.message}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error retrying build:', error);
+            showAlert('Failed to retry build', 'error');
+        }
+    }
+
+    function clearForm() {
+        selectedProducts = [];
+        document.querySelectorAll('.product-item').forEach(item => {
+            item.classList.remove('selected');
+            item.querySelector('.order-badge')?.remove();
+        });
+        updateSelectedProductsDisplay();
+    }
+
+    function showAlert(message, type) {
+        const alertsContainer = document.getElementById('alertsContainer');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.innerHTML = message;
+
+        alertsContainer.appendChild(alert);
+
+        setTimeout(() => {
+            alert.remove();
+        }, 5000);
+    }
+
+    function setButtonLoading(buttonId, text, loading) {
+        const button = document.getElementById(buttonId);
+        if (button) {
+            button.disabled = loading;
+            button.textContent = text;
+        }
+    }
+
+    function showLoading(elementId, text) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.innerHTML = `<div>${text}</div>`;
+            element.classList.add('show');
+        }
+    }
+
+    function hideLoading(elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.classList.remove('show');
+        }
+    }
+
+    function formatTimestamp(timestamp) {
+        if (!timestamp) return 'N/A';
+        return new Date(timestamp).toLocaleString();
+    }
+
+    function formatDuration(duration) {
+        if (!duration) return 'N/A';
+
+        const seconds = Math.floor(duration / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+
+        if (hours > 0) {
+            return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${seconds % 60}s`;
+        } else {
+            return `${seconds}s`;
+        }
+    }
+
+    function handleZohoAuth(authURI)
 {
-                              let screenX = screen.width / 2 - 325;
-                              let screenY = screen.height / 2 - 400;
-                              var popupOptions = "width=650,height=750,top="+ screenY + ",left=" + screenX;
-                              window.open(authURI, "Authentication", popupOptions);
+                          let screenX = screen.width / 2 - 325;
+                          let screenY = screen.height / 2 - 400;
+                          var popupOptions = "width=650,height=750,top="+ screenY + ",left=" + screenX;
+                          window.open(authURI, "Authentication", popupOptions);
 
 }
-    </script>
+</script>
 </body>
 </html>

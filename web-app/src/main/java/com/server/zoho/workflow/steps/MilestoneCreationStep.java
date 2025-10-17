@@ -88,7 +88,7 @@ public class MilestoneCreationStep extends WorkflowStep
 			instance.setVariable("productName", product.getProductName());
 			boolean isServerRepo = IntegService.getProductConfig(product.getProductName()).isServerRepo();
 
-			return new WorkflowEvent(!isServerRepo ? BuildEventType.CHANNEL_MAPPING : BuildEventType.SD_BUILD_UPLOAD, Map.of("milestoneVersion", releaseVersion));
+			return new WorkflowEvent(!isServerRepo ? BuildEventType.CHANNEL_MAPPING : BuildEventType.SD_CSEZ_BUILD_UPLOAD, Map.of("milestoneVersion", releaseVersion));
 
 		}
 		catch(Exception e)

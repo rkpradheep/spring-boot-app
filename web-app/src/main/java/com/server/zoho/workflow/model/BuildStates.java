@@ -13,7 +13,10 @@ public enum BuildStates
 	NEXT_PRODUCT(Constants.NEXT_PRODUCT),
 	WORKFLOW_COMPLETED(Constants.WORKFLOW_COMPLETED),
 	WORKFLOW_FAILED(Constants.WORKFLOW_FAILED),
-	SD_BUILD_UPLOAD(Constants.SD_BUILD_UPLOAD);
+	SD_CSEZ_BUILD_UPLOAD(Constants.SD_CSEZ_BUILD_UPLOAD),
+	SD_CSEZ_BUILD_UPLOAD_FAILED(Constants.SD_CSEZ_BUILD_UPLOAD_FAILED),
+	SD_LOCAL_BUILD_UPLOAD(Constants.SD_LOCAL_BUILD_UPLOAD),
+	SD_LOCAL_BUILD_UPLOAD_FAILED(Constants.SD_LOCAL_BUILD_UPLOAD_FAILED);
 
 	public final String value;
 
@@ -58,6 +61,9 @@ public enum BuildStates
 		public static final String NEXT_PRODUCT = "NEXT_PRODUCT";
 		public static final String WORKFLOW_COMPLETED = "WORKFLOW_COMPLETED";
 		public static final String WORKFLOW_FAILED = "WORKFLOW_FAILED";
-		public static final String SD_BUILD_UPLOAD = "SD_BUILD_UPLOAD";
+		public static final String SD_CSEZ_BUILD_UPLOAD = "SD_CSEZ_BUILD_UPLOAD";
+		public static final String SD_CSEZ_BUILD_UPLOAD_FAILED = "SD_CSEZ_BUILD_UPLOAD_FAILED";
+		public static final String SD_LOCAL_BUILD_UPLOAD = "SD_LOCAL_BUILD_UPLOAD";
+		public static final String SD_LOCAL_BUILD_UPLOAD_FAILED = "SD_LOCAL_BUILD_UPLOAD_FAILED";
 	}
 }

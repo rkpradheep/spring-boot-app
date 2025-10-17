@@ -9,13 +9,18 @@ import redis.clients.jedis.JedisPoolConfig;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jose4j.jwt.JwtClaims;
 import org.jose4j.jwt.NumericDate;
 import org.jose4j.base64url.Base64Url;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.net.Inet4Address;
 import java.security.KeyFactory;
@@ -42,6 +47,7 @@ import javax.net.ssl.SSLSocketFactory;
 import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.AppProperties;
 import com.server.framework.common.CommonService;
+import com.server.framework.common.DateUtil;
 import com.server.framework.error.AppException;
 import com.server.framework.http.HttpService;
 import com.server.framework.http.HttpContext;
@@ -391,6 +397,39 @@ public class ZohoController
 			.put("url", tokenUrl);
 
 		return doEARDecryption(keyLabel, cipherText, dc, isSearchable, isOEK, tokenGeneratePayload);
+	}
+
+	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region)
+	{
+		JSONObject buildOptions = new JSONObject()
+			.put("skip_continue", true)
+			.put("iast_jar_needed", true);
+
+		JSONArray notifyTo = new JSONArray().put("pradheep.rkd@zohocorp.com");
+
+		String comment = DateUtil.getFormattedCurrentTime("'MASTER BUILD' dd'th' MMMM yyyy");
+		JSONObject sdBuildUpdatePayload = new JSONObject()
+			.put("data_center", dc)
+			.put("region", region)
+			.put("deployment_mode", "live")
+			.put("build_stage", "production")
+			.put("build_url", IntegService.getProductConfig(productName).getBuildUrl().replace("{0}", milestoneVersion))
+			.put("is_grid_edited", false)
+			.put("build_options", buildOptions)
+			.put("notify_to", notifyTo)
+			.put("comment", comment)
+			.put("provision_type", "build_update");
+
+		String sdBuildUpdateUrl = AppProperties.getProperty("zoho.sd.build.update.api.url");
+		String apiKey = AppProperties.getProperty("zoho.sd.build.api.token");
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Authorization", apiKey);
+		headers.setContentType(MediaType.APPLICATION_JSON);
+
+		HttpEntity<String> requestEntity = new HttpEntity<>(sdBuildUpdatePayload.toString(), headers);
+
+		return AppContextHolder.getBean(RestTemplate.class).postForObject(sdBuildUpdateUrl, requestEntity, String.class);
 	}
 
 	String doEARDecryption(String keyLabel, String cipherText, String dc, boolean isSearchable, boolean isOEK, JSONObject tokenGeneratePayload) throws Exception

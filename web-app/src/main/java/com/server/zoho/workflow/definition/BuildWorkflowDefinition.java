@@ -50,7 +50,10 @@ public class BuildWorkflowDefinition extends WorkflowDefinition
 	private BuildCompletedStep buildCompletedStep;
 
 	@Autowired
-	private SDBuildUploadStep sdBuildUploadStep;
+	private SDCsezBuildUploadStep sdCsezBuildUploadStep;
+
+	@Autowired
+	private SDLocalBuildUploadStep sdLocalBuildUploadStep;
 
 	@Override
 	protected void initializeDefinition()
@@ -76,7 +79,8 @@ public class BuildWorkflowDefinition extends WorkflowDefinition
 		addStep(BuildStates.NEXT_PRODUCT.getValue(), nextProductStep);
 		addStep(BuildStates.WORKFLOW_COMPLETED.getValue(), workflowCompletedStep);
 		addStep(BuildStates.WORKFLOW_FAILED.getValue(), workflowFailedStep);
-		addStep(BuildStates.SD_BUILD_UPLOAD.getValue(), sdBuildUploadStep);
+		addStep(BuildStates.SD_CSEZ_BUILD_UPLOAD.getValue(), sdCsezBuildUploadStep);
+		addStep(BuildStates.SD_LOCAL_BUILD_UPLOAD.getValue(), sdLocalBuildUploadStep);
 	}
 
 	private void defineTransitions()
@@ -110,15 +114,23 @@ public class BuildWorkflowDefinition extends WorkflowDefinition
 				BuildEventType.CHANNEL_MAPPING.getValue()));
 
 		addTransition(BuildStates.MILESTONE_CREATION.getValue(),
-			new WorkflowTransition(BuildStates.MILESTONE_CREATION.getValue(), BuildStates.SD_BUILD_UPLOAD.getValue(),
-				BuildEventType.SD_BUILD_UPLOAD.getValue()));
+			new WorkflowTransition(BuildStates.MILESTONE_CREATION.getValue(), BuildStates.SD_CSEZ_BUILD_UPLOAD.getValue(),
+				BuildEventType.SD_CSEZ_BUILD_UPLOAD.getValue()));
 
-		addTransition(BuildStates.SD_BUILD_UPLOAD.getValue(),
-			new WorkflowTransition(BuildStates.SD_BUILD_UPLOAD.getValue(), BuildStates.WORKFLOW_COMPLETED.getValue(),
+		addTransition(BuildStates.SD_CSEZ_BUILD_UPLOAD.getValue(),
+			new WorkflowTransition(BuildStates.SD_CSEZ_BUILD_UPLOAD.getValue(), BuildStates.SD_LOCAL_BUILD_UPLOAD.getValue(),
+				BuildEventType.SD_LOCAL_BUILD_UPLOAD.getValue()));
+
+		addTransition(BuildStates.SD_CSEZ_BUILD_UPLOAD.getValue(),
+			new WorkflowTransition(BuildStates.SD_CSEZ_BUILD_UPLOAD_FAILED.getValue(), BuildStates.SD_CSEZ_BUILD_UPLOAD_FAILED.getValue(),
+				WorkFlowCommonEventType.WORKFLOW_FAILED.getValue(), true));
+
+		addTransition(BuildStates.SD_LOCAL_BUILD_UPLOAD.getValue(),
+			new WorkflowTransition(BuildStates.SD_LOCAL_BUILD_UPLOAD.getValue(), BuildStates.WORKFLOW_COMPLETED.getValue(),
 				WorkFlowCommonEventType.WORKFLOW_COMPLETED.getValue(), true));
 
-		addTransition(BuildStates.SD_BUILD_UPLOAD.getValue(),
-			new WorkflowTransition(BuildStates.SD_BUILD_UPLOAD.getValue(), BuildStates.WORKFLOW_FAILED.getValue(),
+		addTransition(BuildStates.SD_LOCAL_BUILD_UPLOAD.getValue(),
+			new WorkflowTransition(BuildStates.SD_LOCAL_BUILD_UPLOAD_FAILED.getValue(), BuildStates.SD_LOCAL_BUILD_UPLOAD_FAILED.getValue(),
 				WorkFlowCommonEventType.WORKFLOW_FAILED.getValue(), true));
 
 		addTransition(BuildStates.MILESTONE_CREATION.getValue(),
@@ -163,6 +175,14 @@ public class BuildWorkflowDefinition extends WorkflowDefinition
 
 		addTransition(BuildStates.CHANNEL_FAILED.getValue(),
 			new WorkflowTransition(BuildStates.CHANNEL_FAILED.getValue(), BuildStates.CHANNEL_MAPPING.getValue(),
+				BuildEventType.RETRY_REQUESTED.getValue()));
+
+		addTransition(BuildStates.SD_CSEZ_BUILD_UPLOAD_FAILED.getValue(),
+			new WorkflowTransition(BuildStates.SD_CSEZ_BUILD_UPLOAD_FAILED.getValue(), BuildStates.SD_CSEZ_BUILD_UPLOAD.getValue(),
+				BuildEventType.RETRY_REQUESTED.getValue()));
+
+		addTransition(BuildStates.SD_LOCAL_BUILD_UPLOAD_FAILED.getValue(),
+			new WorkflowTransition(BuildStates.SD_LOCAL_BUILD_UPLOAD_FAILED.getValue(), BuildStates.SD_LOCAL_BUILD_UPLOAD.getValue(),
 				BuildEventType.RETRY_REQUESTED.getValue()));
 
 		addTransition(BuildStates.WORKFLOW_FAILED.getValue(), new WorkflowTransition(BuildStates.WORKFLOW_FAILED.getValue(), BuildStates.BUILD_INITIATION.getValue(),

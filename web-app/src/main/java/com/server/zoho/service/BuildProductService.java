@@ -92,7 +92,7 @@ public class BuildProductService
 
 	public void markMilestoneCreated(BuildProductEntity buildProductEntity, String milestoneVersion)
 	{
-		buildProductEntity.setStatus("MILESTONE_CREATED");
+		buildProductEntity.setStatus(BuildProductStatus.MILESTONE_CREATED.getName());
 		buildProductEntity.setErrorMessage(null);
 		buildProductEntity.setMilestoneVersion(milestoneVersion);
 		buildProductEntity.updateUpdatedTime();
@@ -119,6 +119,42 @@ public class BuildProductService
 		buildProductEntity.markAsStarted(buildId);
 		buildProductRepository.save(buildProductEntity);
 		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as STARTED");
+	}
+
+	public void markSDCSEZBuildUploaded(BuildProductEntity buildProductEntity)
+	{
+		buildProductEntity.setStatus(BuildProductStatus.SD_CSEZ_BUILD_UPLOADED.getName());
+		buildProductEntity.setErrorMessage(null);
+		buildProductEntity.updateUpdatedTime();
+		buildProductRepository.save(buildProductEntity);
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_BUILD_UPLOADED");
+	}
+
+	public void markSDLocalBuildUploaded(BuildProductEntity buildProductEntity)
+	{
+		buildProductEntity.setStatus(BuildProductStatus.SD_LOCAL_BUILD_UPLOADED.getName());
+		buildProductEntity.setErrorMessage(null);
+		buildProductEntity.updateUpdatedTime();
+		buildProductRepository.save(buildProductEntity);
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_CSEZ_BUILD_UPLOADED");
+	}
+
+	public void markSDCSEZBuildUploadFailed(BuildProductEntity buildProductEntity, String errorMessage)
+	{
+		buildProductEntity.setStatus(BuildProductStatus.SD_CSEZ_BUILD_UPLOAD_FAILED.getName());
+		buildProductEntity.setErrorMessage(null);
+		buildProductEntity.updateUpdatedTime();
+		buildProductRepository.save(buildProductEntity);
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_CSEZ_BUILD_UPLOAD_FAILED");
+	}
+
+	public void markSDLocalBuildUploadFailed(BuildProductEntity buildProductEntity, String errorMessage)
+	{
+		buildProductEntity.setStatus(BuildProductStatus.SD_LOCAL_BUILD_UPLOAD_FAILED.getName());
+		buildProductEntity.setErrorMessage(errorMessage);
+		buildProductEntity.updateUpdatedTime();
+		buildProductRepository.save(buildProductEntity);
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_LOCAL_BUILD_UPLOAD_FAILED");
 	}
 
 }
