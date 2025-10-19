@@ -79,6 +79,7 @@ fi
 
 
 echo "Using JAVA_OPTS: $JAVA_OPTS"
+#nohup caffeinate -di $JAVA_HOME/bin/java $JAVA_OPTS -jar "$JAR_FILE" &
 nohup $JAVA_HOME/bin/java $JAVA_OPTS -jar "$JAR_FILE" &
 
 

@@ -4,6 +4,7 @@ import com.server.framework.common.AppProperties;
 import com.server.framework.common.DateUtil;
 import com.server.framework.entity.JobEntity;
 import com.server.framework.job.CustomRunnable;
+import com.server.framework.job.JobStatus;
 import com.server.framework.job.RefreshManager;
 import com.server.framework.repository.JobRepository;
 
@@ -47,13 +48,14 @@ public class JobService
 
 	public void scheduleJob(JobEntity jobEntity)
 	{
+		jobEntity.setStatus(JobStatus.JOB_DISPATCHED);
 		jobRepository.save(jobEntity);
-		RefreshManager.addJobInQueue(() -> jobWrapper.executeJob(jobEntity), Math.min(0, jobEntity.getScheduledTime() - DateUtil.getCurrentTimeInMillis()));
+		RefreshManager.addJobInQueue(() -> jobWrapper.executeJob(jobEntity), Math.max(0, jobEntity.getScheduledTime() - DateUtil.getCurrentTimeInMillis()));
 	}
 
 	public List<JobEntity> findJobsToExecute(Long executionTime)
 	{
-		return jobRepository.findJobsToExecute(executionTime);
+		return jobRepository.findJobsToExecute(executionTime, JobStatus.JOB_NOT_RUNNING.getStatus());
 	}
 
 	public Long scheduleJob(String taskName, String data, long executionTimeInMilliseconds) throws Exception

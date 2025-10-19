@@ -9,6 +9,7 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
@@ -179,9 +180,16 @@ public class SecurityFilter implements Filter
 			httpResponse.sendRedirect(ROOT_PATH);
 			return true;
 		}
-		else if(!SecurityUtil.isLoginRequest() && !SecurityUtil.isAdminCall() && !SecurityUtil.isAdminUser() && !SecurityUtil.isResourceFetchRequest() && !requestURI.startsWith("/api") && AppProperties.getProperty("environment", "development").equals("zoho") && !requestURI.startsWith(ZOHO_PATH))
+		else if(AppProperties.getProperty("environment", "development").equals("zoho") && !requestURI.startsWith(ZOHO_PATH) && !SecurityUtil.isLoginRequest() && !SecurityUtil.isAdminCall() && !SecurityUtil.isAdminUser() && !SecurityUtil.isResourceFetchRequest() && !requestURI.startsWith("/api"))
 		{
-			httpResponse.sendError(HttpStatus.FORBIDDEN.value());
+			if(requestURI.equals("/") || requestURI.equals(StringUtils.EMPTY))
+			{
+				httpResponse.sendRedirect(ZOHO_PATH);
+			}
+			else
+			{
+				httpResponse.sendError(HttpStatus.FORBIDDEN.value());
+			}
 			return true;
 		}
 		return false;

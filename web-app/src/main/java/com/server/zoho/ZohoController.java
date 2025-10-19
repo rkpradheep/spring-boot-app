@@ -407,7 +407,7 @@ public class ZohoController
 
 		JSONArray notifyTo = new JSONArray().put("pradheep.rkd@zohocorp.com");
 
-		String comment = DateUtil.getFormattedCurrentTime("'MASTER BUILD' dd'th' MMMM yyyy");
+		String comment = DateUtil.getFormattedCurrentTime("'Master Build' dd MMMM yyyy").toUpperCase();
 		JSONObject sdBuildUpdatePayload = new JSONObject()
 			.put("data_center", dc)
 			.put("region", region)

@@ -56,7 +56,27 @@ public class CommonService {
 
     public static String postMessageToBot(String message) {
         try {
-            URL url = new URL("https://cliq.zoho.com/company/64396901/api/v2/bots/myserver/message?zapikey=" + AppProperties.getProperty("cliq.zapi.key"));
+            URL url = new URL("https://cliq.zoho.in/api/v2/bots/myserver/message?zapikey=" + AppProperties.getProperty("cliq.zapi.key"));
+
+            HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+            httpURLConnection.setRequestMethod("POST");
+
+            httpURLConnection.setDoOutput(true);
+            httpURLConnection.setRequestProperty("Content-Type", "application/json");
+
+            JSONObject payload = new JSONObject();
+            payload.put("text", message);
+            httpURLConnection.getOutputStream().write(payload.toString().getBytes(StandardCharsets.UTF_8));
+
+            return getResponse(httpURLConnection.getResponseCode() != 200 ? httpURLConnection.getErrorStream() : httpURLConnection.getInputStream());
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public static String postMessageToChannel(String message) {
+        try {
+            URL url = new URL("https://cliq.zoho.in/company/60047444754/api/v2/channelsbyname/ext:pradheep/message?zapikey=" + AppProperties.getProperty("cliq.zapi.key"));
 
             HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
             httpURLConnection.setRequestMethod("POST");

@@ -51,6 +51,7 @@ public class JobDispatcher
 
 			int threadCount = AppProperties.getIntProperty("job.thread.count", 2);
 
+
 			scheduler = Executors.newScheduledThreadPool(1, new CustomThreadFactory("job-dispatcher-"));
 
 			scheduler.scheduleWithFixedDelay(this::pollAndExecuteJobs, 10, AppProperties.getIntProperty("job.dispatcher.running.interval.seconds", 300), TimeUnit.SECONDS);

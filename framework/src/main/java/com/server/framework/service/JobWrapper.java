@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import com.server.framework.common.AppProperties;
 import com.server.framework.common.DateUtil;
 import com.server.framework.entity.JobEntity;
+import com.server.framework.job.JobStatus;
 import com.server.framework.job.Task;
 import com.server.framework.job.TaskEnum;
 import com.server.framework.repository.JobRepository;
@@ -30,7 +31,7 @@ public class JobWrapper
 
 		try
 		{
-			jobEntity.setIsRunning(true);
+			jobEntity.setStatus(JobStatus.JOB_RUNNING);
 			jobRepository.save(jobEntity);
 
 			Task task = TaskEnum.getTaskInstance(jobEntity.getTaskName());
@@ -53,7 +54,7 @@ public class JobWrapper
 	{
 		try
 		{
-			jobEntity.setIsRunning(false);
+			jobEntity.setStatus(JobStatus.JOB_NOT_RUNNING);
 			jobRepository.save(jobEntity);
 
 			if(Boolean.TRUE.equals(jobEntity.getIsRecurring()) && jobEntity.getDayInterval() != null && jobEntity.getDayInterval() > 0)
@@ -63,6 +64,23 @@ public class JobWrapper
 				jobService.updateNextExecutionTime(jobEntity.getId(), nextExecutionTime);
 
 				LOGGER.info("Recurring job " + jobEntity.getId() + " rescheduled for: " + new java.util.Date(nextExecutionTime));
+
+				if(!AppProperties.getBoolean("job.dispatcher.enabled"))
+				{
+					jobService.scheduleJob(jobEntity);
+				}
+
+				return;
+			}
+
+			Task task = TaskEnum.getTaskInstance(jobEntity.getTaskName());
+			if(task.canAddJobAgain())
+			{
+				long nextExecutionTime = DateUtil.getCurrentTimeInMillis() + task.getDelayBeforeAddJobAgain();
+
+				jobService.updateNextExecutionTime(jobEntity.getId(), nextExecutionTime);
+
+				LOGGER.info("Job " + jobEntity.getId() + " rescheduled for: " + DateUtil.getFormattedTime(nextExecutionTime, DateUtil.DATE_WITH_TIME_SECONDS_FORMAT));
 
 				if(!AppProperties.getBoolean("job.dispatcher.enabled"))
 				{

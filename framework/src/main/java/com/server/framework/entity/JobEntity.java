@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 
 import org.hibernate.annotations.GenericGenerator;
 
+import com.server.framework.job.JobStatus;
+
 @Entity(name = "Job")
 @Table(name = "Job")
 public class JobEntity
@@ -18,7 +20,7 @@ public class JobEntity
     @Column(name = "TaskName", nullable = false, length = 255)
     private String taskName;
     
-    @Column(name = "Data", nullable = false, columnDefinition = "LONGTEXT")
+    @Column(name = "Data", columnDefinition = "LONGTEXT")
     private String data;
     
     @Column(name = "ScheduledTime", nullable = false)
@@ -30,8 +32,8 @@ public class JobEntity
     @Column(name = "IsRecurring", nullable = false)
     private Boolean isRecurring = false;
 
-    @Column(name = "IsRunning", nullable = false)
-    private Boolean isRunning = false;
+    @Column(name = "Status", nullable = false, columnDefinition = "INT DEFAULT -1")
+    private Integer status = JobStatus.JOB_NOT_RUNNING.getStatus();
 
     public JobEntity() {}
     
@@ -62,6 +64,10 @@ public class JobEntity
     public String getData() {
         return data;
     }
+
+    public int getStatus() {
+        return status;
+    }
     
     public void setData(String data) {
         this.data = data;
@@ -91,13 +97,9 @@ public class JobEntity
         this.isRecurring = isRecurring;
     }
 
-    public Boolean getIsRunning()
-    {
-        return isRunning;
-    }
 
-    public void setIsRunning(Boolean isRunning) {
-        this.isRunning = isRunning;
+    public void setStatus(JobStatus jobStatus) {
+        this.status = jobStatus.getStatus();
     }
     
     @Override
@@ -108,7 +110,7 @@ public class JobEntity
                 ", scheduledTime=" + scheduledTime +
                 ", dayInterval=" + dayInterval +
                 ", isRecurring=" + isRecurring +
-                ", isRunning=" + isRunning +
+                ", status=" + status +
                 '}';
     }
 }

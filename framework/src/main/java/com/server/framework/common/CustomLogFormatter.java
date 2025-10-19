@@ -20,7 +20,7 @@ public class CustomLogFormatter extends LayoutBase<ILoggingEvent>
 		sb.append(Thread.currentThread().getName());
 		sb.append(" ----> ");
 
-		sb.append(DateUtil.getFormattedTime(event.getTimeStamp(), DateUtil.DATE_WITH_TIME_FORMAT));
+		sb.append(DateUtil.getFormattedTime(event.getTimeStamp(), DateUtil.DATE_WITH_TIME_SECONDS_FORMAT));
 		sb.append(" ");
 
 		String level = event.getLevel().toString();

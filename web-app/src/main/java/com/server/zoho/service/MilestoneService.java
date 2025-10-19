@@ -211,7 +211,7 @@ public class MilestoneService
 		Map<String, Object> movedDetail = new HashMap<>();
 
 		movedDetail.put("location", newMilestone);
-		movedDetail.put("comment", DateUtil.getFormattedCurrentTime("'MASTER BUILD' dd'th' MMMM yyyy"));
+		movedDetail.put("comment", DateUtil.getFormattedCurrentTime("'Master Build' dd MMMM yyyy").toUpperCase());
 		movedDetail.put("release_type", "MAJOR_OR_MINOR");
 		movedDetail.put("buildlog_id", buildLogId);
 
