@@ -57,6 +57,11 @@ public class IntegService
 	{
 		try
 		{
+			if(Objects.isNull(getClass().getClassLoader().getResource("zoho-properties.yml")))
+			{
+				LOGGER.info("zoho-properties.yml not found in classpath. Skipping product configuration load.");
+				return;
+			}
 			PRODUCT_CONFIG_MAP = new HashMap<>();
 
 			try(InputStream inputStream = getClass().getClassLoader().getResourceAsStream("zoho-properties.yml"))

@@ -17,6 +17,8 @@ import java.util.logging.Logger;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
 
 public class ContextInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext>
@@ -30,23 +32,19 @@ public class ContextInitializer implements ApplicationContextInitializer<Configu
 		LOGGER.log(Level.INFO, "Application Context Initializer Called");
 
 		ConfigurableEnvironment environment = applicationContext.getEnvironment();
-		MutablePropertySources propertySources = environment.getPropertySources();
 
 		try
 		{
-			String customPropertiesPath = Paths.get( "application-custom.properties").toString();
-			Properties customProperties = new Properties();
 
-			if(!new File(customPropertiesPath).exists())
-			{
-				return;
-			}
+//			String customPropertiesPath = Paths.get( "application-custom.properties").toString();
+//			Properties customProperties = new Properties();
 
-			try(FileInputStream fis = new FileInputStream(customPropertiesPath))
-			{
-				customProperties.load(fis);
-				LOGGER.info("Loaded custom.properties from: " + customPropertiesPath);
-			}
+//			MutablePropertySources propertySources = environment.getPropertySources();
+//			try(FileInputStream fis = new FileInputStream(customPropertiesPath))
+//			{
+//				customProperties.load(fis);
+//				LOGGER.info("Loaded custom.properties from: " + customPropertiesPath);
+//			}
 
 //			Map<String, Object> propertiesMap = new HashMap<>();
 //			for(String key : customProperties.stringPropertyNames())
@@ -60,7 +58,7 @@ public class ContextInitializer implements ApplicationContextInitializer<Configu
 //
 //			LOGGER.info("Custom properties loaded successfully. Total properties: " + customProperties.size());
 
-			coldStart(customProperties);
+			coldStart(environment);
 
 		}
 		catch(IOException e)
@@ -69,18 +67,18 @@ public class ContextInitializer implements ApplicationContextInitializer<Configu
 		}
 	}
 
-	public static void coldStart(Properties customProperties) throws IOException
+	public static void coldStart(Environment environment) throws IOException
 	{
-		boolean coldStart = Boolean.parseBoolean(customProperties.getProperty("coldstart", "false"));
+		boolean coldStart = Boolean.parseBoolean(System.getProperty("coldstart", "false"));
 		if(!coldStart)
 		{
 			return;
 		}
 
-		String jdbcUrl = customProperties.getProperty("spring.datasource.url");
-		String dbSchema = customProperties.getProperty("db.server.schema", "tomcatserver");
-		String dbUser = customProperties.getProperty("spring.datasource.username");
-		String dbPassword = customProperties.getProperty("spring.datasource.password");
+		String jdbcUrl = environment.getProperty("spring.datasource.url");
+		String dbSchema = environment.getProperty("db.server.schema", "tomcatserver");
+		String dbUser = environment.getProperty("spring.datasource.username");
+		String dbPassword = environment.getProperty("spring.datasource.password");
 
 		try(Connection connection = DriverManager.getConnection(jdbcUrl, dbUser, dbPassword))
 		{

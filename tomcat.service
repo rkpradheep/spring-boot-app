@@ -6,9 +6,9 @@ Requires=mariadb.service
 [Service]
 Type=forking
 
-Environment="APP_SERVER_HOME=/home/pradheep_rk_it/spring-boot-app"
-ExecStart=/home/pradheep_rk_it/spring-boot-app/run.sh
-ExecStop=/home/pradheep_rk_it/spring-boot-app/shutdown.sh
+Environment="APP_SERVER_HOME=/home/pradheep_rk_it/spring-boot-app/build/container"
+ExecStart=/home/pradheep_rk_it/spring-boot-app/build/container/run.sh
+ExecStop=/home/pradheep_rk_it/spring-boot-app/build/container/shutdown.sh
 
 User=root
 Group=root

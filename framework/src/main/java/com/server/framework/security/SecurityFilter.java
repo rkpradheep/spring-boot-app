@@ -6,6 +6,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -91,6 +92,7 @@ public class SecurityFilter implements Filter
 	{
 		HttpServletResponse httpResponse = (HttpServletResponse) response;
 
+		setCookies(httpResponse);
 		initializeThreadLocals(request);
 		setResponseHeaders(httpResponse);
 
@@ -124,6 +126,15 @@ public class SecurityFilter implements Filter
 		}
 
 		handleAuthentication(httpResponse, chain);
+	}
+
+	private void setCookies(HttpServletResponse httpResponse)
+	{
+		Cookie cookie = new Cookie("environment", AppProperties.getProperty("environment"));
+		cookie.setHttpOnly(false);
+		cookie.setPath("/");
+		cookie.setMaxAge(-1);
+		httpResponse.addCookie(cookie);
 	}
 
 	private void initializeThreadLocals(ServletRequest request)

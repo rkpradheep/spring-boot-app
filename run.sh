@@ -67,14 +67,14 @@ if [ ! -f "$JAR_FILE" ]; then
   exit 1m
 fi
 
-JAVA_OPTS="-Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes= -Duser.timezone=Asia/Kolkata -javaagent:instrumentation.jar --add-exports=java.base/sun.net.www.protocol.http=ALL-UNNAMED --add-exports=java.base/sun.net.www.protocol.https=ALL-UNNAMED --add-exports=java.base/sun.net.www.http=ALL-UNNAMED -Djava.protocol.handler.pkgs=com.server.protocol -Xbootclasspath/a:protocol.jar"
+JAVA_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 -Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes= -Duser.timezone=Asia/Kolkata -javaagent:instrumentation.jar --add-exports=java.base/sun.net.www.protocol.http=ALL-UNNAMED --add-exports=java.base/sun.net.www.protocol.https=ALL-UNNAMED --add-exports=java.base/sun.net.www.http=ALL-UNNAMED -Djava.protocol.handler.pkgs=com.server.protocol -Xbootclasspath/a:protocol.jar -Dspring.profiles.active=custom"
 
 
 #Placeholder
 JAVA_OPTS_CUSTOM_VALUE=
 
 if [ -n "$JAVA_OPTS_CUSTOM_VALUE" ]; then
-  JAVA_OPTS=$JAVA_OPTS_CUSTOM_VALUE
+  JAVA_OPTS="$JAVA_OPTS_CUSTOM_VALUE"
 fi
 
 

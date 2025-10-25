@@ -117,6 +117,6 @@ rm -f "build/run.sh"
 
 echo "${GREEN}############## Build completed ##############${NC}\n"
 
-if [ $CUSTOM_DIR == $DEFAULT_CUSTOM_DIR ]; then
+if [ "$CUSTOM_DIR" = "$DEFAULT_CUSTOM_DIR" ]; then
   sh deploy.sh $(pwd)/build
 fi

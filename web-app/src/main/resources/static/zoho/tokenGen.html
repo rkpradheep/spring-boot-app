@@ -180,7 +180,7 @@ To generate token using your own secrets <a target="_blank" href="/tokenGenCusto
 
           window.onload = function() {
                 forceHttpsRedirect();
-                if (getCookie('production') == 'true')
+                if (getCookie('environment') == 'production')
                 {
                 hideElement('dev')
                 hideElement('local')
