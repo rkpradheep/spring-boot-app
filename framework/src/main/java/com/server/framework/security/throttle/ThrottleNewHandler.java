@@ -14,8 +14,8 @@ public class ThrottleNewHandler
 	// Allow bursts up to 10; refill 5 tokens every second
 	// Or for sliding window: max 10 requests per 60-second window
 
-	private static final Integer MAX_REQUEST_ALLOWED = 10;  // capacity (burst) / max requests per window
-	private static final Integer TOKENS_ADDED_PER_INTERVAL = 5;  // tokens added per interval (for token bucket)
+	private static final Integer MAX_REQUEST_ALLOWED = 100;  // capacity (burst) / max requests per window
+	private static final Integer TOKENS_ADDED_PER_INTERVAL = 100;  // tokens added per interval (for token bucket)
 	private static final Algorithm DEFAULT_ALGORITHM = Algorithm.TOKEN_BUCKET;  // tokens added per interval (for token bucket)
 	private static final Integer WINDOW_SIZE = 60;  // tokens added per interval (for token bucket)
 
