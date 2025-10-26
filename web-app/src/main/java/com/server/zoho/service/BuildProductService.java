@@ -1,5 +1,6 @@
 package com.server.zoho.service;
 
+import com.server.zoho.IntegService;
 import com.server.zoho.entity.BuildProductEntity;
 import com.server.zoho.repository.BuildProductRepository;
 import com.server.zoho.workflow.model.BuildProductStatus;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -25,6 +27,7 @@ public class BuildProductService
 	public void createBuildProducts(Long buildMonitorId, List<String> productNames)
 	{
 		List<BuildProductEntity> buildProductEntities = new java.util.ArrayList<>();
+		productNames.sort(Comparator.comparingInt(productName-> IntegService.getProductConfig(productName).getOrder()));
 
 		for(int i = 0; i < productNames.size(); i++)
 		{

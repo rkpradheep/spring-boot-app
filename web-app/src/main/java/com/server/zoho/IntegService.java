@@ -91,8 +91,9 @@ public class IntegService
 						String branchName = config.get("branch_name").toString();
 						boolean isServerRepo = config.get("is_server_repo") != null && Boolean.parseBoolean(config.get("is_server_repo").toString());
 						String buildUrl = config.get("build_url") != null ? config.get("build_url").toString() : null;
+						Integer order = config.get("order") != null ? (Integer) config.get("order") : -1;
 
-						PRODUCT_CONFIG_MAP.put(productName, new ProductConfig(productId, channelName, branchName, isServerRepo, buildUrl));
+						PRODUCT_CONFIG_MAP.put(productName, new ProductConfig(productId, channelName, branchName, isServerRepo, buildUrl, order));
 					}
 				}
 
@@ -380,14 +381,16 @@ public class IntegService
 		private final String branch;
 		private boolean isServerRepo;
 		private String buildUrl;
+		private int order;
 
-		public ProductConfig(String id, String channel, String branch, boolean isServerRepo, String buildUrl)
+		public ProductConfig(String id, String channel, String branch, boolean isServerRepo, String buildUrl, int order)
 		{
 			this.id = id;
 			this.channel = channel;
 			this.branch = branch;
 			this.isServerRepo = isServerRepo;
 			this.buildUrl = buildUrl;
+			this.order = order;
 		}
 
 		public String getId()
@@ -413,6 +416,11 @@ public class IntegService
 		public String getBuildUrl()
 		{
 			return buildUrl;
+		}
+
+		public int getOrder()
+		{
+			return order;
 		}
 	}
 

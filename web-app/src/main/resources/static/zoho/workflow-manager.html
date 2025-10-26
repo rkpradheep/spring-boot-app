@@ -873,13 +873,6 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <div id="selectedProductsDisplay" class="selected-products-display">
-                        <p style="color: #666; font-style: italic;">No products selected</p>
-                    </div>
-                </div>
-
-
                 <button class="btn" id="startWorkflowBtn" onclick="startWorkflow()">
                     Start Build
                 </button>
@@ -950,19 +943,19 @@
         if (index > -1) {
             selectedProducts.splice(index, 1);
             element.classList.remove('selected');
-            element.querySelector('.order-badge')?.remove();
+<!--            element.querySelector('.order-badge')?.remove();-->
         } else {
             selectedProducts.push(product);
             element.classList.add('selected');
 
-            const orderBadge = document.createElement('span');
-            orderBadge.className = 'order-badge';
-            orderBadge.textContent = selectedProducts.length;
-            element.appendChild(orderBadge);
+<!--            const orderBadge = document.createElement('span');-->
+<!--            orderBadge.className = 'order-badge';-->
+<!--            orderBadge.textContent = selectedProducts.length;-->
+<!--            element.appendChild(orderBadge);-->
         }
 
-        updateOrderBadges();
-        updateSelectedProductsDisplay();
+<!--        updateOrderBadges();-->
+<!--        updateSelectedProductsDisplay();-->
     }
 
     function updateOrderBadges() {
@@ -1104,7 +1097,6 @@
                 <div class="status-badge ${statusClass}">${instance.status}</div>
             </div>
             <div class="instance-details">
-                <div><strong>Workflow:</strong> ${instance.workflowName}</div>
                 ${instance.createdBy ? `<div><strong>Started By:</strong> ${instance.createdBy}</div>` : ''}
                 ${instance.lastModifiedBy ? `<div><strong>Last Modified By:</strong> ${instance.lastModifiedBy}</div>` : ''}
                 <div><strong>Current State:</strong> ${instance.currentState}</div>
@@ -1552,9 +1544,9 @@
         selectedProducts = [];
         document.querySelectorAll('.product-item').forEach(item => {
             item.classList.remove('selected');
-            item.querySelector('.order-badge')?.remove();
+<!--            item.querySelector('.order-badge')?.remove();-->
         });
-        updateSelectedProductsDisplay();
+<!--       updateSelectedProductsDisplay(); -->
     }
 
     function showAlert(message, type) {
