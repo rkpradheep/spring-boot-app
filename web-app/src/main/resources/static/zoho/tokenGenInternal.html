@@ -4,7 +4,6 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport"  content="initial-scale=0.8,userEntity-scalable=no"/>
-    <link rel='stylesheet' href='/css/navbar.css'>
 </head>
 <style>
     body {
@@ -40,6 +39,9 @@
 <br><br><br>
 <h1><b>OAuth 2.0 Token Generator</b></h1>
 <br/>
+To generate token using your own secrets <a target="_blank" href="/zoho/oauth-tool-custom">click here</a>
+<br/>
+<br/>
 <br/>
 <form>
     DC :
@@ -56,7 +58,6 @@
     <button onclick="copyAT()"> Copy Access Token </button> <button onclick="copyRT()"> Copy Refresh Token </button> <button onclick="copyAll()"> Copy All </button> <br>
     <textarea readonly id="output" name="output" rows="10" cols="100" style="font-size:18px;color:white;background-color:black;max-width: 80vw;overflow: auto; "></textarea>
 </div>
-<script src="/js/navbar.js"></script>
 <script src="/js/common.js"></script>
 <script>
     var dcListOptions = ""

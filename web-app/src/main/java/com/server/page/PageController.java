@@ -151,4 +151,10 @@ public class PageController
 	{
 		return "forward:/tokenGenCustom.html";
 	}
+
+	@GetMapping("/zoho/oauth-tool-custom")
+	public String tokenGenCustomInternalJspPage()
+	{
+		return "forward:/zoho/tokenGenCustomInternal.html";
+	}
 }
