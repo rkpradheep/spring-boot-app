@@ -9,8 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import com.server.framework.common.CommonService;
 import com.server.framework.workflow.definition.WorkflowStep;
-import com.server.zoho.ZohoController;
+import com.server.zoho.ZohoService;
 import com.server.zoho.service.BuildMonitorService;
 import com.server.zoho.service.BuildProductService;
 import com.server.framework.workflow.model.WorkflowEvent;
@@ -49,14 +50,15 @@ public class SDCsezBuildUploadStep extends WorkflowStep
 		Long monitorId = (Long) context.get("monitorId");
 		Long productId = (Long) context.get("productId");
 
+		String milestoneVersion = instance.getVariable("milestoneVersion");
+		String productName = instance.getVariable("productName");
+
+
 		try
 		{
-			String milestoneVersion = instance.getVariable("milestoneVersion");
-			String productName = instance.getVariable("productName");
-
 			LOGGER.info("Preparing SD Build Update for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion + ", productName: " + productName);
 
-			String response = ZohoController.uploadBuild(productName, milestoneVersion, "CSEZ", "SEZ");
+			String response = ZohoService.uploadBuild(productName, milestoneVersion, "CSEZ", "SEZ");
 			LOGGER.info("SD Build Update Response CSEZ : " + response);
 
 			boolean isCSEZBuildSuccessful = new JSONObject(response).getString("code").equals("SUCCESS");
@@ -64,13 +66,15 @@ public class SDCsezBuildUploadStep extends WorkflowStep
 
 			if(isCSEZBuildSuccessful)
 			{
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload initiated for CSEZ ( " + milestoneVersion + " )");
+
 				buildProductService.getById(productId).ifPresent(buildProductService::markSDCSEZBuildUploaded);
 				LOGGER.info("SD Build Update Successful for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion);
 				return new WorkflowEvent(BuildEventType.SD_LOCAL_BUILD_UPLOAD, Map.of("message", "SD csez build upload completed"));
 			}
 			else
 			{
-
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload to CSEZ Failed ( " + milestoneVersion + " )");
 				LOGGER.severe("SD Build Update Failed: " + "CSEZ Message : " + csezBuildMessage);
 				buildProductService.getById(productId).ifPresent(buildProductEntity -> buildProductService.markSDCSEZBuildUploadFailed(buildProductEntity, csezBuildMessage));
 				return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED, Map.of("error", "SD Build Update Failed: " + "CSEZ Message : " + csezBuildMessage));
@@ -78,6 +82,7 @@ public class SDCsezBuildUploadStep extends WorkflowStep
 		}
 		catch(Exception e)
 		{
+			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload to CSEZ Failed ( " + milestoneVersion + " )");
 			LOGGER.log(Level.SEVERE, "Error in SDBuildUploadStep execute", e);
 			buildProductService.getById(productId).ifPresent(buildProductEntity -> buildProductService.markSDCSEZBuildUploadFailed(buildProductEntity, e.getMessage()));
 			return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED, Map.of("error", e.getMessage()));

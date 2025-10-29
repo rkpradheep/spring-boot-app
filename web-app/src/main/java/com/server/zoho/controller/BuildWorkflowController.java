@@ -1,10 +1,13 @@
 package com.server.zoho.controller;
 
+import com.server.framework.common.CommonService;
+import com.server.framework.common.DateUtil;
 import com.server.framework.entity.WorkflowInstanceEntity;
 import com.server.framework.error.AppException;
 import com.server.framework.service.LockService;
 import com.server.framework.workflow.WorkflowEngine;
 import com.server.framework.workflow.definition.WorkFlowCommonEventType;
+import com.server.zoho.BuildResponse;
 import com.server.zoho.ZohoService;
 import com.server.zoho.workflow.model.BuildEventType;
 import com.server.framework.workflow.model.WorkflowInstance;
@@ -19,8 +22,9 @@ import com.server.zoho.service.BuildProductService;
 import com.server.framework.builder.ApiResponseBuilder;
 import com.server.zoho.workflow.model.BuildProductStatus;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +33,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/zoho/workflow")
@@ -66,12 +72,9 @@ public class BuildWorkflowController
 			List<WorkflowInstanceEntity> workflowInstances = workflowService.findRunningInstances();
 			if(!workflowInstances.isEmpty())
 			{
-				return ResponseEntity.badRequest().body(ApiResponseBuilder.error(
-					"A build workflow is already running. Please wait for it to complete before starting a new one.",
-					HttpStatus.BAD_REQUEST.value()
-				));
+				throw new AppException("A build workflow is already running. Please wait for it to complete before starting a new one.");
 			}
-			IntegService.BuildResponse response = integService.scheduleBuilds(request.getProductNames());
+			BuildResponse response = integService.scheduleBuilds(request.getProductNames());
 
 			Map<String, Object> data = new HashMap<>();
 			data.put("response", response.getText());
@@ -88,6 +91,30 @@ public class BuildWorkflowController
 		{
 			return ResponseEntity.badRequest().body(ApiResponseBuilder.error("Error starting build workflow: " + e.getMessage(), 400));
 		}
+	}
+
+	@Transactional
+	@PostMapping("/patch-build/start")
+	private ResponseEntity<Map<String, Object>> startPatchBuildWorkflow(@Param("product_name") String productName, @Param("branch_name") String branchName) throws Exception
+	{
+		BuildMonitorEntity monitor = buildMonitorService.createBuildMonitor(Set.of(productName));
+
+		BuildProductEntity firstProduct = buildProductService.getNextPendingProduct(monitor.getId()).orElse(null);
+
+		Map<String, Object> context = new HashMap<>()
+		{
+			{
+				put("monitorId", monitor.getId());
+				put("productId", firstProduct.getId());
+				put("isPatchBuild", true);
+				put("branchName", branchName);
+			}
+		};
+
+		String referenceID = monitor.getId().toString();
+		workflowEngine.scheduleWorkflow("PatchBuildWorkflow", referenceID, context, ZohoService.getCurrentUserEmail());
+
+		return ResponseEntity.badRequest().body(ApiResponseBuilder.success("Patch Build scheduled successfully", null));
 	}
 
 	@Transactional
@@ -449,28 +476,16 @@ public class BuildWorkflowController
 
 	public static class BuildWorkflowRequest
 	{
-		private List<String> productNames;
-		private Long buildId;
+		private Set<String> productNames;
 
-		// Getters and Setters
-		public List<String> getProductNames()
+		public Set<String> getProductNames()
 		{
 			return productNames;
 		}
 
-		public void setProductNames(List<String> productNames)
+		public void setProductNames(Set<String> productNames)
 		{
 			this.productNames = productNames;
-		}
-
-		public Long getBuildId()
-		{
-			return buildId;
-		}
-
-		public void setBuildId(Long buildId)
-		{
-			this.buildId = buildId;
 		}
 	}
 }

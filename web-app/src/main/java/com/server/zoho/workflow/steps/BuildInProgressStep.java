@@ -1,9 +1,13 @@
 package com.server.zoho.workflow.steps;
 
+import com.server.framework.common.CommonService;
 import com.server.framework.common.DateUtil;
 import com.server.framework.job.TaskEnum;
 import com.server.framework.workflow.definition.WorkflowStep;
+import com.server.zoho.BuildResponse;
 import com.server.zoho.IntegService;
+import com.server.zoho.ZohoService;
+import com.server.zoho.entity.BuildProductEntity;
 import com.server.zoho.service.BuildProductService;
 import com.server.framework.workflow.model.WorkflowEvent;
 import com.server.framework.workflow.model.WorkflowInstance;
@@ -53,18 +57,23 @@ import java.util.logging.Logger;
 
 		try
 		{
-			IntegService.BuildResponse response = integService.checkBuildStatus(buildId);
+			BuildResponse response = integService.checkBuildStatus(buildId);
 			String status = response.getMessage();
+
+			String productName = buildProductService.getById(productId).map(BuildProductEntity::getProductName).orElse(null);
 
 			if("BUILD_SUCCESS".equals(status))
 			{
 				instance.setVariable("buildDuration", response.getDuration());
 				instance.setVariable("buildUrl", response.getUrl());
 
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productName + " ]* Build Success");
+
 				return new WorkflowEvent(BuildEventType.BUILD_COMPLETED, Map.of("message", "Build completed successfully", "buildLogId", response.getBuildLogId()));
 			}
 			else if("BUILD_FAILED".equals(status))
 			{
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productName + " ]* Build Failed");
 				return new WorkflowEvent(BuildEventType.BUILD_FAILED, Map.of("error", response.getErrorMessage() != null ? response.getErrorMessage() : "Build failed"));
 			}
 			else

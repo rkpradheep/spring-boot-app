@@ -1,6 +1,8 @@
 package com.server.zoho.workflow.steps;
 
+import com.server.framework.common.CommonService;
 import com.server.framework.workflow.definition.WorkflowStep;
+import com.server.zoho.ZohoService;
 import com.server.zoho.entity.BuildProductEntity;
 import com.server.zoho.service.BuildProductService;
 import com.server.zoho.service.MilestoneService;
@@ -43,42 +45,31 @@ public class ChannelMappingStep extends WorkflowStep
 		Long buildId = Long.parseLong(instance.getVariable("buildId"));
 		String milestoneVersion = instance.getVariable("milestoneVersion");
 
-		if(productId != null && milestoneVersion != null)
+		Optional<BuildProductEntity> productOpt = buildProductService.getById(productId);
+
+		try
 		{
-			try
-			{
-				Optional<BuildProductEntity> productOpt = buildProductService.getById(productId);
-				if(productOpt.isPresent())
-				{
-					BuildProductEntity product = productOpt.get();
-					MilestoneService.ChannelMappingResult result = milestoneService.mapMilestoneToChannel(buildId, milestoneVersion, product.getProductName());
+			BuildProductEntity product = productOpt.get();
+			MilestoneService.ChannelMappingResult result = milestoneService.mapMilestoneToChannel(buildId, milestoneVersion, product.getProductName());
 
-					if(result.isSuccess() && result.getChannelUrl() != null)
-					{
-						buildProductService.markChannelMapped(product, result.getChannelUrl());
-						return new WorkflowEvent(BuildEventType.NEXT_PRODUCT,
-							Map.of("channelUrl", result.getChannelUrl()));
-					}
-					else
-					{
-						return new WorkflowEvent(BuildEventType.CHANNEL_FAILED,
-							Map.of("error", result.getMessage()));
-					}
-				}
-				else
-				{
-					return new WorkflowEvent(BuildEventType.CHANNEL_FAILED,
-						Map.of("error", "Product not found"));
-				}
-			}
-			catch(Exception e)
+			if(result.isSuccess() && result.getChannelUrl() != null)
 			{
-				return new WorkflowEvent(BuildEventType.CHANNEL_FAILED,
-					Map.of("error", "Channel mapping failed: " + e.getMessage()));
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + product.getProductName() + " ]* Channel Mapped");
+				buildProductService.markChannelMapped(product, result.getChannelUrl());
+				return new WorkflowEvent(BuildEventType.NEXT_PRODUCT, Map.of("channelUrl", result.getChannelUrl()));
 			}
+			else
+			{
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + product.getProductName() + " ]* Channel Mapping Failed");
+				return new WorkflowEvent(BuildEventType.CHANNEL_MAPPING_FAILED, Map.of("error", result.getMessage()));
+			}
+
 		}
-
-		return new WorkflowEvent(BuildEventType.CHANNEL_FAILED,
-			Map.of("error", "Missing productId, buildId, or milestoneVersion"));
+		catch(Exception e)
+		{
+			buildProductService.markChannelMappingFailed(productOpt.orElse(null), e.getMessage());
+			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productOpt.get().getProductName() + " ]* Channel Mapping Failed");
+			return new WorkflowEvent(BuildEventType.CHANNEL_MAPPING_FAILED, Map.of("error", "Channel mapping failed: " + e.getMessage()));
+		}
 	}
 }

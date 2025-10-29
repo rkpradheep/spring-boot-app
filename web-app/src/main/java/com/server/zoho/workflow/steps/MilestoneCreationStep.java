@@ -1,7 +1,10 @@
 package com.server.zoho.workflow.steps;
 
+import com.server.framework.common.CommonService;
 import com.server.framework.workflow.definition.WorkflowStep;
+import com.server.zoho.BuildResponse;
 import com.server.zoho.IntegService;
+import com.server.zoho.ZohoService;
 import com.server.zoho.entity.BuildProductEntity;
 import com.server.zoho.service.BuildProductService;
 import com.server.zoho.service.MilestoneService;
@@ -14,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Logger;
 
@@ -50,20 +52,11 @@ public class MilestoneCreationStep extends WorkflowStep
 		Long productId = (Long) context.get("productId");
 		Long buildId = Long.parseLong(instance.getVariable("buildId"));
 
-		if(Objects.isNull(productId))
-		{
-			return new WorkflowEvent(BuildEventType.MILESTONE_FAILED, Map.of("error", "Missing productId or buildId"));
-		}
+		Optional<BuildProductEntity> productOpt = buildProductService.getById(productId);
 
 		try
 		{
-			Optional<BuildProductEntity> productOpt = buildProductService.getById(productId);
-			if(productOpt.isEmpty())
-			{
-				return new WorkflowEvent(BuildEventType.MILESTONE_FAILED, Map.of("error", "Product not found"));
-			}
-
-			IntegService.BuildResponse buildResponse = integService.checkBuildStatus(buildId);
+			BuildResponse buildResponse = integService.checkBuildStatus(buildId);
 			String releaseVersion = buildResponse.getReleaseVersion();
 			BuildProductEntity product = productOpt.get();
 			if(StringUtils.isEmpty(releaseVersion))
@@ -71,15 +64,18 @@ public class MilestoneCreationStep extends WorkflowStep
 				MilestoneService.MilestoneResult result = milestoneService.moveBuildToMilestone(buildId, product.getProductName());
 				if(result.isSuccess() && result.getMilestoneVersion() != null)
 				{
+					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productOpt.get().getProductName() + " ]* Milestone created ( " + result.getMilestoneVersion() + " )");
 					releaseVersion = result.getMilestoneVersion();
 				}
 				else
 				{
+					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productOpt.get().getProductName() + " ]* Milestone Failed");
 					return new WorkflowEvent(BuildEventType.MILESTONE_FAILED, Map.of("error", result.getMessage()));
 				}
 			}
 			else
 			{
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productOpt.get().getProductName() + " ]* Milestone Already Available( " + releaseVersion + " )");
 				LOGGER.info("Milestone already available. Using release version from build response: " + releaseVersion);
 			}
 
@@ -93,6 +89,8 @@ public class MilestoneCreationStep extends WorkflowStep
 		}
 		catch(Exception e)
 		{
+			buildProductService.markMilestoneFailed(productOpt.orElse(null), e.getMessage());
+			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productOpt.get().getProductName() + " ]* Milestone Failed");
 			return new WorkflowEvent(BuildEventType.MILESTONE_FAILED, Map.of("error", "Milestone creation failed: " + e.getMessage()));
 		}
 	}

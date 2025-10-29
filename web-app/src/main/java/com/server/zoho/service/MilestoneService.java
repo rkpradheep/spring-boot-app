@@ -6,6 +6,7 @@ import com.server.framework.common.AppProperties;
 import com.server.framework.common.DateUtil;
 import com.server.framework.error.AppException;
 import com.server.zoho.IntegService;
+import com.server.zoho.ProductConfig;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +36,7 @@ public class MilestoneService
 		{
 			LOGGER.info("Starting milestone creation for build ID: " + buildId + ", product: " + productName);
 
-			IntegService.ProductConfig productConfig = IntegService.getProductConfig(productName);
+			ProductConfig productConfig = IntegService.getProductConfig(productName);
 			if(productConfig == null)
 			{
 				return new MilestoneResult(false, "Product mapping not found for: " + productName);
@@ -75,7 +76,7 @@ public class MilestoneService
 		{
 			LOGGER.info("Starting channel mapping for build ID: " + buildId + ", milestone: " + milestoneVersion + ", product: " + productName);
 
-			IntegService.ProductConfig productConfig = IntegService.getProductConfig(productName);
+			ProductConfig productConfig = IntegService.getProductConfig(productName);
 			if(productConfig == null)
 			{
 				return new ChannelMappingResult(false, "Product mapping not found for: " + productName);

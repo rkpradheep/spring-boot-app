@@ -168,6 +168,10 @@
             <option value="books-local">BOOKS LOCAL</option>
         </select>&nbsp;&nbsp;ZSID &nbsp;&nbsp;<input type="text" id="paid_org_zsid"/> <button onclick="markAsTestOrPaidOrg(true)">Mark As Paid Org</button>
         <br>
+        <select id="org_count_increase_products">
+            <option value="books-local">BOOKS LOCAL</option>
+        </select>&nbsp;&nbsp;ZUID &nbsp;&nbsp;<input type="text" id="org_count_increase_zuid"/> &nbsp;&nbsp;Count &nbsp;&nbsp;<input type="text" id="org_count_increase_value"/> <button onclick="increaseOrgCount()">Update Free Org Creation Count</button>
+        <br>
         <br>
         <br>
          Product &nbsp;
@@ -1140,6 +1144,36 @@ function handleZohoAuth(authURI)
                     unHideElement("loading");
                     var endpoint = "/api/v1/zoho/mark-as-test-org" + "?service=" + getElementValue("test_org_products").split("-")[0] +"&dc=" + getElementValue("test_org_products").split("-")[1] + "&zsid=" + getElementValue("test_org_zsid")
                     endpoint = isPaidOrgMarking ?  "/api/v1/zoho/mark-as-paid-org" + "?service=" + getElementValue("paid_org_products").split("-")[0] +"&dc=" + getElementValue("paid_org_products").split("-")[1] + "&zsid=" + getElementValue("paid_org_zsid") : endpoint;
+                    var res;
+                    fetch(endpoint, {
+                      method: "POST"
+                        })
+                        .then((response) => {
+                            hideElement("loading");
+                            return response.text();
+                        })
+                        .then((data) => {
+                            res = JSON.parse(data)
+                            if(handleRedirection(res))
+                            {
+                                return;
+                            }
+                           alert(res.message)
+                        })
+                        .catch((error) => {
+                            hideElement("loading");
+                            console.log(error);
+                            alert("Something went wrong. Please try again later.");
+                        });
+
+        }
+
+
+        function increaseOrgCount()
+        {
+
+                    unHideElement("loading");
+                    var endpoint = "/api/v1/zoho/org-count-increment" + "?service=" + getElementValue("org_count_increase_products").split("-")[0] +"&dc=" + getElementValue("org_count_increase_products").split("-")[1] + "&zuid=" + getElementValue("org_count_increase_zuid") + "&count=" + getElementValue("org_count_increase_value")
                     var res;
                     fetch(endpoint, {
                       method: "POST"

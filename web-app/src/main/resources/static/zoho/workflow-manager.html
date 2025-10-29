@@ -865,6 +865,12 @@
 
     <div class="content">
 
+        <button class="btn" id="startPayoutAutoBuild" onclick="startAutoBuildForPayout()">
+            Trigger Automatic Payout Build
+        </button>
+
+        <br><br>
+
         <div class="section">
             <div class="workflow-form">
                 <div class="form-group">
@@ -913,7 +919,7 @@
 
 <script>
     const availableProducts = [
-        'payout_mock_configuration', 'pay_banks', 'payout_common', 'payouts', 'bbps', 'payout_qa', 'payout_server'
+        'payout_mock_configuration', 'pay_banks', 'payout_common', 'payouts', 'payout_in', 'bbps', 'payout_qa', 'payout_server'
     ];
 
     const apiBase = '/api/v1/zoho/workflow';
@@ -1047,6 +1053,34 @@
         } catch (error) {
             console.error('Error starting workflow:', error);
             showAlert('Error starting workflow. Please try again.', 'error');
+        }
+    }
+        async function startAutoBuildForPayout() {
+
+        try {
+            const response = await fetch('/api/v1/zoho/payout/trigger-build', {
+                method: 'POST',
+            });
+
+            const responseJSON = await response.json();
+
+            if (responseJSON.success) {
+                const successMessage = "Automatic Payout Build triggered successfully";
+                showAlert(`${successMessage}`, 'success');
+                alert(successMessage);
+            } else {
+                if(responseJSON.error_code == "reauth_required")
+                {
+                  handleZohoAuth(responseJSON.data.auth_uri)
+                  return;
+                 }
+                 alert(`Failed : ${responseJSON.message}`);
+                showAlert(`Failed : ${responseJSON.message}`, 'error');
+            }
+
+        } catch (error) {
+            console.error('Error starting workflow:', error);
+            showAlert('Error starting automatic build. Please try again.', 'error');
         }
     }
     async function loadWorkflowInstances() {
@@ -1276,7 +1310,7 @@
             'MILESTONE_FAILED': '❌',
             'CHANNEL_MAPPING': '🔗',
             'CHANNEL_COMPLETED': '✅',
-            'CHANNEL_FAILED': '❌',
+            'CHANNEL_MAPPING_FAILED': '❌',
             'NEXT_PRODUCT': '➡️',
             'WORKFLOW_STARTED': '🚀',
             'WORKFLOW_COMPLETED': '🎉',
@@ -1372,7 +1406,7 @@
             case 'sd_csez_build_uploaded': return 'product-status-completed';
             case 'build_failed': return 'product-status-failed';
             case 'milestone_failed': return 'product-status-failed';
-            case 'channel_failed': return 'product-status-failed';
+            case 'channel_mapping_failed': return 'product-status-failed';
             case 'sd_local_build_upload_failed': return 'product-status-failed';
             case 'sd_csez_build_upload_failed': return 'product-status-failed';
             default: return 'product-status-unknown';
@@ -1380,7 +1414,7 @@
     }
 
     function getProductProgressClass(productStatus, currentState) {
-        if (productStatus === 'build_failed' || productStatus === 'milestone_failed' || productStatus === 'channel_failed') {
+        if (productStatus === 'build_failed' || productStatus === 'milestone_failed' || productStatus === 'channel_mapping_failed') {
             return 'product-failed';
         } else if (productStatus === 'channel_mapped') {
             return 'product-completed';

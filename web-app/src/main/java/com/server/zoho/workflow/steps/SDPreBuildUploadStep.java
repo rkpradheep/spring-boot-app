@@ -22,7 +22,7 @@ import com.server.zoho.service.BuildMonitorService;
 import com.server.zoho.service.BuildProductService;
 
 @Component
-public class SDLocalBuildUploadStep extends WorkflowStep
+public class SDPreBuildUploadStep extends WorkflowStep
 {
 	@Autowired
 	private BuildMonitorService buildMonitorService;
@@ -30,12 +30,12 @@ public class SDLocalBuildUploadStep extends WorkflowStep
 	@Autowired
 	private BuildProductService buildProductService;
 
-	private static final Logger LOGGER = Logger.getLogger(SDLocalBuildUploadStep.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(SDPreBuildUploadStep.class.getName());
 
-	public SDLocalBuildUploadStep() {
+	public SDPreBuildUploadStep() {
 		super();
-		setName("SD LOCAL Build Upload");
-		setDescription("Uploads the build to LOCAL");
+		setName("SD PRE Build Upload");
+		setDescription("Uploads the build to PRE");
 		setType(StepType.ACTION);
 		setTimeoutSeconds(10);
 		setMaxRetries(0);
@@ -48,6 +48,8 @@ public class SDLocalBuildUploadStep extends WorkflowStep
 		Map<String, Object> context = (Map<String, Object>) instance.getContext();
 		Long monitorId = (Long) context.get("monitorId");
 		Long productId = (Long) context.get("productId");
+		boolean isPatchBuildUpdate = Boolean.TRUE.equals(context.get("isPatchBuild"));
+		String buildURL = isPatchBuildUpdate ? instance.getVariable("buildUrl") : null;
 		String milestoneVersion = instance.getVariable("milestoneVersion");
 		String productName = instance.getVariable("productName");
 
@@ -55,43 +57,43 @@ public class SDLocalBuildUploadStep extends WorkflowStep
 		{
 			LOGGER.info("Preparing SD Build Update for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion + ", productName: " + productName);
 
-			String response = ZohoService.uploadBuild(productName, milestoneVersion, "CT1", "CT");
-			LOGGER.info("SD Build Update Response LOCAL : " + response);
+			String response = ZohoService.uploadBuild(productName, milestoneVersion, "IN2", "IN", isPatchBuildUpdate, buildURL);
+			LOGGER.info("SD Build Update Response PRE : " + response);
 
-			boolean isLocalBuildSuccessful = new JSONObject(response).getString("code").equals("SUCCESS");
-			String localBuildMessage = new JSONObject(response).getString("message");
+			boolean isPreBuildSuccessful = new JSONObject(response).getString("code").equals("SUCCESS");
+			String preBuildMessage = new JSONObject(response).getString("message");
 
-			if(isLocalBuildSuccessful)
+			if(isPreBuildSuccessful)
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload initiated for LOCAL ( " + milestoneVersion + " )");
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload initiated for PRE ( " + milestoneVersion + " )");
 
 				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
 				if(StringUtils.isNotEmpty(buildOwnerEmail))
 				{
 					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
 				}
-				buildProductService.getById(productId).ifPresent(buildProductService::markSDLocalBuildUploaded);
+				buildProductService.getById(productId).ifPresent(buildProductService::markSDPreBuildUploaded);
 
 				BuildMonitorEntity monitor = buildMonitorService.getById(monitorId).orElse(null);
 				assert monitor != null;
 				buildMonitorService.markAsCompleted(monitor);
 
 				LOGGER.info("SD Build Update Successful for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion);
-				return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_COMPLETED, Map.of("message", "SD local build upload completed"));
+				return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_COMPLETED, Map.of("message", "SD pre build upload completed"));
 			}
 			else
 			{
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload to CSEZ Failed ( " + milestoneVersion + " )");
-				LOGGER.severe("SD Build Update Failed: " + "LOCAL Message : " + localBuildMessage);
-				buildProductService.getById(productId).ifPresent(buildProductEntity -> buildProductService.markSDLocalBuildUploadFailed(buildProductEntity, localBuildMessage));
-				return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED, Map.of("error", "SD Build Update Failed: " + "Local Message : " + localBuildMessage));
+				LOGGER.severe("SD Build Update Failed: " + "PRE Message : " + preBuildMessage);
+				buildProductService.getById(productId).ifPresent(buildProductEntity -> buildProductService.markSDPreBuildUploadFailed(buildProductEntity, preBuildMessage));
+				return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED, Map.of("error", "SD Build Update Failed: " + "Pre Message : " + preBuildMessage));
 			}
 		}
 		catch(Exception e)
 		{
-			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload to LOCAL Failed ( " + milestoneVersion + " )");
+			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload to PRE Failed ( " + milestoneVersion + " )");
 			LOGGER.log(Level.SEVERE, "Error in SDBuildUploadStep execute", e);
-			buildProductService.getById(productId).ifPresent(buildProductEntity -> buildProductService.markSDLocalBuildUploadFailed(buildProductEntity, e.getMessage()));
+			buildProductService.getById(productId).ifPresent(buildProductEntity -> buildProductService.markSDPreBuildUploadFailed(buildProductEntity, e.getMessage()));
 			return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED, Map.of("error", e.getMessage()));
 		}
 	}

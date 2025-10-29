@@ -1,7 +1,10 @@
 package com.server.zoho.workflow.steps;
 
+import com.server.framework.common.CommonService;
 import com.server.framework.workflow.definition.WorkflowStep;
+import com.server.zoho.BuildResponse;
 import com.server.zoho.IntegService;
+import com.server.zoho.ZohoService;
 import com.server.zoho.entity.BuildProductEntity;
 import com.server.zoho.service.BuildProductService;
 import com.server.framework.workflow.model.WorkflowEvent;
@@ -57,7 +60,7 @@ public class BuildInitiationStep extends WorkflowStep
 
 		try
 		{
-			IntegService.BuildResponse response = integService.initiateBuild(productName);
+			BuildResponse response = integService.initiateBuild(productName, Boolean.TRUE.equals(context.get("isPatchBuild")), (String)context.get("branchName"));
 
 			if(response.isSuccess() && response.getBuildLogId() != null)
 			{
@@ -70,15 +73,19 @@ public class BuildInitiationStep extends WorkflowStep
 				Optional<BuildProductEntity> productOpt = buildProductService.getById(productId);
 				productOpt.ifPresent(product -> buildProductService.markBuildStarted(product,  response.getBuildLogId()));
 
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productName + " ]* Build started");
+
 				return new WorkflowEvent(BuildEventType.BUILD_STARTED, Map.of("buildId", response.getBuildLogId(), "message", response.getMessage()));
 			}
 			else
 			{
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productName + " ]* Build Failed");
 				return new WorkflowEvent(BuildEventType.BUILD_FAILED, Map.of("error", response.getMessage()));
 			}
 		}
 		catch(Exception e)
 		{
+			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productName + " ]* Build Failed");
 			return new WorkflowEvent(BuildEventType.BUILD_FAILED, Map.of("error", "Failed to start build: " + e.getMessage()));
 		}
 	}

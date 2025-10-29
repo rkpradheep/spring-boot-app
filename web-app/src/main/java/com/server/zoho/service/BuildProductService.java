@@ -5,13 +5,17 @@ import com.server.zoho.entity.BuildProductEntity;
 import com.server.zoho.repository.BuildProductRepository;
 import com.server.zoho.workflow.model.BuildProductStatus;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Logger;
 
 @Service
@@ -24,14 +28,23 @@ public class BuildProductService
 	@Autowired
 	private BuildProductRepository buildProductRepository;
 
-	public void createBuildProducts(Long buildMonitorId, List<String> productNames)
+	public void createBuildProducts(Long buildMonitorId, Set<String> productNames)
 	{
-		List<BuildProductEntity> buildProductEntities = new java.util.ArrayList<>();
-		productNames.sort(Comparator.comparingInt(productName-> IntegService.getProductConfig(productName).getOrder()));
-
-		for(int i = 0; i < productNames.size(); i++)
+		List<String> finalizedProductNamesForBuild = new ArrayList<>(productNames);
+		for(String productName : productNames)
 		{
-			BuildProductEntity buildProductEntity = new BuildProductEntity(buildMonitorId, productNames.get(i), i + 1);
+			String parentProduct = IntegService.getProductConfig(productName).getParentProduct();
+			if(!finalizedProductNamesForBuild.contains(productName) && StringUtils.isNotEmpty(parentProduct) && !finalizedProductNamesForBuild.contains(parentProduct))
+			{
+				finalizedProductNamesForBuild.add(parentProduct);
+			}
+		}
+		List<BuildProductEntity> buildProductEntities = new java.util.ArrayList<>();
+		finalizedProductNamesForBuild.sort(Comparator.comparingInt(productName-> IntegService.getProductConfig(productName).getOrder()));
+
+		for(int i = 0; i < finalizedProductNamesForBuild.size(); i++)
+		{
+			BuildProductEntity buildProductEntity = new BuildProductEntity(buildMonitorId, finalizedProductNamesForBuild.get(i), i + 1);
 			buildProductEntities.add(buildProductRepository.save(buildProductEntity));
 		}
 
@@ -77,13 +90,6 @@ public class BuildProductService
 		LOGGER.info("Marked build " + buildProductEntity.getBuildId() + " as successful for product " + buildProductEntity.getProductName());
 	}
 
-	public void markBuildFailed(BuildProductEntity buildProductEntity, String errorMessage)
-	{
-		buildProductEntity.markAsFailed(errorMessage);
-		buildProductRepository.save(buildProductEntity);
-		LOGGER.warning("Marked build " + buildProductEntity.getBuildId() + " as failed for product " + buildProductEntity.getProductName() + ": " + errorMessage);
-	}
-
 	public void markBuildFailed(BuildProductEntity buildProductEntity, String status, String apiErrorResponse)
 	{
 		buildProductEntity.setStatus(status);
@@ -103,6 +109,20 @@ public class BuildProductService
 		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as MILESTONE_CREATED with version: " + milestoneVersion);
 	}
 
+	public void markMilestoneFailed(BuildProductEntity buildProductEntity, String errorMessage)
+	{
+		if(Objects.isNull(buildProductEntity))
+		{
+			LOGGER.warning("Cannot mark milestone failed. BuildProductEntity is null.");
+			return;
+		}
+		buildProductEntity.setStatus(BuildProductStatus.MILESTONE_FAILED.getName());
+		buildProductEntity.setErrorMessage(errorMessage);
+		buildProductEntity.updateUpdatedTime();
+		buildProductRepository.save(buildProductEntity);
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as MILESTONE_FAILED");
+	}
+
 	public void markChannelMapped(BuildProductEntity buildProductEntity, String channelUrl)
 	{
 		buildProductEntity.setStatus(BuildProductStatus.CHANNEL_MAPPED.getName());
@@ -110,6 +130,20 @@ public class BuildProductService
 		buildProductEntity.updateUpdatedTime();
 		buildProductRepository.save(buildProductEntity);
 		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as CHANNEL_MAPPED with URL: " + channelUrl);
+	}
+
+	public void markChannelMappingFailed(BuildProductEntity buildProductEntity, String errorMessage)
+	{
+		if(Objects.isNull(buildProductEntity))
+		{
+			LOGGER.warning("Cannot mark channel mapping failed. BuildProductEntity is null.");
+			return;
+		}
+		buildProductEntity.setStatus(BuildProductStatus.CHANNEL_MAPPING_FAILED.getName());
+		buildProductEntity.setErrorMessage(errorMessage);
+		buildProductEntity.updateUpdatedTime();
+		buildProductRepository.save(buildProductEntity);
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as CHANNEL_MAPPING_FAILED");
 	}
 
 	public BuildProductEntity save(BuildProductEntity buildProductEntity)
@@ -142,6 +176,15 @@ public class BuildProductService
 		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_CSEZ_BUILD_UPLOADED");
 	}
 
+	public void markSDPreBuildUploaded(BuildProductEntity buildProductEntity)
+	{
+		buildProductEntity.setStatus(BuildProductStatus.SD_PRE_BUILD_UPLOADED.getName());
+		buildProductEntity.setErrorMessage(null);
+		buildProductEntity.updateUpdatedTime();
+		buildProductRepository.save(buildProductEntity);
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_PRE_BUILD_UPLOADED");
+	}
+
 	public void markSDCSEZBuildUploadFailed(BuildProductEntity buildProductEntity, String errorMessage)
 	{
 		buildProductEntity.setStatus(BuildProductStatus.SD_CSEZ_BUILD_UPLOAD_FAILED.getName());
@@ -158,6 +201,15 @@ public class BuildProductService
 		buildProductEntity.updateUpdatedTime();
 		buildProductRepository.save(buildProductEntity);
 		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_LOCAL_BUILD_UPLOAD_FAILED");
+	}
+
+	public void markSDPreBuildUploadFailed(BuildProductEntity buildProductEntity, String errorMessage)
+	{
+		buildProductEntity.setStatus(BuildProductStatus.SD_PRE_BUILD_UPLOAD_FAILED.getName());
+		buildProductEntity.setErrorMessage(errorMessage);
+		buildProductEntity.updateUpdatedTime();
+		buildProductRepository.save(buildProductEntity);
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_PRE_BUILD_UPLOAD_FAILED");
 	}
 
 }

@@ -17,13 +17,10 @@ public class ConfigurationEntity
     @Column(name = "CValue", nullable = false, columnDefinition = "LONGTEXT")
     private String cValue;
 
+    @Column(name = "ExpiryTime", nullable = false,  columnDefinition = "BIGINT DEFAULT -1")
+    private Long expiryTime;
+
     public ConfigurationEntity() {}
-    
-    public ConfigurationEntity(Long id, String cKey, String cValue) {
-        this.id = id;
-        this.cKey = cKey;
-        this.cValue = cValue;
-    }
 
     public Long getId() {
         return id;
@@ -40,7 +37,13 @@ public class ConfigurationEntity
     public void setCKey(String cKey) {
         this.cKey = cKey;
     }
-    
+
+    public void setExpiryTime(Long expiryTime) {
+        this.expiryTime = expiryTime;
+    }
+    public Long getExpiryTime() {
+        return expiryTime;
+    }
     public String getCValue() {
         return cValue;
     }

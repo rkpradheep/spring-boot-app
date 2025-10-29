@@ -1,17 +1,20 @@
 package com.server.zoho;
 
+import org.apache.commons.lang3.StringUtils;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.server.framework.common.AppProperties;
+import com.server.framework.common.CommonService;
+import com.server.framework.common.DateUtil;
 import com.server.framework.error.AppException;
 import com.server.zoho.entity.BuildMonitorEntity;
 import com.server.zoho.service.BuildMonitorService;
@@ -19,10 +22,8 @@ import com.server.zoho.service.BuildProductService;
 import com.server.zoho.entity.BuildProductEntity;
 import com.server.framework.workflow.WorkflowEngine;
 
-import org.yaml.snakeyaml.Yaml;
-
-import java.io.InputStream;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class IntegService
@@ -43,80 +44,43 @@ public class IntegService
 
 	private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(IntegService.class.getName());
 
-	private static Map<String, ProductConfig> PRODUCT_CONFIG_MAP;
-
 	public IntegService()
 	{
 		this.restTemplate = new RestTemplate();
 		this.objectMapper = new ObjectMapper();
 		this.objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
-		loadProductConfiguration();
 	}
 
-	private void loadProductConfiguration()
+	public static Map<String, ProductConfig> getProductConfig()
 	{
-		try
-		{
-			if(Objects.isNull(getClass().getClassLoader().getResource("zoho-properties.yml")))
-			{
-				LOGGER.info("zoho-properties.yml not found in classpath. Skipping product configuration load.");
-				return;
-			}
-			PRODUCT_CONFIG_MAP = new HashMap<>();
-
-			try(InputStream inputStream = getClass().getClassLoader().getResourceAsStream("zoho-properties.yml"))
-			{
-				Yaml yaml = new Yaml();
-				Map<String, Object> data = yaml.load(inputStream);
-
-				if(!data.containsKey("integ_products"))
-				{
-					LOGGER.warning("No 'integ_products' section found in zoho-properties.yml. Skipping product configuration load.");
-					return;
-				}
-
-				@SuppressWarnings("unchecked")
-				List<Map<String, Object>> products = (List<Map<String, Object>>) data.get("integ_products");
-
-				for(Map<String, Object> product : products)
-				{
-					for(Map.Entry<String, Object> entry : product.entrySet())
-					{
-						String productName = entry.getKey();
-						@SuppressWarnings("unchecked")
-						Map<String, Object> config = (Map<String, Object>) entry.getValue();
-
-						String productId = config.get("product_id").toString();
-						String channelName = config.get("channel_name") != null ? config.get("channel_name").toString() : null;
-						String branchName = config.get("branch_name").toString();
-						boolean isServerRepo = config.get("is_server_repo") != null && Boolean.parseBoolean(config.get("is_server_repo").toString());
-						String buildUrl = config.get("build_url") != null ? config.get("build_url").toString() : null;
-						Integer order = config.get("order") != null ? (Integer) config.get("order") : -1;
-
-						PRODUCT_CONFIG_MAP.put(productName, new ProductConfig(productId, channelName, branchName, isServerRepo, buildUrl, order));
-					}
-				}
-
-				LOGGER.info("Loaded " + PRODUCT_CONFIG_MAP.size() + " product configurations from YAML");
-			}
-		}
-		catch(Exception e)
-		{
-			LOGGER.log(java.util.logging.Level.SEVERE, "Exception in loadProductConfiguration", e);
-		}
+		return (Map<String, ProductConfig>) ZohoService.getMetaConfig("PRODUCT_CONFIGS");
 	}
 
-	public static Map<String, ProductConfig> getProductConfigMap()
+	public static ProductConfig getProductConfigForID(String productID)
 	{
-		return PRODUCT_CONFIG_MAP != null ? PRODUCT_CONFIG_MAP : new HashMap<>();
+		Map<String, ProductConfig> productConfigMap = (Map<String, ProductConfig>) ZohoService.getMetaConfig("PRODUCT_CONFIGS");
+		for(ProductConfig config : productConfigMap.values())
+		{
+			if(config.getId().equals(productID))
+			{
+				return config;
+			}
+		}
+
+		return null;
 	}
 
 	public static ProductConfig getProductConfig(String productName)
 	{
-		return PRODUCT_CONFIG_MAP.get(productName);
+		return ((Map<String, ProductConfig>) ZohoService.getMetaConfig("PRODUCT_CONFIGS")).get(productName);
 	}
 
-	public BuildResponse scheduleBuilds(List<String> productNames)
+	public static String getTodayBuildOwnerEmail()
+	{
+		return ((Map<String, String>) ZohoService.getMetaConfig("BUILD_OWNERS")).get(DateUtil.getFormattedCurrentTime("EEEE").toUpperCase());
+	}
+
+	public BuildResponse scheduleBuilds(Set<String> productNames)
 	{
 
 		if(productNames == null || productNames.isEmpty())
@@ -135,7 +99,7 @@ public class IntegService
 
 		if(!invalidProducts.isEmpty())
 		{
-			String supportedRepos = String.join(", ", getProductConfigMap().keySet());
+			String supportedRepos = String.join(", ", getProductConfig().keySet());
 			return new BuildResponse("Invalid repo names provided: " + String.join(", ", invalidProducts) + " Supported repo names : " + supportedRepos);
 		}
 
@@ -145,37 +109,32 @@ public class IntegService
 
 	}
 
-	public BuildResponse initiateBuild(String productName)
+	public BuildResponse initiateBuild(String productName, boolean isPatchBuild, String branchName)
 	{
 		try
 		{
 			//Mock for testing
-//			BuildResponse buildResponse = new BuildResponse(true, "Build has been started successfully", 11646340L, "RUNNING");
-//			buildResponse.setProductId("4671");
-//			buildResponse.setBuildType("FULLBUILD");
-//			buildResponse.setCheckoutLabel("master");
-//			buildResponse.setUrl("https://build.zohocorp.com/zoho/payout_mock_configuration/webhost/master/Oct_07_2025_2");
-//			buildResponse.setBuildLogId(11646340L);
-//
-//			if(true)
-//				return buildResponse;
-
-
-
-
-			//Mock for testing server
-//						BuildResponse buildResponse = new BuildResponse(true, "Build has been started successfully", 11723376L, "RUNNING");
-//						buildResponse.setProductId("4670");
+//						BuildResponse buildResponse = new BuildResponse(true, "Build has been started successfully", 11833705L, "RUNNING");
+//						buildResponse.setProductId("4671");
 //						buildResponse.setBuildType("FULLBUILD");
 //						buildResponse.setCheckoutLabel("master");
-//						buildResponse.setUrl("https://build.zohocorp.com/zoho/payout_server/webhost/master/Oct_16_2025_1/");
-//
+//						buildResponse.setUrl("https://build.zohocorp.com/zoho/payout_mock_configuration/webhost/master/Oct_30_2025");
+//						buildResponse.setBuildLogId(11833705L);
 //						if(true)
 //							return buildResponse;
 
 
+			//Mock for testing server
+			//						BuildResponse buildResponse = new BuildResponse(true, "Build has been started successfully", 11723376L, "RUNNING");
+			//						buildResponse.setProductId("4670");
+			//						buildResponse.setBuildType("FULLBUILD");
+			//						buildResponse.setCheckoutLabel("master");
+			//						buildResponse.setUrl("https://build.zohocorp.com/zoho/payout_server/webhost/master/Oct_16_2025_1/");
+			//
+			//						if(true)
+			//							return buildResponse;
 
-			Map<String, ProductConfig> productConfigMap = getProductConfigMap();
+			Map<String, ProductConfig> productConfigMap = getProductConfig();
 			if(!productConfigMap.containsKey(productName))
 			{
 				String supportedRepos = String.join(", ", productConfigMap.keySet());
@@ -183,12 +142,16 @@ public class IntegService
 					"\n\nSupported repo names : " + supportedRepos);
 			}
 
+			if(isPatchBuild)
+			{
+				return callPatchBuildApi(productName, branchName);
+			}
+
 			ProductConfig config = productConfigMap.get(productName);
-			String branchName = config.getBranch();
 			String productId = config.getId();
 			String userNames = "pradheep.rkd";
 
-			BuildRequest buildRequest = createBuildRequest(branchName, productId, userNames);
+			BuildRequest buildRequest = createBuildRequest(config.getBranch(), productId, userNames);
 			return callBuildApi(buildRequest);
 
 		}
@@ -198,7 +161,7 @@ public class IntegService
 		}
 	}
 
-	private void scheduleBuildWorkFlow(List<String> productNames)
+	private void scheduleBuildWorkFlow(Set<String> productNames)
 	{
 		try
 		{
@@ -206,7 +169,39 @@ public class IntegService
 
 			BuildProductEntity firstProduct = buildProductService.getNextPendingProduct(monitor.getId()).orElse(null);
 
-			Map<String, Object> context = Map.of("monitorId", monitor.getId(), "productId", firstProduct.getId());
+			String message = DateUtil.getFormattedCurrentTime("'Master Build' dd MMMM yyyy").toUpperCase() + " (" + monitor.getId() +  ")";
+			String messageID;
+			String gitlabIssueID;
+			List<String> qualifiedProducts = buildProductService.getProductsForMonitor(monitor.getId()).stream().map(BuildProductEntity::getProductName).collect(Collectors.toList());
+
+			Map<String, Object> context = new HashMap<>()
+			{
+				{
+					put("monitorId", monitor.getId());
+					put("productId", firstProduct.getId());
+				}
+			};
+
+			Optional<String> serverRepoOptional = qualifiedProducts.stream().filter(productName -> productName.endsWith("_server")).findFirst();
+			if(serverRepoOptional.isPresent())
+			{
+				messageID = ZohoService.postMessageToChannel(CommonService.getDefaultChannelUrl(), message + "\n{@participants}");
+				context.put("messageID", messageID);
+				gitlabIssueID = ZohoService.createIssue(serverRepoOptional.get(), message);
+				context.put("gitlabIssueID", gitlabIssueID);
+				context.put("server_product_name", serverRepoOptional.get());
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "[GITLAB ISSUE CREATED](https://zpaygit.csez.zohocorpin.com/zohopay/" + serverRepoOptional.get() + "/-/issues/" + gitlabIssueID + ")");
+
+				ZohoService.postChangeSet(ZohoService.generatePayoutChangSetsFromIDC(), CommonService.getDefaultChannelUrl(), context);
+			}
+
+			String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
+			if(StringUtils.isNotEmpty(buildOwnerEmail))
+			{
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner : {@" + buildOwnerEmail + "}");
+			}
+
+			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "Products qualified for build : " + String.join(",", qualifiedProducts));
 
 			String referenceID = monitor.getId().toString();
 			workflowEngine.scheduleWorkflow("BuildWorkflow", referenceID, context, ZohoService.getCurrentUserEmail());
@@ -337,36 +332,14 @@ public class IntegService
 				String.class
 			);
 
-			JsonNode responseNode = objectMapper.readTree(response.getBody());
+			BuildResponse buildResponse = getBuildResponse(response.getBody());
 
-			if(responseNode.has("buildlogs") && responseNode.get("buildlogs").has("id"))
+			if(Objects.nonNull(buildResponse))
 			{
-				JsonNode buildlogs = responseNode.get("buildlogs");
-				Long buildId = buildlogs.get("id").asLong();
-				String status = buildlogs.has("status") ? buildlogs.get("status").asText() : "Unknown";
-				String productId = buildlogs.has("product_id") ? buildlogs.get("product_id").asText() : null;
-				String buildType = buildlogs.has("build_type") ? buildlogs.get("build_type").asText() : null;
-				String checkoutLabel = buildlogs.has("checkout_label") ? buildlogs.get("checkout_label").asText() : null;
-				String duration = buildlogs.has("duration") ? buildlogs.get("duration").asText() : null;
-				String url = buildlogs.has("url") ? buildlogs.get("url").asText() : null;
-
-				BuildResponse buildResponse = new BuildResponse(true, "Build has been started successfully", buildId, status);
-				buildResponse.setProductId(productId);
-				buildResponse.setBuildType(buildType);
-				buildResponse.setCheckoutLabel(checkoutLabel);
-				buildResponse.setDuration(duration);
-				buildResponse.setUrl(url);
-				buildResponse.setBuildLogId(buildId);
-
 				return buildResponse;
 			}
-
 			return new BuildResponse(false, "Request failed. Please try again later.");
 
-		}
-		catch(HttpClientErrorException | HttpServerErrorException e)
-		{
-			return new BuildResponse(false, "API call failed: " + e.getMessage());
 		}
 		catch(Exception e)
 		{
@@ -374,359 +347,81 @@ public class IntegService
 		}
 	}
 
-	public static class ProductConfig
+	private BuildResponse callPatchBuildApi(String product, String branchName)
 	{
-		private final String id;
-		private final String channel;
-		private final String branch;
-		private boolean isServerRepo;
-		private String buildUrl;
-		private int order;
-
-		public ProductConfig(String id, String channel, String branch, boolean isServerRepo, String buildUrl, int order)
+		try
 		{
-			this.id = id;
-			this.channel = channel;
-			this.branch = branch;
-			this.isServerRepo = isServerRepo;
-			this.buildUrl = buildUrl;
-			this.order = order;
+			String apiToken = AppProperties.getProperty("zoho.build.api.token");
+			String buildApiUrl = AppProperties.getProperty("zoho.build.api.url") + "/api/v1/patch_build_details";
+
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_JSON);
+			headers.set("PRIVATE-TOKEN", apiToken);
+
+			JSONObject request = new JSONObject()
+				.put("stage", "pre")
+				.put("grid_value", "IN2")
+				.put("product_id", IntegService.getProductConfig(product).getId())
+				.put("checkout_label", branchName)
+				.put("product_name", "ZOHOPAYOUT")
+				.put("patch_build_url", ZohoService.getPatchBuildURL(product, "pre"));
+
+			HttpEntity<String> entity = new HttpEntity<>(request.toString(), headers);
+
+			ResponseEntity<String> response = restTemplate.exchange(
+				buildApiUrl,
+				HttpMethod.POST,
+				entity,
+				String.class
+			);
+
+			BuildResponse buildResponse = getBuildResponse(response.getBody());
+
+			if(Objects.nonNull(buildResponse))
+			{
+				return buildResponse;
+			}
+			return new BuildResponse(false, "Request failed. Please try again later.");
+
 		}
-
-		public String getId()
+		catch(Exception e)
 		{
-			return id;
-		}
-
-		public String getChannel()
-		{
-			return channel;
-		}
-
-		public String getBranch()
-		{
-			return branch;
-		}
-
-		public boolean isServerRepo()
-		{
-			return isServerRepo;
-		}
-
-		public String getBuildUrl()
-		{
-			return buildUrl;
-		}
-
-		public int getOrder()
-		{
-			return order;
+			return new BuildResponse(false, "Request failed. Please try again later.");
 		}
 	}
 
-	public static class BuildResponse
+	public BuildResponse getBuildResponse(String response) throws JsonProcessingException
 	{
-		private boolean success;
-		private String message;
-		private Long buildLogId;
-		private String status;
-		private String buildType;
-		private String checkoutLabel;
-		private String productId;
-		private String duration;
-		private String url;
-		private String errorMessage;
-		private String releaseVersion;
+		JsonNode responseNode = objectMapper.readTree(response);
 
-		public BuildResponse(boolean success, String message)
+		if(!responseNode.has("buildlogs") && !responseNode.has("patch_build_details"))
 		{
-			this.success = success;
-			this.message = message;
+			return null;
 		}
+		JsonNode buildlogs = responseNode.has("patch_build_details") ? responseNode.get("patch_build_details") : responseNode.get("buildlogs");
+		buildlogs = buildlogs.isArray() ? buildlogs.get(0) : buildlogs;
 
-		public BuildResponse(boolean success, String message, Long buildLogId, String status)
-		{
-			this.success = success;
-			this.message = message;
-			this.buildLogId = buildLogId;
-			this.status = status;
-		}
+		Long buildId = buildlogs.get("id").asLong();
+		String status = buildlogs.has("status") ? buildlogs.get("status").asText() : "Unknown";
+		String productId = buildlogs.has("product_id") ? buildlogs.get("product_id").asText() : null;
+		String buildType = buildlogs.has("build_type") ? buildlogs.get("build_type").asText() : null;
+		String checkoutLabel = buildlogs.has("checkout_label") ? buildlogs.get("checkout_label").asText() : null;
+		String duration = buildlogs.has("duration") ? buildlogs.get("duration").asText() : null;
+		String url = buildlogs.has("url") ? buildlogs.get("url").asText() : null;
+		String commit = buildlogs.has("build_label") ? buildlogs.get("build_label").asText() : null;
+		String releaseVersion = buildlogs.has("release_version") ? buildlogs.get("release_version").asText() : null;
 
-		public BuildResponse(String text)
-		{
-			this.success = text.contains("successfully");
-			this.message = text;
-		}
+		BuildResponse buildResponse = new BuildResponse(true, "Build has been started successfully", buildId, status);
+		buildResponse.setProductId(productId);
+		buildResponse.setBuildType(buildType);
+		buildResponse.setCheckoutLabel(checkoutLabel);
+		buildResponse.setDuration(duration);
+		buildResponse.setUrl(url);
+		buildResponse.setBuildLogId(buildId);
+		buildResponse.setCommitSHA(commit);
+		buildResponse.setReleaseVersion(releaseVersion);
 
-		public boolean isSuccess()
-		{
-			return success;
-		}
-
-		public void setSuccess(boolean success)
-		{
-			this.success = success;
-		}
-
-		public String getMessage()
-		{
-			return message;
-		}
-
-		public void setMessage(String message)
-		{
-			this.message = message;
-		}
-
-		public Long getBuildLogId()
-		{
-			return buildLogId;
-		}
-
-		public void setBuildLogId(Long buildLogId)
-		{
-			this.buildLogId = buildLogId;
-		}
-
-		public String getStatus()
-		{
-			return status;
-		}
-
-		public void setStatus(String status)
-		{
-			this.status = status;
-		}
-
-		public String getBuildType()
-		{
-			return buildType;
-		}
-
-		public void setBuildType(String buildType)
-		{
-			this.buildType = buildType;
-		}
-
-		public String getCheckoutLabel()
-		{
-			return checkoutLabel;
-		}
-
-		public void setCheckoutLabel(String checkoutLabel)
-		{
-			this.checkoutLabel = checkoutLabel;
-		}
-
-		public void setReleaseVersion(String releaseVersion)
-		{
-			this.releaseVersion = releaseVersion;
-		}
-
-		public String getReleaseVersion()
-		{
-			return releaseVersion;
-		}
-
-		public String getProductId()
-		{
-			return productId;
-		}
-
-		public void setProductId(String productId)
-		{
-			this.productId = productId;
-		}
-
-		public String getDuration()
-		{
-			return duration;
-		}
-
-		public void setDuration(String duration)
-		{
-			this.duration = duration;
-		}
-
-		public String getUrl()
-		{
-			return url;
-		}
-
-		public void setUrl(String url)
-		{
-			this.url = url;
-		}
-
-		public String getErrorMessage()
-		{
-			return errorMessage;
-		}
-
-		public void setErrorMessage(String errorMessage)
-		{
-			this.errorMessage = errorMessage;
-		}
-
-		public String getText()
-		{
-			return message != null ? message : "Unknown";
-		}
-
-		public void setText(String text)
-		{
-			this.message = text;
-		}
+		return buildResponse;
 	}
 
-	private static class BuildRequest
-	{
-		private BuildLog buildLog;
-
-		public void setBuildLog(BuildLog buildLog)
-		{
-			this.buildLog = buildLog;
-		}
-
-		public BuildLog getBuildLog()
-		{
-			return buildLog;
-		}
-	}
-
-	private static class BuildLog
-	{
-		private String checkout_label;
-		private String status;
-		private String report_needed;
-		private String build_type;
-		private String started_from;
-		private String customize_info;
-		private String success_mail;
-		private String error_mail;
-		private String security_report_needed;
-		private String selected;
-		private String product_id;
-		private String instant_response;
-
-		public String getCheckoutLabel()
-		{
-			return checkout_label;
-		}
-
-		public void setCheckoutLabel(String checkout_label)
-		{
-			this.checkout_label = checkout_label;
-		}
-
-		public String getStatus()
-		{
-			return status;
-		}
-
-		public void setStatus(String status)
-		{
-			this.status = status;
-		}
-
-		public String getReportNeeded()
-		{
-			return report_needed;
-		}
-
-		public void setReportNeeded(String report_needed)
-		{
-			this.report_needed = report_needed;
-		}
-
-		public String getBuildType()
-		{
-			return build_type;
-		}
-
-		public void setBuildType(String build_type)
-		{
-			this.build_type = build_type;
-		}
-
-		public String getStartedFrom()
-		{
-			return started_from;
-		}
-
-		public void setStartedFrom(String started_from)
-		{
-			this.started_from = started_from;
-		}
-
-		public String getCustomizeInfo()
-		{
-			return customize_info;
-		}
-
-		public void setCustomizeInfo(String customize_info)
-		{
-			this.customize_info = customize_info;
-		}
-
-		public String getSuccessMail()
-		{
-			return success_mail;
-		}
-
-		public void setSuccessMail(String success_mail)
-		{
-			this.success_mail = success_mail;
-		}
-
-		public String getErrorMail()
-		{
-			return error_mail;
-		}
-
-		public void setErrorMail(String error_mail)
-		{
-			this.error_mail = error_mail;
-		}
-
-		public String getSecurityReportNeeded()
-		{
-			return security_report_needed;
-		}
-
-		public void setSecurityReportNeeded(String security_report_needed)
-		{
-			this.security_report_needed = security_report_needed;
-		}
-
-		public String getSelected()
-		{
-			return selected;
-		}
-
-		public void setSelected(String selected)
-		{
-			this.selected = selected;
-		}
-
-		public String getProductId()
-		{
-			return product_id;
-		}
-
-		public void setProductId(String product_id)
-		{
-			this.product_id = product_id;
-		}
-
-		public String getInstantResponse()
-		{
-			return instant_response;
-		}
-
-		public void setInstantResponse(String instant_response)
-		{
-			this.instant_response = instant_response;
-		}
-	}
 }

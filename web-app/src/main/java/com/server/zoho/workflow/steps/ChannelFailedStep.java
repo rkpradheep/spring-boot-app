@@ -42,7 +42,7 @@ public class ChannelFailedStep extends WorkflowStep
 		if(productId != null)
 		{
 			Optional<BuildProductEntity> productOpt = buildProductService.getById(productId);
-			productOpt.ifPresent(product -> buildProductService.markBuildFailed(product, BuildProductStatus.CHANNEL_FAILED.getName(), errorMessage));
+			productOpt.ifPresent(product -> buildProductService.markBuildFailed(product, BuildProductStatus.CHANNEL_MAPPING_FAILED.getName(), errorMessage));
 		}
 
 		return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED,

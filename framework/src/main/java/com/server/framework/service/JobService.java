@@ -56,9 +56,9 @@ public class JobService
 		return jobRepository.findJobsToExecute(executionTime, JobStatus.JOB_NOT_RUNNING.getStatus());
 	}
 
-	public Long scheduleJob(String taskName, String data, long executionTimeInMilliseconds) throws Exception
+	public Long scheduleJob(String taskName, String data, long delayInMilliseconds) throws Exception
 	{
-		return scheduleJob(taskName, data, executionTimeInMilliseconds, 0, false);
+		return scheduleJob(taskName, data, DateUtil.getCurrentTimeInMillis() + delayInMilliseconds, 0, false);
 	}
 
 	public Long scheduleJob(String taskName, String data, long executionTimeInMilliseconds, int dayInterval, boolean isRecurring) throws Exception

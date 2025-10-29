@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @Component
@@ -33,11 +34,17 @@ public class BuildCompletedStep extends WorkflowStep
     @Override
     public WorkflowEvent execute(WorkflowInstance instance) {
         Map<String, Object> context = (Map<String, Object>) instance.getContext();
+        Boolean isPatchBuild = (Boolean) context.get("isPatchBuild");
         Long productId = (Long) context.get("productId");
         
         if (productId != null) {
             Optional<BuildProductEntity> productOpt = buildProductService.getById(productId);
 			productOpt.ifPresent(product -> buildProductService.markBuildSuccess(product));
+        }
+
+        if(Boolean.TRUE.equals(isPatchBuild))
+        {
+            return new WorkflowEvent(BuildEventType.PATCH_BUILD);
         }
         
         return new WorkflowEvent(BuildEventType.MILESTONE_CREATION);

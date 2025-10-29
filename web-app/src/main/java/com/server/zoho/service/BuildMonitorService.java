@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Logger;
 
 @Service
@@ -35,7 +36,7 @@ public class BuildMonitorService
 		this.objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
 	}
 
-	public BuildMonitorEntity createBuildMonitor(List<String> productNames)
+	public BuildMonitorEntity createBuildMonitor(Set<String> productNames)
 	{
 		try
 		{

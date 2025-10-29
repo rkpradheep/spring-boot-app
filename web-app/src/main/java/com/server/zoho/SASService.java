@@ -218,7 +218,7 @@ public class SASService {
                 endQuery = query.substring(limitMatcher.start(2));
             }
 
-            if (skipScoping || pkName == null || !pkName.matches("(.*)(?i)(id)") || pkName.equalsIgnoreCase("zsid") || pkName.equalsIgnoreCase("zuid")) {
+            if (skipScoping || StringUtils.isEmpty(pkName) || !pkName.matches("(.*)(?i)(id)") || pkName.matches("(\\w+\\.)?(?i)(zsid|zuid)")) {
                 preparedStatement = connection.prepareStatement(startQuery + endQuery);
             } else {
                 if (query.matches("(.*)(?i)(where)(.*)")) {
