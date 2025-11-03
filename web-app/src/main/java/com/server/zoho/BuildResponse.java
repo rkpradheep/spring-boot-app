@@ -14,6 +14,7 @@ public class BuildResponse
 	private String errorMessage;
 	private String releaseVersion;
 	private String commitSHA;
+	private String patchBuildUrl;
 
 	public BuildResponse(boolean success, String message)
 	{
@@ -108,6 +109,16 @@ public class BuildResponse
 	public void setReleaseVersion(String releaseVersion)
 	{
 		this.releaseVersion = releaseVersion;
+	}
+
+	public void setPatchBuildUrl(String patchBuildUrl)
+	{
+		this.patchBuildUrl = patchBuildUrl;
+	}
+
+	public String getPatchBuildUrl()
+	{
+		return this.patchBuildUrl;
 	}
 
 	public String getReleaseVersion()

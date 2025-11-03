@@ -13,8 +13,9 @@ public class ProductConfig
 	private String parentProduct;
 	private String gitlabIssueUrl;
 	private String productName;
+	private String patchBuildZipName;
 
-	public ProductConfig(String productName, String id, String channel, String branch, boolean isServerRepo, String buildUrl, int order, String gitlabUrl, String gitlabToken, String parentProduct, String gitlabIssueUrl)
+	public ProductConfig(String productName, String id, String channel, String branch, boolean isServerRepo, String buildUrl, int order, String gitlabUrl, String gitlabToken, String parentProduct, String gitlabIssueUrl, String patchBuildZipName)
 	{
 		this.productName = productName;
 		this.id = id;
@@ -27,6 +28,7 @@ public class ProductConfig
 		this.gitlabToken = gitlabToken;
 		this.parentProduct = parentProduct;
 		this.gitlabIssueUrl = gitlabIssueUrl;
+		this.patchBuildZipName = patchBuildZipName;
 	}
 
 	public String getProductName()
@@ -82,5 +84,10 @@ public class ProductConfig
 	public String getGitlabIssueUrl()
 	{
 		return gitlabIssueUrl;
+	}
+
+	public String getPatchBuildZipName()
+	{
+		return patchBuildZipName;
 	}
 }

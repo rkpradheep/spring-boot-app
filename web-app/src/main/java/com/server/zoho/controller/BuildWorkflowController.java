@@ -95,8 +95,11 @@ public class BuildWorkflowController
 
 	@Transactional
 	@PostMapping("/patch-build/start")
-	private ResponseEntity<Map<String, Object>> startPatchBuildWorkflow(@Param("product_name") String productName, @Param("branch_name") String branchName) throws Exception
+	public ResponseEntity<Map<String, Object>> startPatchBuildWorkflow(@RequestParam("product_name") String productName, @RequestParam("branch_name") String branchName) throws Exception
 	{
+		ZohoService.doAuthentication();
+		lockService.acquireCommonLock();
+
 		BuildMonitorEntity monitor = buildMonitorService.createBuildMonitor(Set.of(productName));
 
 		BuildProductEntity firstProduct = buildProductService.getNextPendingProduct(monitor.getId()).orElse(null);
@@ -108,11 +111,12 @@ public class BuildWorkflowController
 				put("productId", firstProduct.getId());
 				put("isPatchBuild", true);
 				put("branchName", branchName);
+				put("productName", productName);
 			}
 		};
 
 		String referenceID = monitor.getId().toString();
-		workflowEngine.scheduleWorkflow("PatchBuildWorkflow", referenceID, context, ZohoService.getCurrentUserEmail());
+		workflowEngine.scheduleWorkflow("BuildWorkflow", referenceID, context, ZohoService.getCurrentUserEmail());
 
 		return ResponseEntity.badRequest().body(ApiResponseBuilder.success("Patch Build scheduled successfully", null));
 	}

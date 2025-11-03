@@ -869,6 +869,10 @@
             Trigger Automatic Payout Build
         </button>
 
+        <button class="btn" id="initiatePayoutPatchBuild" onclick="initiatePayoutPatchBuild()">
+            Initiate Payout Patch Build
+        </button>
+
         <br><br>
 
         <div class="section">
@@ -1081,6 +1085,42 @@
         } catch (error) {
             console.error('Error starting workflow:', error);
             showAlert('Error starting automatic build. Please try again.', 'error');
+        }
+    }
+
+
+   async function initiatePayoutPatchBuild() {
+
+        try {
+    let branchName = prompt("Enter branch name");
+    if(branchName.length < 1)
+    {
+    alert("Invalid branch name");
+    return;
+    }
+            const response = await fetch('/api/v1/zoho/workflow/patch-build/start?product_name=payout_server&branch_name=' + branchName, {
+                method: 'POST',
+            });
+
+            const responseJSON = await response.json();
+
+            if (responseJSON.success) {
+                const successMessage = "Patch Build initiated successfully";
+                showAlert(`${successMessage}`, 'success');
+                alert(successMessage);
+            } else {
+                if(responseJSON.error_code == "reauth_required")
+                {
+                  handleZohoAuth(responseJSON.data.auth_uri)
+                  return;
+                 }
+                 alert(`Failed : ${responseJSON.message}`);
+                showAlert(`Failed : ${responseJSON.message}`, 'error');
+            }
+
+        } catch (error) {
+            console.error('Error starting workflow:', error);
+            showAlert('Error starting patch build. Please try again.', 'error');
         }
     }
     async function loadWorkflowInstances() {

@@ -176,6 +176,10 @@ import java.util.logging.Logger;
 			if(transition.isTerminal())
 			{
 				WorkflowStatus workflowStatus = event.getEventType().equals(WorkFlowCommonEventType.WORKFLOW_FAILED.getValue()) ? WorkflowStatus.FAILED : WorkflowStatus.COMPLETED;
+				if(workflowStatus == WorkflowStatus.COMPLETED)
+				{
+					instance.setEventHistory(null);
+				}
 				instance.setStatus(workflowStatus);
 				instance.setEndTime(System.currentTimeMillis());
 			}

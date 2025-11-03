@@ -51,13 +51,13 @@ public class SDPreBuildUploadStep extends WorkflowStep
 		boolean isPatchBuildUpdate = Boolean.TRUE.equals(context.get("isPatchBuild"));
 		String buildURL = isPatchBuildUpdate ? instance.getVariable("buildUrl") : null;
 		String milestoneVersion = instance.getVariable("milestoneVersion");
-		String productName = instance.getVariable("productName");
+		String productName = isPatchBuildUpdate ? (String) context.get("productName") : instance.getVariable("productName");
 
 		try
 		{
 			LOGGER.info("Preparing SD Build Update for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion + ", productName: " + productName);
 
-			String response = ZohoService.uploadBuild(productName, milestoneVersion, "IN2", "IN", isPatchBuildUpdate, buildURL);
+			String response = ZohoService.uploadBuild(productName, milestoneVersion, "IN2", "IN", "pre", isPatchBuildUpdate, buildURL);
 			LOGGER.info("SD Build Update Response PRE : " + response);
 
 			boolean isPreBuildSuccessful = new JSONObject(response).getString("code").equals("SUCCESS");

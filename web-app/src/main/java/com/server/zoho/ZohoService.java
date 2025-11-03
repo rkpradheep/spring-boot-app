@@ -93,31 +93,32 @@ public class ZohoService
 
 	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region) throws Exception
 	{
-		return uploadBuild(productName, milestoneVersion, dc, region, false, null);
+		return uploadBuild(productName, milestoneVersion, dc, region,"production", false, null);
 	}
 
-	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region, boolean isPatchBuild, String patchBuildURL) throws Exception
+	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region, String buildStage, boolean isPatchBuild, String patchBuildURL) throws Exception
 	{
 		JSONObject buildOptions = new JSONObject()
 			.put("skip_continue", true)
-			.put("iast_jar_needed", true);
+			.put("iast_jar_needed", !region.equals("IN"));
 
 		JSONArray notifyTo = new JSONArray().put("pradheep.rkd@zohocorp.com");
 
-		String buildURL = isPatchBuild ? patchBuildURL : IntegService.getProductConfig(productName).getBuildUrl().replace("{0}", milestoneVersion);
+		ProductConfig productConfig =  IntegService.getProductConfig(productName);
+		String buildURL = isPatchBuild ? patchBuildURL.concat("/").concat(productConfig.getPatchBuildZipName()) : productConfig.getBuildUrl().replace("{0}", milestoneVersion);
 
 		String comment = DateUtil.getFormattedCurrentTime("'Master Build' dd MMMM yyyy").toUpperCase();
 		JSONObject sdBuildUpdatePayload = new JSONObject()
 			.put("data_center", dc)
 			.put("region", region)
 			.put("deployment_mode", "live")
-			.put("build_stage", "production")
+			.put("build_stage", buildStage)
 			.put("build_url", buildURL)
 			.put("is_grid_edited", false)
 			.put("build_options", buildOptions)
 			.put("notify_to", notifyTo)
 			.put("comment", isPatchBuild ? "PATCH BUILD" : comment)
-			.put("is_patch_build", isPatchBuild)
+			.put("is_patch_update", isPatchBuild)
 			.put("provision_type", "build_update");
 
 		String sdBuildUpdateUrl = AppProperties.getProperty("zoho.sd.build.update.api.url");
@@ -169,8 +170,9 @@ public class ZohoService
 						String gitlabToken = config.get("gitlab_token") != null ? config.get("gitlab_token").toString() : null;
 						String parentProduct = config.get("parent_product") != null ? config.get("parent_product").toString() : null;
 						String gitlabIssueUrl = config.get("gitlab_issue_url") != null ? config.get("gitlab_issue_url").toString() : null;
+						String patchBuildZipName = config.get("patch_build_zip_name") != null ? config.get("patch_build_zip_name").toString() : null;
 
-						productConfigMap.put(productName, new ProductConfig(productName, productId, channelName, branchName, isServerRepo, buildUrl, order, gitlabUrl, gitlabToken, parentProduct, gitlabIssueUrl));
+						productConfigMap.put(productName, new ProductConfig(productName, productId, channelName, branchName, isServerRepo, buildUrl, order, gitlabUrl, gitlabToken, parentProduct, gitlabIssueUrl, patchBuildZipName));
 					}
 				}
 
@@ -588,7 +590,7 @@ public class ZohoService
 		context.setHeader("PRIVATE-TOKEN", AppProperties.getProperty("zoho.build.api.token"));
 
 		HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(context);
-		return AppContextHolder.getBean(IntegService.class).getBuildResponse(httpResponse.getStringResponse()).getUrl();
+		return AppContextHolder.getBean(IntegService.class).getBuildResponse(httpResponse.getStringResponse()).getPatchBuildUrl();
 	}
 
 	public static String getSDINBuildURLFromSDAPI(String product, String stage) throws Exception

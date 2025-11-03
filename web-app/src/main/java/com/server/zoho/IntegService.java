@@ -410,6 +410,7 @@ public class IntegService
 		String url = buildlogs.has("url") ? buildlogs.get("url").asText() : null;
 		String commit = buildlogs.has("build_label") ? buildlogs.get("build_label").asText() : null;
 		String releaseVersion = buildlogs.has("release_version") ? buildlogs.get("release_version").asText() : null;
+		String patchBuildURL = buildlogs.has("patch_build_url") ? buildlogs.get("patch_build_url").asText() : null;
 
 		BuildResponse buildResponse = new BuildResponse(true, "Build has been started successfully", buildId, status);
 		buildResponse.setProductId(productId);
@@ -420,6 +421,7 @@ public class IntegService
 		buildResponse.setBuildLogId(buildId);
 		buildResponse.setCommitSHA(commit);
 		buildResponse.setReleaseVersion(releaseVersion);
+		buildResponse.setPatchBuildUrl(patchBuildURL);
 
 		return buildResponse;
 	}
