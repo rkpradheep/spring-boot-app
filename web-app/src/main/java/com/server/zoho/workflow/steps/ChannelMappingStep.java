@@ -54,7 +54,7 @@ public class ChannelMappingStep extends WorkflowStep
 
 			if(result.isSuccess() && result.getChannelUrl() != null)
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + product.getProductName() + " ]* Channel Mapped");
+				//ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + product.getProductName() + " ]* Channel Mapped");
 				buildProductService.markChannelMapped(product, result.getChannelUrl());
 				return new WorkflowEvent(BuildEventType.NEXT_PRODUCT, Map.of("channelUrl", result.getChannelUrl()));
 			}

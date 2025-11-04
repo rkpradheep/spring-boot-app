@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Build Tool</title>
+    <link rel="stylesheet" href="/css/loading.css" />
+    <script src="/js/common.js"></script>
     <style>
         * {
             margin: 0;
@@ -858,6 +860,7 @@
     </style>
 </head>
 <body>
+<div class="loading" id="loading" style="display:none">Loading&#8230;</div>
 <div class="container">
     <div class="header">
         <p>Build Tool</p>
@@ -1027,6 +1030,8 @@
         }
 
         try {
+
+            unHideElement("loading");
             const requestData = {
                 productNames: selectedProducts
             };
@@ -1040,6 +1045,8 @@
             });
 
             const responseJSON = await response.json();
+
+            hideElement("loading");
 
             if (responseJSON.success) {
                 showAlert(`${responseJSON.message}`, 'success');
@@ -1055,11 +1062,14 @@
             }
 
         } catch (error) {
+            hideElement("loading");
             console.error('Error starting workflow:', error);
             showAlert('Error starting workflow. Please try again.', 'error');
         }
     }
         async function startAutoBuildForPayout() {
+
+        unHideElement("loading");
 
         try {
             const response = await fetch('/api/v1/zoho/payout/trigger-build', {
@@ -1067,6 +1077,8 @@
             });
 
             const responseJSON = await response.json();
+
+            hideElement("loading");
 
             if (responseJSON.success) {
                 const successMessage = "Automatic Payout Build triggered successfully";
@@ -1083,6 +1095,7 @@
             }
 
         } catch (error) {
+            hideElement("loading");
             console.error('Error starting workflow:', error);
             showAlert('Error starting automatic build. Please try again.', 'error');
         }
@@ -1092,18 +1105,22 @@
    async function initiatePayoutPatchBuild() {
 
         try {
+
     let branchName = prompt("Enter branch name");
     if(branchName.length < 1)
     {
     alert("Invalid branch name");
     return;
     }
+
+            unHideElement("loading");
             const response = await fetch('/api/v1/zoho/workflow/patch-build/start?product_name=payout_server&branch_name=' + branchName, {
                 method: 'POST',
             });
 
             const responseJSON = await response.json();
 
+            hideElement("loading");
             if (responseJSON.success) {
                 const successMessage = "Patch Build initiated successfully";
                 showAlert(`${successMessage}`, 'success');
@@ -1119,6 +1136,7 @@
             }
 
         } catch (error) {
+            hideElement("loading");
             console.error('Error starting workflow:', error);
             showAlert('Error starting patch build. Please try again.', 'error');
         }

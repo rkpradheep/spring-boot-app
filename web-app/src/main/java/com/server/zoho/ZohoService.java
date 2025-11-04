@@ -348,11 +348,12 @@ public class ZohoService
 	{
 		if(Objects.isNull(SecurityUtil.getCurrentRequest()))
 		{
-			return "scheduler";
+			return "SCHEDULER";
 		}
-		if(SecurityUtil.getCurrentRequest().getRequestURI().equals("/api/v1/zoho/payout/trigger-build") && StringUtils.isNotEmpty(SecurityUtil.getCurrentRequest().getParameter("user_email")))
+		String emailFromParam = SecurityUtil.getCurrentRequest().getParameter("user_email");
+		if(StringUtils.isNotEmpty(emailFromParam))
 		{
-			return SecurityUtil.getCurrentRequest().getParameter("user_email");
+			return emailFromParam;
 		}
 		String zohoToken = SecurityUtil.getCookieValue("zoho_authenticated_token");
 		if(StringUtils.isEmpty(zohoToken))
@@ -667,7 +668,7 @@ public class ZohoService
 				return;
 			}
 
-			comment = comment.replaceAll("(\\*(.*)\\*)", "<b>$2<\b>");
+			comment = comment.replaceAll("(\\*(.*)\\*)", "**$2**");
 			comment = comment.replace("{@", "");
 			comment = comment.replace("}", "");
 			comment = comment.replace("{@participants}", "");
@@ -697,7 +698,7 @@ public class ZohoService
 				return;
 			}
 
-			description = description.replaceAll("(\\*(.*)\\*)", "<b>$2<\b>");
+			description = description.replaceAll("(\\*(.*)\\*)", "**$2**");
 			description = description.replace("{@", "");
 			description = description.replace("}", "");
 			description = description.replace("{@participants}", "");

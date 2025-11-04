@@ -34,7 +34,7 @@ public class BuildProductService
 		for(String productName : productNames)
 		{
 			String parentProduct = IntegService.getProductConfig(productName).getParentProduct();
-			if(!finalizedProductNamesForBuild.contains(productName) && StringUtils.isNotEmpty(parentProduct) && !finalizedProductNamesForBuild.contains(parentProduct))
+			if(StringUtils.isNotEmpty(parentProduct) && !finalizedProductNamesForBuild.contains(parentProduct))
 			{
 				finalizedProductNamesForBuild.add(parentProduct);
 			}

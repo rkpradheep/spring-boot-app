@@ -67,7 +67,7 @@ import java.util.logging.Logger;
 				instance.setVariable("buildDuration", response.getDuration());
 				instance.setVariable("buildUrl", response.getUrl());
 
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productName + " ]* Build Success");
+				//ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productName + " ]* Build Success");
 
 				return new WorkflowEvent(BuildEventType.BUILD_COMPLETED, Map.of("message", "Build completed successfully", "buildLogId", response.getBuildLogId()));
 			}

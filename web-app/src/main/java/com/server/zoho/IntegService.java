@@ -185,7 +185,14 @@ public class IntegService
 			Optional<String> serverRepoOptional = qualifiedProducts.stream().filter(productName -> productName.endsWith("_server")).findFirst();
 			if(serverRepoOptional.isPresent())
 			{
-				messageID = ZohoService.postMessageToChannel(CommonService.getDefaultChannelUrl(), message + "\n{@participants}");
+				String initiatorEmail = ZohoService.getCurrentUserEmail();
+				String initiatorMessage = StringUtils.equals(initiatorEmail, "SCHEDULER") ? initiatorEmail : "{@" + initiatorEmail + "}";
+				initiatorMessage = "\n\nInitiated By : " + initiatorMessage;
+
+				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
+				String buildOwnerMessage = StringUtils.isNotEmpty(buildOwnerEmail) ? "\n\nBuild Owner : {@" + buildOwnerEmail + "}" : StringUtils.EMPTY;
+
+				messageID = ZohoService.postMessageToChannel(CommonService.getDefaultChannelUrl(), message + initiatorMessage + buildOwnerMessage + "\n\n{@participants}");
 				context.put("messageID", messageID);
 				gitlabIssueID = ZohoService.createIssue(serverRepoOptional.get(), message);
 				context.put("gitlabIssueID", gitlabIssueID);
@@ -195,13 +202,7 @@ public class IntegService
 				ZohoService.postChangeSet(ZohoService.generatePayoutChangSetsFromIDC(), CommonService.getDefaultChannelUrl(), context);
 			}
 
-			String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
-			if(StringUtils.isNotEmpty(buildOwnerEmail))
-			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner : {@" + buildOwnerEmail + "}");
-			}
-
-			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "Products qualified for build : " + String.join(",", qualifiedProducts));
+			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "Products qualified for build : \n\n" + String.join("\n", qualifiedProducts));
 
 			String referenceID = monitor.getId().toString();
 			workflowEngine.scheduleWorkflow("BuildWorkflow", referenceID, context, ZohoService.getCurrentUserEmail());

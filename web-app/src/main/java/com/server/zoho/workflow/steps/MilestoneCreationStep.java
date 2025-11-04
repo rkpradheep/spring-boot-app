@@ -64,7 +64,8 @@ public class MilestoneCreationStep extends WorkflowStep
 				MilestoneService.MilestoneResult result = milestoneService.moveBuildToMilestone(buildId, product.getProductName());
 				if(result.isSuccess() && result.getMilestoneVersion() != null)
 				{
-					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productOpt.get().getProductName() + " ]* Milestone created ( " + result.getMilestoneVersion() + " )");
+					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + product.getProductName() + " ]* COMPLETED\n\nMilestone Version: " + result.getMilestoneVersion());
+					//ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productOpt.get().getProductName() + " ]* Milestone created ( " + result.getMilestoneVersion() + " )");
 					releaseVersion = result.getMilestoneVersion();
 				}
 				else

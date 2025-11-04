@@ -73,7 +73,7 @@ public class BuildInitiationStep extends WorkflowStep
 				Optional<BuildProductEntity> productOpt = buildProductService.getById(productId);
 				productOpt.ifPresent(product -> buildProductService.markBuildStarted(product,  response.getBuildLogId()));
 
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productName + " ]* Build started");
+				//ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productName + " ]* Build started");
 
 				return new WorkflowEvent(BuildEventType.BUILD_STARTED, Map.of("buildId", response.getBuildLogId(), "message", response.getMessage()));
 			}
