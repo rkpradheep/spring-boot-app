@@ -24,11 +24,11 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.server.framework.common.AppProperties;
+import com.server.framework.common.SecurityRequestWrapper;
 import com.server.framework.entity.UserEntity;
 import com.server.framework.security.throttle.ThrottleNewHandler;
 import com.server.framework.service.HttpLogService;
@@ -78,7 +78,7 @@ public class SecurityFilter implements Filter
 		try
 		{
 			//Instrumentation code start
-			_doFilter(request, response, chain);
+			_doFilter(new SecurityRequestWrapper((HttpServletRequest) request), response, chain);
 			//Instrumentation code end
 		}
 		finally

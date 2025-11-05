@@ -461,7 +461,7 @@ public class SecurityUtil
 		{
 			HttpLogService httpLogService = AppContextHolder.getBean(HttpLogService.class);
 			PosterOutputStream outputStream = StringUtils.equals(connection.getRequestProperty("Content-Type"), "application/json") ? (PosterOutputStream) connection.getOutputStream() : null;
-			String requestJSON = Objects.nonNull(outputStream) ? outputStream.toString() : null;
+			String requestJSON = Objects.nonNull(outputStream) ? outputStream.toString() : StringUtils.EMPTY;
 			return httpLogService.logOutgoing(connection, requestJSON);
 		}
 		catch(Exception e)
