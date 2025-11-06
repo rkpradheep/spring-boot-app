@@ -391,14 +391,14 @@ public class TaskEngineService
 		return jobMethodId.equals("s3") ? "Periodic Repetition updated successfully" : "Periodic Repetition added successfully";
 	}
 
-	public String addOrUpdateCalenderRepetition(String repetition, long userId, long customerId, boolean isCommon, String hourMinSec, String frequency, String dayOfWeek) throws Exception
+	public String addOrUpdateCalenderRepetition(String repetition, long userId, long customerId, boolean isCommon, String hourMinSec, String frequency, String dayOfWeek, String dateOfMonth) throws Exception
 	{
 		Map<String, Integer> frequencyMeta = new HashMap<>()
 		{
 			{
 				put("daily", 0);
 				put("weekly", 1);
-				//				put("monthly", 2);
+				put("monthly", 2);
 				//				put("yearly", 3);
 			}
 		};
@@ -417,7 +417,8 @@ public class TaskEngineService
 			.put(getIdForRepetition("TIME_OF_DAY", false), timeOfDay)
 			.put(getIdForRepetition("USER_ID", false), userId)
 			.put(getIdForRepetition("DAY_OF_WEEK", false), dayOfWeek)
-			.put(getIdForRepetition("SCHEMAID", false), customerId);
+			.put(getIdForRepetition("SCHEMAID", false), customerId)
+			.put(getIdForRepetition("DATE_OF_MONTH", false), dateOfMonth);
 
 		Iterator<String> iterator = jobDetails.keys();
 
@@ -437,6 +438,7 @@ public class TaskEngineService
 			jobDetails.put(getIdForRepetition("REPEAT_FREQUENCY", false), repetitionDetails.get("REPEAT_FREQUENCY"));
 			jobDetails.put(getIdForRepetition("TIME_OF_DAY", false), ObjectUtils.defaultIfNull(timeOfDay, repetitionDetails.get("TIME_OF_DAY")));
 			jobDetails.put(getIdForRepetition("DAY_OF_WEEK", false), ObjectUtils.defaultIfNull(dayOfWeek, repetitionDetails.get("DAY_OF_WEEK")));
+			jobDetails.put(getIdForRepetition("DATE_OF_MONTH", false), ObjectUtils.defaultIfNull(dayOfWeek, repetitionDetails.get("DATE_OF_MONTH")));
 			jobMethodId = "s4";
 		}
 		catch(Exception ignored)

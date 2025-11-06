@@ -326,7 +326,8 @@ public class ZohoController
 			String hourMinSec = requestBody.get("time");
 			String frequency = requestBody.get("frequency");
 			String dayOfWeek = requestBody.get("day_of_week");
-			return ResponseEntity.ok(Map.of("data", TaskEngineService.getInstance(dc, serviceId, queueName).addOrUpdateCalenderRepetition(repetitionName, userId, customerId, isCommon, hourMinSec, frequency, dayOfWeek)));
+			String dateOfMonth = requestBody.get("date_of_month");
+			return ResponseEntity.ok(Map.of("data", TaskEngineService.getInstance(dc, serviceId, queueName).addOrUpdateCalenderRepetition(repetitionName, userId, customerId, isCommon, hourMinSec, frequency, dayOfWeek, dateOfMonth)));
 		}
 		else if(StringUtils.equals("delete", operation))
 		{

@@ -518,7 +518,7 @@ public class ZohoService
 						{
 							break;
 						}
-						if(commit.getString("title").startsWith("Merge branch "))
+						if(!commit.getString("title").startsWith("Merge branch "))
 						{
 							continue;
 						}
@@ -537,10 +537,11 @@ public class ZohoService
 						{
 							JSONObject mr = mrs.getJSONObject(0);
 							commitInfo.put("webURL", mr.getString("web_url"));
-							String authorName = mr.getJSONObject("author").getString("name");
-							String authorEmail = authorName.contains(".") ? authorName + "@zohcorp.com" : commit.getString("author_email");
+							String authorName = mr.getJSONObject("author").getString("username");
+							String authorEmail = authorName.contains(".") ? authorName + "@zohocorp.com" : commit.getString("author_email");
 							commitInfo.put("author", authorEmail);
 							commitInfo.put("mrTitle", mr.getString("title"));
+							commitInfo.put("mergedDate", DateUtil.getFormattedTime(DateUtil.convertDateToMilliseconds(mr.getString("merged_at"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")));
 
 							if(mrsFetched.contains(mr.getString("web_url")))
 							{
@@ -785,6 +786,7 @@ public class ZohoService
 						message += "Commit Message : " + changesDetailsJSON.getString("commitMessage").replace("\n", "") + "\n";
 					}
 					message += "Author : {@" + changesDetailsJSON.getString("author") + "}\n";
+					message += "Merged At : " + changesDetailsJSON.getString("mergedDate") + "\n";
 					message += "\n";
 				}
 

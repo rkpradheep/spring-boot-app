@@ -227,9 +227,12 @@
                  <select id="frequency" style="display:none" onclick="doChangeForFrequency()">
                  <option value="daily">DAILY</option>
                  <option value="weekly">WEEKLY</option>
+                 <option value="monthly">MONTHLY</option>
                  </select>
          <label for="day-of-week" id="day-of-week-label" style="display:none">&nbsp;&nbsp;&nbsp;Day of Week &nbsp;</label>
          <input type="text" id="day-of-week" style="display:none"/>
+           <label for="date-of-month" id="date-of-month-label" style="display:none">&nbsp;&nbsp;&nbsp;Date of Month &nbsp;</label>
+            <input type="text" id="date-of-month" style="display:none"/>
         <label for="time" id="time_label" style="display:none">&nbsp;&nbsp;&nbsp;Time Of Day &nbsp;</label>
         <input type="text" id="time" placeholder="hh:mm:ss" style="display:none"/> <br>
            <label for="periodic_repetition">IS PERIODIC</label>
@@ -365,9 +368,21 @@ if(getElementValue("frequency") == 'weekly')
 {
 document.getElementById("day-of-week").style.display="inline"
 document.getElementById("day-of-week-label").style.display="inline"
+document.getElementById("date-of-month").style.display="none"
+document.getElementById("date-of-month-label").style.display="none"
 }
-else
+else if(getElementValue("frequency") == 'daily')
 {
+document.getElementById("day-of-week").style.display="none"
+document.getElementById("day-of-week-label").style.display="none"
+document.getElementById("date-of-month").style.display="none"
+document.getElementById("date-of-month-label").style.display="none"
+}
+
+else if(getElementValue("frequency") == 'monthly')
+{
+document.getElementById("date-of-month").style.display="inline"
+document.getElementById("date-of-month-label").style.display="inline"
 document.getElementById("day-of-week").style.display="none"
 document.getElementById("day-of-week-label").style.display="none"
 }
