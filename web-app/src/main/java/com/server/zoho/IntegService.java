@@ -16,6 +16,8 @@ import com.server.framework.common.AppProperties;
 import com.server.framework.common.CommonService;
 import com.server.framework.common.DateUtil;
 import com.server.framework.error.AppException;
+import com.server.framework.service.ConfigurationService;
+import com.server.framework.workflow.model.WorkflowInstance;
 import com.server.zoho.entity.BuildMonitorEntity;
 import com.server.zoho.service.BuildMonitorService;
 import com.server.zoho.service.BuildProductService;
@@ -37,6 +39,9 @@ public class IntegService
 
 	@Autowired
 	BuildProductService buildProductService;
+
+	@Autowired
+	ConfigurationService configurationService;
 
 	@Lazy
 	@Autowired
@@ -169,9 +174,10 @@ public class IntegService
 
 			BuildProductEntity firstProduct = buildProductService.getNextPendingProduct(monitor.getId()).orElse(null);
 
-			String message = DateUtil.getFormattedCurrentTime("'Master Build' dd MMMM yyyy").toUpperCase() + " (" + monitor.getId() +  ")";
-			String messageID;
-			String gitlabIssueID;
+			String dateString = DateUtil.getFormattedCurrentTime("'Master Build' dd MMMM yyyy").toUpperCase();
+			String message = dateString  + " (" + monitor.getId() +  ")";
+			String messageID = null;
+			String gitlabIssueID = null;
 			List<String> qualifiedProducts = buildProductService.getProductsForMonitor(monitor.getId()).stream().map(BuildProductEntity::getProductName).collect(Collectors.toList());
 
 			Map<String, Object> context = new HashMap<>()
@@ -185,6 +191,8 @@ public class IntegService
 			Optional<String> serverRepoOptional = qualifiedProducts.stream().filter(productName -> productName.endsWith("_server")).findFirst();
 			if(serverRepoOptional.isPresent())
 			{
+				String serverRepoName = serverRepoOptional.get();
+				String masterBuildKey = serverRepoName.concat("_").concat(dateString);
 				String initiatorEmail = ZohoService.getCurrentUserEmail();
 				String initiatorMessage = StringUtils.equals(initiatorEmail, "SCHEDULER") ? initiatorEmail : "{@" + initiatorEmail + "}";
 				initiatorMessage = "\n\nInitiated By : " + initiatorMessage;
@@ -192,12 +200,40 @@ public class IntegService
 				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
 				String buildOwnerMessage = StringUtils.isNotEmpty(buildOwnerEmail) ? "\n\nBuild Owner : {@" + buildOwnerEmail + "}" : StringUtils.EMPTY;
 
-				messageID = ZohoService.postMessageToChannel(CommonService.getDefaultChannelUrl(), message + initiatorMessage + buildOwnerMessage + "\n\n{@participants}");
-				context.put("messageID", messageID);
-				gitlabIssueID = ZohoService.createIssue(serverRepoOptional.get(), message);
-				context.put("gitlabIssueID", gitlabIssueID);
+				Optional<String> masterBuildOptional = configurationService.getValue(masterBuildKey);
+				if(masterBuildOptional.isPresent())
+				{
+					LOGGER.info("Master build already taken. key: " + masterBuildKey + " with ID: " + masterBuildOptional.get());
+					Optional<WorkflowInstance> workflowInstanceOptional = workflowEngine.getInstance(masterBuildOptional.get());
+					if(workflowInstanceOptional.isPresent())
+					{
+						WorkflowInstance workflowInstance = workflowInstanceOptional.get();
+						Map<String, Object> contextTemp = (Map<String, Object>) workflowInstance.getContext();
+						messageID = contextTemp.get("messageID").toString();
+						gitlabIssueID = contextTemp.get("gitlabIssueID").toString();
+
+						context.put("messageID", messageID);
+						context.put("gitlabIssueID", gitlabIssueID);
+
+						ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "BUGFIX BUILD" + initiatorMessage  + "\n\n{@participants}");
+					}
+				}
+				else
+				{
+					messageID = ZohoService.postMessageToChannel(CommonService.getDefaultChannelUrl(), message + initiatorMessage + buildOwnerMessage + "\n\n{@participants}");
+					configurationService.setValue(masterBuildKey, monitor.getId().toString());
+					context.put("messageID", messageID);
+
+					gitlabIssueID = ZohoService.createIssue(serverRepoOptional.get(), message);
+
+					if(StringUtils.isNotEmpty(gitlabIssueID))
+					{
+						context.put("gitlabIssueID", gitlabIssueID);
+						ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "[GITLAB ISSUE CREATED](https://zpaygit.csez.zohocorpin.com/zohopay/" + serverRepoOptional.get() + "/-/issues/" + gitlabIssueID + ")");
+					}
+				}
+
 				context.put("server_product_name", serverRepoOptional.get());
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "[GITLAB ISSUE CREATED](https://zpaygit.csez.zohocorpin.com/zohopay/" + serverRepoOptional.get() + "/-/issues/" + gitlabIssueID + ")");
 
 				ZohoService.postChangeSet(ZohoService.generatePayoutChangSetsFromIDC(), CommonService.getDefaultChannelUrl(), context);
 			}

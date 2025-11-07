@@ -34,7 +34,7 @@ public class ConfigurationService
 
 	public ConfigurationEntity setValue(String key, String value)
 	{
-		return setValue(key, value, null);
+		return setValue(key, value, -1L);
 	}
 
 	public ConfigurationEntity setValue(String key, String value, Long expiryTime)
