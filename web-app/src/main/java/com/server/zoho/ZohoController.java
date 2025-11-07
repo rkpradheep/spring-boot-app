@@ -405,6 +405,38 @@ public class ZohoController
 		}
 	}
 
+	@PostMapping("/zoho/payout/upload-to-idc")
+	public ResponseEntity<Map<String, Object>> uploadToIDC(@RequestParam("product_name") String productName, String stage)
+	{
+		try
+		{
+			ZohoService.doAuthentication();
+
+			Pair<String, String> milestoneAndComment = ZohoService.getLatestMilestoneAndCommentForBuildUpload(productName, stage);
+			if(Objects.isNull(milestoneAndComment))
+			{
+				Map<String, Object> response = ApiResponseBuilder.error("No milestone found to upload build", HttpStatus.BAD_REQUEST.value());
+				return ResponseEntity.ok(response);
+			}
+			String sdResponse = ZohoService.uploadBuild(productName, milestoneAndComment.getLeft(), "IN2", "IN", stage, milestoneAndComment.getRight(), false, null);
+
+			boolean isUploadSuccessful = new JSONObject(sdResponse).getString("code").equals("SUCCESS");
+			String preBuildMessage = new JSONObject(sdResponse).getString("message");
+
+			Map<String, Object> response = isUploadSuccessful ? ApiResponseBuilder.success("Build upload to " + stage +  " initiated successfully", null) : ApiResponseBuilder.error("Build upload to " + stage +  " failed: " + preBuildMessage, HttpStatus.BAD_REQUEST.value());
+			return ResponseEntity.ok(response);
+		}
+		catch(AppException ae)
+		{
+			throw ae;
+		}
+		catch(Exception e)
+		{
+			Map<String, Object> response = ApiResponseBuilder.error("API call failed : " + e.getMessage(), 400);
+			return ResponseEntity.badRequest().body(response);
+		}
+	}
+
 	public static String generateISCSignature(String service, String dc) throws Exception
 	{
 		Set<String> useJwtServices = Arrays.stream(AppProperties.getProperty("security.services.use.jwt").split(",")).map(String::trim).collect(Collectors.toSet());

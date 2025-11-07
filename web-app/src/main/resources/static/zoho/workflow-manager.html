@@ -876,6 +876,15 @@
             Initiate Payout Patch Build
         </button>
 
+        <br/><br/>
+        <button class="btn" id="initiatePreBuildUpload" onclick="uploadToPayoutIDC(0)">
+            Upload To Pre (Payout)
+        </button>
+
+        <button class="btn" id="initiateProductionBuildUpload" onclick="uploadToPayoutIDC(1)">
+            Upload To Production (Payout)
+        </button>
+
         <br><br>
 
         <div class="section">
@@ -1139,6 +1148,40 @@
             hideElement("loading");
             console.error('Error starting workflow:', error);
             showAlert('Error starting patch build. Please try again.', 'error');
+        }
+    }
+
+
+       async function uploadToPayoutIDC(stage) {
+
+        try {
+            unHideElement("loading");
+            const stageName = stage == 0 ? "pre" : "production";
+            const response = await fetch('/api/v1/zoho/payout/upload-to-idc?product_name=payout_server&stage=' + stageName, {
+                method: 'POST',
+            });
+
+            const responseJSON = await response.json();
+
+            hideElement("loading");
+            if (responseJSON.success) {
+                const successMessage = "Upload initiated successfully";
+                showAlert(`${successMessage}`, 'success');
+                alert(successMessage);
+            } else {
+                if(responseJSON.error_code == "reauth_required")
+                {
+                  handleZohoAuth(responseJSON.data.auth_uri)
+                  return;
+                 }
+                 alert(`Failed : ${responseJSON.message}`);
+                showAlert(`Failed : ${responseJSON.message}`, 'error');
+            }
+
+        } catch (error) {
+            hideElement("loading");
+            console.error('Error:', error);
+            showAlert('Error uploading build. Please try again.', 'error');
         }
     }
     async function loadWorkflowInstances() {

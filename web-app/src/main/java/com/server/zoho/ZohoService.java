@@ -13,6 +13,8 @@ import com.server.framework.service.ConfigurationService;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.json.JSONArray;
@@ -43,6 +45,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 public class ZohoService
@@ -98,6 +102,11 @@ public class ZohoService
 
 	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region, String buildStage, boolean isPatchBuild, String patchBuildURL) throws Exception
 	{
+		return uploadBuild(productName, milestoneVersion, dc, region, buildStage, null, isPatchBuild, patchBuildURL);
+	}
+
+	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region, String buildStage, String comments, boolean isPatchBuild, String patchBuildURL) throws Exception
+	{
 		JSONObject buildOptions = new JSONObject()
 			.put("skip_continue", true)
 			.put("iast_jar_needed", !region.equals("IN"));
@@ -107,7 +116,7 @@ public class ZohoService
 		ProductConfig productConfig =  IntegService.getProductConfig(productName);
 		String buildURL = isPatchBuild ? patchBuildURL.concat("/").concat(productConfig.getPatchBuildZipName()) : productConfig.getBuildUrl().replace("{0}", milestoneVersion);
 
-		String comment = DateUtil.getFormattedCurrentTime("'Master Build' dd MMMM yyyy").toUpperCase();
+		String comment = StringUtils.defaultIfEmpty(comments, DateUtil.getFormattedCurrentTime("'Master Build' dd MMMM yyyy").toUpperCase());
 		JSONObject sdBuildUpdatePayload = new JSONObject()
 			.put("data_center", dc)
 			.put("region", region)
@@ -622,8 +631,49 @@ public class ZohoService
 		}
 		catch(Exception e)
 		{
-			LOGGER.log(Level.SEVERE, "Error fetching SDIN build URL from SD API for product: " + product + " and stage: " + stage, e);
+			LOGGER.log(Level.SEVERE, "Error fetching SD IN build URL from SD API for product: " + product + " and stage: " + stage, e);
 			return getPatchBuildURL(product, stage);
+		}
+	}
+
+	public static Pair<String, String> getLatestMilestoneAndCommentForBuildUpload(String product, String stage)
+	{
+		try
+		{
+			String sdBuildOptionUrl = AppProperties.getProperty("zoho.sd.build.update.api.url").replace("/action/build_update", "/buildoptions");
+
+			HttpContext context = new HttpContext(sdBuildOptionUrl, "GET");
+
+			context.setParam("deployment_mode", "live");
+			context.setParam("region", "IN");
+			context.setParam("data_center", "IN2");
+			context.setParam("provision_type", "build_update");
+			context.setParam("build_stage", stage);
+
+
+			context.setHeader("AUTHORIZATION", ZohoService.getSDAccessToken());
+
+			HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(context);
+
+			JSONArray buildURLs = new  JSONObject(httpResponse.getStringResponse()).getJSONArray("details").getJSONObject(0)
+				.getJSONObject("build_options").getJSONObject("build_url").getJSONArray("urls");
+
+			for(int i =0 ; i< buildURLs.length(); i++)
+			{
+				JSONObject buildURLObj = buildURLs.getJSONObject(i);
+				Pattern milestonePattern = Pattern.compile( ".*/milestones/master/([\\w\\.]+)/.*");
+				Matcher matcher = milestonePattern.matcher(buildURLObj.getString("url"));
+				if(!buildURLObj.getBoolean("is_patch_url") && matcher.matches())
+				{
+					return new ImmutablePair<>(matcher.group(1), buildURLObj.getString("comment"));
+				}
+			}
+			return null;
+		}
+		catch(Exception e)
+		{
+			LOGGER.log(Level.SEVERE, "Error fetching SD IN build URL from SD API for product: " + product + " and stage: " + stage, e);
+			return null;
 		}
 	}
 
