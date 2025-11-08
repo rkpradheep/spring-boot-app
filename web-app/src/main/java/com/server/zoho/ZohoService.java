@@ -97,7 +97,7 @@ public class ZohoService
 
 	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region) throws Exception
 	{
-		return uploadBuild(productName, milestoneVersion, dc, region,"production", false, null);
+		return uploadBuild(productName, milestoneVersion, dc, region, "production", false, null);
 	}
 
 	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region, String buildStage, boolean isPatchBuild, String patchBuildURL) throws Exception
@@ -105,7 +105,8 @@ public class ZohoService
 		return uploadBuild(productName, milestoneVersion, dc, region, buildStage, null, isPatchBuild, patchBuildURL);
 	}
 
-	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region, String buildStage, String comments, boolean isPatchBuild, String patchBuildURL) throws Exception
+	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region, String buildStage, String comments, boolean isPatchBuild, String patchBuildURL)
+		throws Exception
 	{
 		JSONObject buildOptions = new JSONObject()
 			.put("skip_continue", true)
@@ -113,8 +114,8 @@ public class ZohoService
 
 		JSONArray notifyTo = new JSONArray().put("pradheep.rkd@zohocorp.com");
 
-		ProductConfig productConfig =  IntegService.getProductConfig(productName);
-		String buildURL = isPatchBuild ? patchBuildURL.concat("/").concat(productConfig.getPatchBuildZipName()) : productConfig.getBuildUrl().replace("{0}", milestoneVersion);
+		ProductConfig productConfig = IntegService.getProductConfig(productName);
+		String buildURL = isPatchBuild ? patchBuildURL.concat("/").concat(productConfig.getPatchBuildZipName()) : getBuildURLForMilestone(productName, milestoneVersion);
 
 		String comment = StringUtils.defaultIfEmpty(comments, DateUtil.getFormattedCurrentTime("'Master Build' dd MMMM yyyy").toUpperCase());
 		JSONObject sdBuildUpdatePayload = new JSONObject()
@@ -138,6 +139,12 @@ public class ZohoService
 		HttpEntity<String> requestEntity = new HttpEntity<>(sdBuildUpdatePayload.toString(), headers);
 
 		return AppContextHolder.getBean(RestTemplate.class).postForObject(sdBuildUpdateUrl, requestEntity, String.class);
+	}
+
+	public static String getBuildURLForMilestone(String productName, String milestoneVersion)
+	{
+		ProductConfig productConfig = IntegService.getProductConfig(productName);
+		return productConfig.getBuildUrl().replace("{0}", milestoneVersion);
 	}
 
 	private void loadMeta()
@@ -201,9 +208,15 @@ public class ZohoService
 
 	public static void createOrSendMessageToThread(String urlString, Map<String, Object> context, String threadTitle, String message)
 	{
+		String messageID = (String) context.get("messageID");
+		String gitlabIssueID = (String) context.get("gitlabIssueID");
+		createOrSendMessageToThread(urlString, messageID, (String) context.get("serverProductName"), gitlabIssueID, threadTitle, message);
+	}
+
+	public static void createOrSendMessageToThread(String urlString, String messageID, String serverRepoName, String gitlabIssueID, String threadTitle, String message)
+	{
 		try
 		{
-			String messageID = (String) context.get("messageID");
 			if(StringUtils.isEmpty(messageID))
 			{
 				return;
@@ -228,7 +241,6 @@ public class ZohoService
 
 			CommonService.getResponse(httpURLConnection.getResponseCode() != 200 ? httpURLConnection.getErrorStream() : httpURLConnection.getInputStream());
 
-			String gitlabIssueID = (String) context.get("gitlabIssueID");
 			if(StringUtils.isEmpty(gitlabIssueID))
 			{
 				return;
@@ -236,7 +248,7 @@ public class ZohoService
 
 			if(!message.contains("GITLAB ISSUE CREATED"))
 			{
-				addCommentToIssue((String) context.get("server_product_name"), gitlabIssueID, message);
+				addCommentToIssue(serverRepoName, gitlabIssueID, message);
 			}
 		}
 		catch(Exception e)
@@ -449,14 +461,19 @@ public class ZohoService
 
 	public static JSONObject generatePayoutChangSetsFromIDC() throws Exception
 	{
+		String inURL = getSDINBuildURLFromSDAPI("payout_server", "production");
+		return generatePayoutChangSetsForURL(inURL);
+	}
+
+	public static JSONObject generatePayoutChangSetsForURL(String buildURL) throws Exception
+	{
 		List<String> payoutProducts = (List<String>) ZohoService.getMetaConfig(("PAYOUT_PRODUCTS"));
 
 		HttpService httpService = AppContextHolder.getBean(HttpService.class);
 
-		JSONObject idcChangeSets = new JSONObject();
+		JSONObject changeSets = new JSONObject();
 
-		String inURL = getSDINBuildURLFromSDAPI("payout_server", "production");
-		BuildResponse inBuildResponse = getBuildResponse(inURL);
+		BuildResponse inBuildResponse = getBuildResponse(buildURL);
 		String buildlogID = inBuildResponse.getBuildLogId() + "";
 
 		JSONArray dependencies = getDependencies(buildlogID);
@@ -500,7 +517,7 @@ public class ZohoService
 			}
 		}
 
-		idcCommitDetails.put("payout_server", getBuildResponse(inURL).getCommitSHA());
+		idcCommitDetails.put("payout_server", getBuildResponse(buildURL).getCommitSHA());
 
 		for(String product : payoutProducts)
 		{
@@ -564,20 +581,20 @@ public class ZohoService
 					}
 					if(!productChangeSet.isEmpty())
 					{
-						idcChangeSets.put(product, productChangeSet);
+						changeSets.put(product, productChangeSet);
 					}
 				}
 			}
 		}
 
-		if(idcChangeSets.isEmpty())
+		if(changeSets.isEmpty())
 		{
 			return new JSONObject();
 		}
 
 		return new JSONObject()
-			.put("idc_milestone", StringUtils.defaultIfEmpty(inBuildResponse.getReleaseVersion(), inBuildResponse.getCheckoutLabel()))
-			.put("products_changesets", idcChangeSets);
+			.put("base_milestone", StringUtils.defaultIfEmpty(inBuildResponse.getReleaseVersion(), inBuildResponse.getCheckoutLabel()))
+			.put("products_changesets", changeSets);
 
 	}
 
@@ -610,7 +627,7 @@ public class ZohoService
 		{
 			HttpContext context = new HttpContext(AppProperties.getProperty("zoho.sd.build.status.api.url").replace("/{BUILD_ID}", ""), "GET");
 
-			context.setParam( "start_date", DateUtil.getFormattedTime(DateUtil.getCurrentTime().minusDays(10).toInstant().toEpochMilli(), "yyyy-MM-dd"));
+			context.setParam("start_date", DateUtil.getFormattedTime(DateUtil.getCurrentTime().minusDays(10).toInstant().toEpochMilli(), "yyyy-MM-dd"));
 			context.setParam("overall_status", "Completed");
 			context.setParam("datacenter", "IN2");
 			context.setParam("region", "IN");
@@ -624,10 +641,10 @@ public class ZohoService
 
 			HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(context);
 
-			JSONObject buildDetails = new  JSONObject(httpResponse.getStringResponse()).getJSONArray("details").getJSONObject(0)
+			JSONObject buildDetails = new JSONObject(httpResponse.getStringResponse()).getJSONArray("details").getJSONObject(0)
 				.getJSONObject("details").getJSONObject("build_details");
 
-			return 	buildDetails.getJSONObject(buildDetails.keySet().stream().findFirst().get()).getString("url");
+			return buildDetails.getJSONObject(buildDetails.keySet().stream().findFirst().get()).getString("url");
 		}
 		catch(Exception e)
 		{
@@ -650,18 +667,17 @@ public class ZohoService
 			context.setParam("provision_type", "build_update");
 			context.setParam("build_stage", stage);
 
-
 			context.setHeader("AUTHORIZATION", ZohoService.getSDAccessToken());
 
 			HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(context);
 
-			JSONArray buildURLs = new  JSONObject(httpResponse.getStringResponse()).getJSONArray("details").getJSONObject(0)
+			JSONArray buildURLs = new JSONObject(httpResponse.getStringResponse()).getJSONArray("details").getJSONObject(0)
 				.getJSONObject("build_options").getJSONObject("build_url").getJSONArray("urls");
 
-			for(int i =0 ; i< buildURLs.length(); i++)
+			for(int i = 0; i < buildURLs.length(); i++)
 			{
 				JSONObject buildURLObj = buildURLs.getJSONObject(i);
-				Pattern milestonePattern = Pattern.compile( ".*/milestones/master/([\\w\\.]+)/.*");
+				Pattern milestonePattern = Pattern.compile(".*/milestones/master/([\\w\\.]+)/.*");
 				Matcher matcher = milestonePattern.matcher(buildURLObj.getString("url"));
 				if(!buildURLObj.getBoolean("is_patch_url") && matcher.matches())
 				{
@@ -806,7 +822,7 @@ public class ZohoService
 		}
 	}
 
-	public static void postChangeSet(JSONObject changeSetResponse, String channelURL, Map<String, Object> cotext)
+	public static void postChangeSet(JSONObject changeSetResponse, String channelURL, Map<String, Object> cotext, boolean isIDC)
 	{
 		try
 		{
@@ -818,8 +834,14 @@ public class ZohoService
 			JSONObject productsChangeSetJSON = changeSetResponse.getJSONObject("products_changesets");
 
 			Set<String> productsChangeSet = productsChangeSetJSON.keySet();
-			String message = "Current IDC Milestone : *" + changeSetResponse.getString("idc_milestone") + "*\n\n";
+			String message = "Current IDC Milestone : *" + changeSetResponse.getString("base_milestone") + "*\n\n";
 			message += "*Changesets Generated From IDC* : \n\n";
+
+			if(!isIDC)
+			{
+				message = "Previous Build Milestone : *" + changeSetResponse.getString("base_milestone") + "*\n\n";
+				message += "*Changesets Generated From Previous Build* : \n\n";
+			}
 			for(String product : productsChangeSet)
 			{
 				message += "Product : *" + product + "*\n";
@@ -880,7 +902,13 @@ public class ZohoService
 		httpContext.setHeader("Authorization", ZohoService.getSDAccessToken());
 
 		HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(httpContext);
-		return new JSONObject(httpResponse.getStringResponse()).getJSONArray("details").getJSONObject(0).getJSONObject("details").getJSONArray("build_details").getJSONObject(0).getJSONObject("status");
+		JSONObject buildDetails =  new JSONObject(httpResponse.getStringResponse()).getJSONArray("details").getJSONObject(0).getJSONObject("details").getJSONArray("build_details").getJSONObject(0);
+
+		return new JSONObject()
+			.put("status", buildDetails.getJSONObject("status"))
+			.put("overall_status", buildDetails.getString("overall_status"))
+			.put("region", buildDetails.getString("region"))
+			.put("url", buildDetails.getString("url"));
 	}
 }
 

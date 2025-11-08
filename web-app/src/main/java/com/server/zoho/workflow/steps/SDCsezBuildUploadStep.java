@@ -9,7 +9,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.CommonService;
+import com.server.framework.common.DateUtil;
+import com.server.framework.job.TaskEnum;
+import com.server.framework.service.JobService;
 import com.server.framework.workflow.definition.WorkflowStep;
 import com.server.zoho.ZohoService;
 import com.server.zoho.service.BuildMonitorService;
@@ -61,12 +65,23 @@ public class SDCsezBuildUploadStep extends WorkflowStep
 			String response = ZohoService.uploadBuild(productName, milestoneVersion, "CSEZ", "SEZ");
 			LOGGER.info("SD Build Update Response CSEZ : " + response);
 
-			boolean isCSEZBuildSuccessful = new JSONObject(response).getString("code").equals("SUCCESS");
-			String csezBuildMessage = new JSONObject(response).getString("message");
+			JSONObject responseJSON = new JSONObject(response);
+			boolean isCSEZBuildSuccessful = responseJSON.getString("code").equals("SUCCESS");
+			String csezBuildMessage = responseJSON.getString("message");
+
+			String buildId = responseJSON.getJSONArray("details").getJSONObject(0).getString("build_id");
 
 			if(isCSEZBuildSuccessful)
 			{
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload initiated for CSEZ ( " + milestoneVersion + " )");
+
+				JSONObject data = new JSONObject()
+					.put("message_id", context.get("messageID"))
+					.put("gitlab_issue_id", context.get("gitlabIssueID"))
+					.put("server_repo_name", context.get("serverProductName"))
+					.put("build_id", buildId);
+
+				AppContextHolder.getBean(JobService.class).scheduleJob(TaskEnum.SD_STATUS_POLL_TASK.getTaskName(), data.toString(), DateUtil.ONE_MINUTE_IN_MILLISECOND);
 
 				buildProductService.getById(productId).ifPresent(buildProductService::markSDCSEZBuildUploaded);
 				LOGGER.info("SD Build Update Successful for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion);

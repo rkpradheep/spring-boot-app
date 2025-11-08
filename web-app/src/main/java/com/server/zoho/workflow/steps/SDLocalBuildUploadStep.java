@@ -10,7 +10,11 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.CommonService;
+import com.server.framework.common.DateUtil;
+import com.server.framework.job.TaskEnum;
+import com.server.framework.service.JobService;
 import com.server.framework.workflow.definition.WorkFlowCommonEventType;
 import com.server.framework.workflow.definition.WorkflowStep;
 import com.server.framework.workflow.model.WorkflowEvent;
@@ -58,12 +62,24 @@ public class SDLocalBuildUploadStep extends WorkflowStep
 			String response = ZohoService.uploadBuild(productName, milestoneVersion, "CT1", "CT");
 			LOGGER.info("SD Build Update Response LOCAL : " + response);
 
-			boolean isLocalBuildSuccessful = new JSONObject(response).getString("code").equals("SUCCESS");
-			String localBuildMessage = new JSONObject(response).getString("message");
+			JSONObject responseJSON = new JSONObject(response);
+			boolean isLocalBuildSuccessful = responseJSON.getString("code").equals("SUCCESS");
+			String localBuildMessage = responseJSON.getString("message");
+
+			String buildId = responseJSON.getJSONArray("details").getJSONObject(0).getString("build_id");
 
 			if(isLocalBuildSuccessful)
 			{
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload initiated for LOCAL ( " + milestoneVersion + " )");
+
+				JSONObject data = new JSONObject()
+					.put("message_id", context.get("messageID"))
+					.put("gitlab_issue_id", context.get("gitlabIssueID"))
+					.put("server_repo_name", context.get("serverProductName"))
+					.put("build_id", buildId);
+
+				AppContextHolder.getBean(JobService.class).scheduleJob(TaskEnum.SD_STATUS_POLL_TASK.getTaskName(), data.toString(), DateUtil.ONE_MINUTE_IN_MILLISECOND);
+
 
 				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
 				if(StringUtils.isNotEmpty(buildOwnerEmail))
