@@ -181,10 +181,15 @@ public class BuildWorkflowController
 			).build());
 
 		}
+		catch(AppException ae)
+		{
+			throw ae;
+		}
 		catch(Exception e)
 		{
-			throw new AppException("Error stopping workflow: ");
+			throw new AppException("Error stopping workflow: " + e.getMessage());
 		}
+
 	}
 
 	@GetMapping("/instances/{instanceId}")

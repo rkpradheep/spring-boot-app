@@ -22,7 +22,7 @@ import com.server.zoho.service.BuildMonitorService;
 import com.server.zoho.service.BuildProductService;
 
 @Component
-public class SDPreBuildUploadStep extends WorkflowStep
+public class SDPreBuildUpdateStep extends WorkflowStep
 {
 	@Autowired
 	private BuildMonitorService buildMonitorService;
@@ -30,9 +30,9 @@ public class SDPreBuildUploadStep extends WorkflowStep
 	@Autowired
 	private BuildProductService buildProductService;
 
-	private static final Logger LOGGER = Logger.getLogger(SDPreBuildUploadStep.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(SDPreBuildUpdateStep.class.getName());
 
-	public SDPreBuildUploadStep() {
+	public SDPreBuildUpdateStep() {
 		super();
 		setName("SD PRE Build Upload");
 		setDescription("Uploads the build to PRE");
@@ -65,14 +65,14 @@ public class SDPreBuildUploadStep extends WorkflowStep
 
 			if(isPreBuildSuccessful)
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload initiated for PRE ( " + milestoneVersion + " )");
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update initiated for PRE ( " + milestoneVersion + " )");
 
 				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
 				if(StringUtils.isNotEmpty(buildOwnerEmail))
 				{
 					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
 				}
-				buildProductService.getById(productId).ifPresent(buildProductService::markSDPreBuildUploaded);
+				buildProductService.getById(productId).ifPresent(buildProductService::markSDPreBuildUpdateFailed);
 
 				BuildMonitorEntity monitor = buildMonitorService.getById(monitorId).orElse(null);
 				assert monitor != null;

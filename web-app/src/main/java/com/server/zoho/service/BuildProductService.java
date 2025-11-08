@@ -158,58 +158,58 @@ public class BuildProductService
 		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as STARTED");
 	}
 
-	public void markSDCSEZBuildUploaded(BuildProductEntity buildProductEntity)
+	public void markSDCSEZBuildUpdateInitiated(BuildProductEntity buildProductEntity)
 	{
-		buildProductEntity.setStatus(BuildProductStatus.SD_CSEZ_BUILD_UPLOADED.getName());
+		buildProductEntity.setStatus(BuildProductStatus.SD_CSEZ_BUILD_UPDATE_INITIATED.getName());
 		buildProductEntity.setErrorMessage(null);
 		buildProductEntity.updateUpdatedTime();
 		buildProductRepository.save(buildProductEntity);
-		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_BUILD_UPLOADED");
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_BUILD_UPDATE_INITIATED");
 	}
 
-	public void markSDLocalBuildUploaded(BuildProductEntity buildProductEntity)
+	public void markSDLocalBuildUpdateInitiated(BuildProductEntity buildProductEntity)
 	{
-		buildProductEntity.setStatus(BuildProductStatus.SD_LOCAL_BUILD_UPLOADED.getName());
+		buildProductEntity.setStatus(BuildProductStatus.SD_LOCAL_BUILD_INITIATED.getName());
 		buildProductEntity.setErrorMessage(null);
 		buildProductEntity.updateUpdatedTime();
 		buildProductRepository.save(buildProductEntity);
-		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_CSEZ_BUILD_UPLOADED");
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_CSEZ_BUILD_UPDATE_INITIATED");
 	}
 
-	public void markSDPreBuildUploaded(BuildProductEntity buildProductEntity)
+	public void markSDPreBuildUpdateFailed(BuildProductEntity buildProductEntity)
 	{
-		buildProductEntity.setStatus(BuildProductStatus.SD_PRE_BUILD_UPLOADED.getName());
+		buildProductEntity.setStatus(BuildProductStatus.SD_PRE_BUILD_UPDATE_INITIATED.getName());
 		buildProductEntity.setErrorMessage(null);
 		buildProductEntity.updateUpdatedTime();
 		buildProductRepository.save(buildProductEntity);
-		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_PRE_BUILD_UPLOADED");
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_PRE_BUILD_UPDATE_INITIATED");
 	}
 
-	public void markSDCSEZBuildUploadFailed(BuildProductEntity buildProductEntity, String errorMessage)
+	public void markSDCSEZBuildUpdateFailed(BuildProductEntity buildProductEntity, String errorMessage)
 	{
-		buildProductEntity.setStatus(BuildProductStatus.SD_CSEZ_BUILD_UPLOAD_FAILED.getName());
+		buildProductEntity.setStatus(BuildProductStatus.SD_CSEZ_BUILD_UPDATE_FAILED.getName());
 		buildProductEntity.setErrorMessage(null);
 		buildProductEntity.updateUpdatedTime();
 		buildProductRepository.save(buildProductEntity);
-		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_CSEZ_BUILD_UPLOAD_FAILED");
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_CSEZ_BUILD_UPDATE_FAILED");
 	}
 
-	public void markSDLocalBuildUploadFailed(BuildProductEntity buildProductEntity, String errorMessage)
+	public void markSDLocalBuildUpdateFailed(BuildProductEntity buildProductEntity, String errorMessage)
 	{
-		buildProductEntity.setStatus(BuildProductStatus.SD_LOCAL_BUILD_UPLOAD_FAILED.getName());
+		buildProductEntity.setStatus(BuildProductStatus.SD_LOCAL_BUILD_UPDATE_FAILED.getName());
 		buildProductEntity.setErrorMessage(errorMessage);
 		buildProductEntity.updateUpdatedTime();
 		buildProductRepository.save(buildProductEntity);
-		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_LOCAL_BUILD_UPLOAD_FAILED");
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_LOCAL_BUILD_UPDATE_FAILED");
 	}
 
 	public void markSDPreBuildUploadFailed(BuildProductEntity buildProductEntity, String errorMessage)
 	{
-		buildProductEntity.setStatus(BuildProductStatus.SD_PRE_BUILD_UPLOAD_FAILED.getName());
+		buildProductEntity.setStatus(BuildProductStatus.SD_PRE_BUILD_UPDATE_FAILED.getName());
 		buildProductEntity.setErrorMessage(errorMessage);
 		buildProductEntity.updateUpdatedTime();
 		buildProductRepository.save(buildProductEntity);
-		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_PRE_BUILD_UPLOAD_FAILED");
+		LOGGER.info("BuildProduct " + buildProductEntity.getId() + " for " + buildProductEntity.getProductName() + " marked as SD_PRE_BUILD_UPDATE_FAILED");
 	}
 
 }
