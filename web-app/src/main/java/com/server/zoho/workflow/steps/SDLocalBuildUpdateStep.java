@@ -66,7 +66,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 			boolean isLocalBuildSuccessful = responseJSON.getString("code").equals("SUCCESS");
 			String localBuildMessage = responseJSON.getString("message");
 
-			String buildId = responseJSON.getJSONArray("details").getJSONObject(0).getString("build_id");
+			String buildId = responseJSON.getJSONArray("details").getJSONObject(0).get("build_id") + "";
 
 			if(isLocalBuildSuccessful)
 			{
@@ -80,12 +80,6 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 
 				AppContextHolder.getBean(JobService.class).scheduleJob(TaskEnum.SD_STATUS_POLL_TASK.getTaskName(), data.toString(), DateUtil.ONE_MINUTE_IN_MILLISECOND);
 
-
-				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
-				if(StringUtils.isNotEmpty(buildOwnerEmail))
-				{
-					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
-				}
 				buildProductService.getById(productId).ifPresent(buildProductService::markSDLocalBuildUpdateInitiated);
 
 				BuildMonitorEntity monitor = buildMonitorService.getById(monitorId).orElse(null);
@@ -97,15 +91,31 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 			}
 			else
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload to CSEZ Failed ( " + milestoneVersion + " )");
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to LOCAL Failed ( " + milestoneVersion + " )");
+
+				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
+				if(StringUtils.isNotEmpty(buildOwnerEmail))
+				{
+					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
+				}
+
 				LOGGER.severe("SD Build Update Failed: " + "LOCAL Message : " + localBuildMessage);
 				buildProductService.getById(productId).ifPresent(buildProductEntity -> buildProductService.markSDLocalBuildUpdateFailed(buildProductEntity, localBuildMessage));
+
 				return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED, Map.of("error", "SD Build Update Failed: " + "Local Message : " + localBuildMessage));
+
 			}
 		}
 		catch(Exception e)
 		{
-			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload to LOCAL Failed ( " + milestoneVersion + " )");
+			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to LOCAL Failed ( " + milestoneVersion + " )");
+
+			String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
+			if(StringUtils.isNotEmpty(buildOwnerEmail))
+			{
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
+			}
+
 			LOGGER.log(Level.SEVERE, "Error in SDBuildUploadStep execute", e);
 			buildProductService.getById(productId).ifPresent(buildProductEntity -> buildProductService.markSDLocalBuildUpdateFailed(buildProductEntity, e.getMessage()));
 			return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED, Map.of("error", e.getMessage()));

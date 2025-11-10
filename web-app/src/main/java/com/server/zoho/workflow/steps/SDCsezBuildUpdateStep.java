@@ -1,5 +1,7 @@
 package com.server.zoho.workflow.steps;
 
+import io.micrometer.common.util.StringUtils;
+
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -15,6 +17,7 @@ import com.server.framework.common.DateUtil;
 import com.server.framework.job.TaskEnum;
 import com.server.framework.service.JobService;
 import com.server.framework.workflow.definition.WorkflowStep;
+import com.server.zoho.IntegService;
 import com.server.zoho.ZohoService;
 import com.server.zoho.service.BuildMonitorService;
 import com.server.zoho.service.BuildProductService;
@@ -69,7 +72,7 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 			boolean isCSEZBuildSuccessful = responseJSON.getString("code").equals("SUCCESS");
 			String csezBuildMessage = responseJSON.getString("message");
 
-			String buildId = responseJSON.getJSONArray("details").getJSONObject(0).getString("build_id");
+			String buildId = responseJSON.getJSONArray("details").getJSONObject(0).get("build_id") + "";
 
 			if(isCSEZBuildSuccessful)
 			{
@@ -89,7 +92,14 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 			}
 			else
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload to CSEZ Failed ( " + milestoneVersion + " )");
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to CSEZ Failed ( " + milestoneVersion + " )");
+
+				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
+				if(StringUtils.isNotEmpty(buildOwnerEmail))
+				{
+					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
+				}
+
 				LOGGER.severe("SD Build Update Failed: " + "CSEZ Message : " + csezBuildMessage);
 				buildProductService.getById(productId).ifPresent(buildProductEntity -> buildProductService.markSDCSEZBuildUpdateFailed(buildProductEntity, csezBuildMessage));
 				return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED, Map.of("error", "SD Build Update Failed: " + "CSEZ Message : " + csezBuildMessage));
@@ -97,7 +107,14 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 		}
 		catch(Exception e)
 		{
-			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload to CSEZ Failed ( " + milestoneVersion + " )");
+			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to CSEZ Failed ( " + milestoneVersion + " )");
+
+			String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
+			if(StringUtils.isNotEmpty(buildOwnerEmail))
+			{
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
+			}
+
 			LOGGER.log(Level.SEVERE, "Error in SDBuildUploadStep execute", e);
 			buildProductService.getById(productId).ifPresent(buildProductEntity -> buildProductService.markSDCSEZBuildUpdateFailed(buildProductEntity, e.getMessage()));
 			return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED, Map.of("error", e.getMessage()));

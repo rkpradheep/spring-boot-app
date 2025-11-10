@@ -119,12 +119,12 @@ public class IntegService
 		try
 		{
 			//Mock for testing
-			//						BuildResponse buildResponse = new BuildResponse(true, "Build has been started successfully", 11833705L, "RUNNING");
-			//						buildResponse.setProductId("4671");
+			//						BuildResponse buildResponse = new BuildResponse(true, "Build has been started successfully", 11894653L, "RUNNING");
+			//						buildResponse.setProductId("4670");
 			//						buildResponse.setBuildType("FULLBUILD");
 			//						buildResponse.setCheckoutLabel("master");
-			//						buildResponse.setUrl("https://build.zohocorp.com/zoho/payout_mock_configuration/webhost/master/Oct_30_2025");
-			//						buildResponse.setBuildLogId(11833705L);
+			//						buildResponse.setUrl("https://build.zohocorp.com/zoho/payout_serve/webhost/master/Nov_08_2025");
+			//						buildResponse.setBuildLogId(11894653L);
 			//						if(true)
 			//							return buildResponse;
 
@@ -239,7 +239,7 @@ public class IntegService
 					}
 				}
 
-				configurationService.setValue(masterBuildKey, monitor.getId().toString(), DateUtil.ONE_DAY_IN_MILLISECOND);
+				configurationService.setValue(masterBuildKey, monitor.getId().toString(), DateUtil.getCurrentTimeInMillis() + DateUtil.ONE_DAY_IN_MILLISECOND);
 
 				if(StringUtils.isNotEmpty(previousBuildMilestone))
 				{

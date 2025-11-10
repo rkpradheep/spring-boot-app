@@ -32,6 +32,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -405,11 +406,11 @@ public class ZohoService
 		return "https://" + subDomain + "." + DC_DOMAIN_MAPPING.get(dc) + resourceUri;
 	}
 
-	public static JSONObject generateProductsChangSetsForBuildInitiation(List<String> payoutProducts) throws Exception
+	public static Set<String> getProductsForBuildInitiation(List<String> payoutProducts) throws Exception
 	{
 		HttpService httpService = AppContextHolder.getBean(HttpService.class);
 
-		JSONObject changeSets = new JSONObject();
+		Set<String> productsForBuildInitiation = new HashSet<>();
 
 		for(String product : payoutProducts)
 		{
@@ -428,35 +429,12 @@ public class ZohoService
 				String commitSHAFromGitlab = commits.getJSONObject(0).getString("id");
 				if(!StringUtils.equals(commitSHAFromGitlab, buildResponse.getCommitSHA()))
 				{
-					JSONArray productChangeSet = new JSONArray();
-					for(int i = 0; i < commits.length(); i++)
-					{
-						JSONObject commit = commits.getJSONObject(i);
-
-						if(commit.getString("id").equals(buildResponse.getCommitSHA()))
-						{
-							break;
-						}
-						if(commit.getString("title").startsWith("Merge branch "))
-						{
-							continue;
-						}
-						JSONObject commitInfo = new JSONObject();
-						commitInfo.put("commitSHA", commit.getString("short_id"));
-						commitInfo.put("commitMessage", commit.getString("message"));
-						commitInfo.put("author", commit.getString("author_email"));
-						commitInfo.put("webURL", commit.getString("web_url"));
-						productChangeSet.put(commitInfo);
-					}
-					if(!productChangeSet.isEmpty())
-					{
-						changeSets.put(product, productChangeSet);
-					}
+					productsForBuildInitiation.add(product);
 				}
 			}
 		}
 
-		return changeSets;
+		return productsForBuildInitiation;
 	}
 
 	public static JSONObject generatePayoutChangSetsFromIDC() throws Exception
@@ -735,10 +713,11 @@ public class ZohoService
 				return;
 			}
 
+			comment = comment.replace("{@participants}", "");
+			comment = comment.replace("Please start the testing", "");
 			comment = comment.replaceAll("(\\*(.*)\\*)", "**$2**");
 			comment = comment.replace("{@", "");
 			comment = comment.replace("}", "");
-			comment = comment.replace("{@participants}", "");
 			comment = comment.replace("\n", "<br/>");
 
 			HttpService httpService = AppContextHolder.getBean(HttpService.class);

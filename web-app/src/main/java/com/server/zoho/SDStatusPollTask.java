@@ -1,5 +1,7 @@
 package com.server.zoho;
 
+import io.micrometer.common.util.StringUtils;
+
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -48,28 +50,34 @@ public class SDStatusPollTask implements Task
 		LOGGER.info("Response from SD : " + response);
 
 		String overallStatus = response.getString("overall_status");
-		if(overallStatus.equals("In Progress"))
-		{
-			canAddJobAgain = true;
-			return;
-		}
 
 		canAddJobAgain = false;
 		String message;
 		String url = response.getString("url");
 		String region = response.getString("region");
-		String regionName = region.equals("CT") ? "Local" : "CSEZ";
+		String regionName = region.equals("CT") ? "LOCAL" : "CSEZ";
 		String buildUrlMessage = "\n\nBuild URL : " + url;
-		if(overallStatus.equals("Failed"))
+		if(overallStatus.equalsIgnoreCase("Failed"))
 		{
 			message = "Build update failed in " + regionName + buildUrlMessage;
 		}
+		else if(overallStatus.equalsIgnoreCase("Completed"))
+		{
+			message = "Build deployed successfully in " + regionName + buildUrlMessage;
+		}
 		else
 		{
-			message = "Build update completed successfully in " + regionName + buildUrlMessage;
+			LOGGER.log(Level.INFO, "Build is not completed yet. Status received: {0}", overallStatus);
+			canAddJobAgain = true;
+			return;
 		}
 
-		ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, gitlabIssueID, "MASTER BUILD", message);
+		ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, gitlabIssueID, "MASTER BUILD", message + "\n\nPlease start the testing {@participants}");
+		String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
+		if(StringUtils.isNotEmpty(buildOwnerEmail) && regionName.equals("LOCAL"))
+		{
+			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, gitlabIssueID, "MASTER BUILD","Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
+		}
 	}
 
 	@Override public boolean canAddJobAgain()

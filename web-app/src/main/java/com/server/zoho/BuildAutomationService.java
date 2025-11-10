@@ -29,7 +29,7 @@ public class BuildAutomationService
 	{
 		List<String> payoutProducts = new ArrayList<>((List<String>) ZohoService.getMetaConfig("PAYOUT_PRODUCTS"));
 		payoutProducts.remove("payout_server");
-		Set<String> productsForBuild = new HashSet<>(ZohoService.generateProductsChangSetsForBuildInitiation(payoutProducts).keySet());
+		Set<String> productsForBuild = new HashSet<>(ZohoService.getProductsForBuildInitiation(payoutProducts));
 
 		if(productsForBuild.isEmpty() && !ZohoService.generatePayoutChangSetsFromIDC().isEmpty())
 		{
