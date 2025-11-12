@@ -1,11 +1,10 @@
 package com.server.zoho;
 
-import io.micrometer.common.util.StringUtils;
-
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -57,6 +56,7 @@ public class SDStatusPollTask implements Task
 		String region = response.getString("region");
 		String regionName = region.equals("CT") ? "LOCAL" : "CSEZ";
 		String buildUrlMessage = "\n\nBuild URL : " + url;
+		boolean isSuccess = false;
 		if(overallStatus.equalsIgnoreCase("Failed"))
 		{
 			message = "Build update failed in " + regionName + buildUrlMessage;
@@ -64,6 +64,7 @@ public class SDStatusPollTask implements Task
 		else if(overallStatus.equalsIgnoreCase("Completed"))
 		{
 			message = "Build deployed successfully in " + regionName + buildUrlMessage;
+			isSuccess = true;
 		}
 		else
 		{
@@ -77,6 +78,25 @@ public class SDStatusPollTask implements Task
 		if(StringUtils.isNotEmpty(buildOwnerEmail) && regionName.equals("LOCAL"))
 		{
 			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, gitlabIssueID, "MASTER BUILD","Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
+		}
+		if(isSuccess)
+		{
+			JSONObject reference = new JSONObject()
+				.put("type", "button")
+				.put("object", new JSONObject()
+					.put("label", "Move To Pre")
+					.put("action", new JSONObject()
+						.put("type", "invoke.function")
+						.put("data", new JSONObject().put("name", "payoutuploadtopre")))
+					.put("arguments", new JSONObject()
+						.put("key", "movetopre")
+						.put("value", jsonObject.optString("monitor_id")))
+					.put("type", "+")
+				);
+
+			JSONObject references = new JSONObject().put("1", reference);
+
+			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, gitlabIssueID, "MASTER BUILD", "[Move To Pre]($1)", references);
 		}
 	}
 

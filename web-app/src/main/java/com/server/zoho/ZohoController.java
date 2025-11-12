@@ -44,6 +44,7 @@ import com.server.framework.error.AppException;
 import com.server.framework.http.HttpService;
 import com.server.framework.http.HttpContext;
 import com.server.framework.http.HttpResponse;
+import com.server.framework.security.SecurityUtil;
 import com.server.framework.service.OAuthService;
 import com.server.framework.builder.ApiResponseBuilder;
 
@@ -418,7 +419,13 @@ public class ZohoController
 				Map<String, Object> response = ApiResponseBuilder.error("No milestone found to upload build", HttpStatus.BAD_REQUEST.value());
 				return ResponseEntity.ok(response);
 			}
-			String sdResponse = ZohoService.uploadBuild(productName, milestoneAndComment.getLeft(), "IN2", "IN", stage, milestoneAndComment.getRight(), false, null);
+
+			String initiatorDetails = StringUtils.EMPTY;
+			if(StringUtils.isNotEmpty(ZohoService.getCurrentUserEmail()))
+			{
+				initiatorDetails = "(Initiated by " + ZohoService.getCurrentUserEmail() + " )";
+			}
+			String sdResponse = ZohoService.uploadBuild(productName, milestoneAndComment.getLeft(), "IN2", "IN", stage, milestoneAndComment.getRight() + initiatorDetails, false, null);
 
 			boolean isUploadSuccessful = new JSONObject(sdResponse).getString("code").equals("SUCCESS");
 			String preBuildMessage = new JSONObject(sdResponse).getString("message");

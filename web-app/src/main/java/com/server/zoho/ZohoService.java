@@ -96,9 +96,9 @@ public class ZohoService
 		loadMeta();
 	}
 
-	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region) throws Exception
+	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region, String comments) throws Exception
 	{
-		return uploadBuild(productName, milestoneVersion, dc, region, "production", false, null);
+		return uploadBuild(productName, milestoneVersion, dc, region, "production", "", false, null);
 	}
 
 	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region, String buildStage, boolean isPatchBuild, String patchBuildURL) throws Exception
@@ -216,6 +216,11 @@ public class ZohoService
 
 	public static void createOrSendMessageToThread(String urlString, String messageID, String serverRepoName, String gitlabIssueID, String threadTitle, String message)
 	{
+		createOrSendMessageToThread(urlString, messageID, serverRepoName, gitlabIssueID, threadTitle, message, null);
+	}
+
+	public static void createOrSendMessageToThread(String urlString, String messageID, String serverRepoName, String gitlabIssueID, String threadTitle, String message, JSONObject reference)
+	{
 		try
 		{
 			if(StringUtils.isEmpty(messageID))
@@ -232,6 +237,7 @@ public class ZohoService
 
 			JSONObject payload = new JSONObject();
 			payload.put("text", message);
+			payload.put("references", Objects.nonNull(reference) ? reference : JSONObject.NULL);
 			payload.put("thread_message_id", messageID);
 			payload.put("post_in_parent", false);
 			payload.put("thread_title", threadTitle);

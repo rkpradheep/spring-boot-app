@@ -52,6 +52,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 		Map<String, Object> context = (Map<String, Object>) instance.getContext();
 		Long monitorId = (Long) context.get("monitorId");
 		Long productId = (Long) context.get("productId");
+		Boolean isBugFixBuild = (Boolean) context.get("isBugFixBuild");
 		String milestoneVersion = instance.getVariable("milestoneVersion");
 		String productName = instance.getVariable("productName");
 
@@ -59,7 +60,9 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 		{
 			LOGGER.info("Preparing SD Build Update for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion + ", productName: " + productName);
 
-			String response = ZohoService.uploadBuild(productName, milestoneVersion, "CT1", "CT");
+			String commentMessageFormat = Boolean.TRUE.equals(isBugFixBuild) ? "'Master Bugfix Build' dd MMMM yyyy" : "'Master Build' dd MMMM yyyy";
+			String comments = DateUtil.getFormattedCurrentTime(commentMessageFormat).toUpperCase();
+			String response = ZohoService.uploadBuild(productName, milestoneVersion, "CT1", "CT", comments);
 			LOGGER.info("SD Build Update Response LOCAL : " + response);
 
 			JSONObject responseJSON = new JSONObject(response);
@@ -76,6 +79,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 					.put("message_id", context.get("messageID"))
 					.put("gitlab_issue_id", context.get("gitlabIssueID"))
 					.put("server_repo_name", context.get("serverProductName"))
+					.put("monitor_id", monitorId + "")
 					.put("build_id", buildId);
 
 				AppContextHolder.getBean(JobService.class).scheduleJob(TaskEnum.SD_STATUS_POLL_TASK.getTaskName(), data.toString(), DateUtil.ONE_MINUTE_IN_MILLISECOND);
