@@ -207,25 +207,37 @@ public class ZohoService
 		}
 	}
 
-	public static void createOrSendMessageToThread(String urlString, Map<String, Object> context, String threadTitle, String message)
+	public static String createOrSendMessageToThread(String urlString, Map<String, Object> context, String threadTitle, String message, boolean canPostInGitIssue)
+	{
+		String messageID = (String) context.get("messageID");
+		String gitlabIssueID = canPostInGitIssue ? (String) context.get("gitlabIssueID") : null;
+		return createOrSendMessageToThread(urlString, messageID, (String) context.get("serverProductName"), gitlabIssueID, threadTitle, message);
+	}
+
+	public static String createOrSendMessageToThread(String urlString, Map<String, Object> context, String threadTitle, String message)
 	{
 		String messageID = (String) context.get("messageID");
 		String gitlabIssueID = (String) context.get("gitlabIssueID");
-		createOrSendMessageToThread(urlString, messageID, (String) context.get("serverProductName"), gitlabIssueID, threadTitle, message);
+		return createOrSendMessageToThread(urlString, messageID, (String) context.get("serverProductName"), gitlabIssueID, threadTitle, message);
 	}
 
-	public static void createOrSendMessageToThread(String urlString, String messageID, String serverRepoName, String gitlabIssueID, String threadTitle, String message)
+	public static String createOrSendMessageToThread(String urlString, String messageID, String serverRepoName, String gitlabIssueID, String threadTitle, String message)
 	{
-		createOrSendMessageToThread(urlString, messageID, serverRepoName, gitlabIssueID, threadTitle, message, null);
+		return createOrSendMessageToThread(urlString, messageID, serverRepoName, gitlabIssueID, threadTitle, message, null);
 	}
 
-	public static void createOrSendMessageToThread(String urlString, String messageID, String serverRepoName, String gitlabIssueID, String threadTitle, String message, JSONObject reference)
+	public static void closeThread()
+	{
+
+	}
+
+	public static String createOrSendMessageToThread(String urlString, String messageID, String serverRepoName, String gitlabIssueID, String threadTitle, String message, JSONObject reference)
 	{
 		try
 		{
 			if(StringUtils.isEmpty(messageID))
 			{
-				return;
+				return null;
 			}
 			URL url = new URL(urlString);
 
@@ -237,7 +249,10 @@ public class ZohoService
 
 			JSONObject payload = new JSONObject();
 			payload.put("text", message);
-			payload.put("references", Objects.nonNull(reference) ? reference : JSONObject.NULL);
+			if(Objects.nonNull(reference))
+			{
+				payload.put("references", reference);
+			}
 			payload.put("thread_message_id", messageID);
 			payload.put("post_in_parent", false);
 			payload.put("thread_title", threadTitle);
@@ -246,21 +261,15 @@ public class ZohoService
 
 			httpURLConnection.getOutputStream().write(payload.toString().getBytes(StandardCharsets.UTF_8));
 
-			CommonService.getResponse(httpURLConnection.getResponseCode() != 200 ? httpURLConnection.getErrorStream() : httpURLConnection.getInputStream());
-
-			if(StringUtils.isEmpty(gitlabIssueID))
-			{
-				return;
-			}
-
-			if(!message.contains("GITLAB ISSUE CREATED"))
-			{
-				addCommentToIssue(serverRepoName, gitlabIssueID, message);
-			}
+			String response = CommonService.getResponse(httpURLConnection.getResponseCode() != 200 ? httpURLConnection.getErrorStream() : httpURLConnection.getInputStream());
+			String threadID = new JSONObject(response).optString("message_id");
+			addCommentToIssue(serverRepoName, gitlabIssueID, message);
+			return threadID;
 		}
 		catch(Exception e)
 		{
 			LOGGER.log(Level.SEVERE, "Error in creating/updating GitLab issue", e);
+			return null;
 		}
 	}
 
@@ -412,6 +421,7 @@ public class ZohoService
 		return "https://" + subDomain + "." + DC_DOMAIN_MAPPING.get(dc) + resourceUri;
 	}
 
+
 	public static Set<String> getProductsForBuildInitiation(List<String> payoutProducts) throws Exception
 	{
 		HttpService httpService = AppContextHolder.getBean(HttpService.class);
@@ -512,7 +522,6 @@ public class ZohoService
 
 			HttpResponse httpResponse = httpService.makeNetworkCall(context);
 			JSONArray commits = new JSONArray(httpResponse.getStringResponse());
-			Set<String> mrsFetched = new HashSet<>();
 			if(!commits.isEmpty())
 			{
 				String commitSHAFromGitlab = commits.getJSONObject(0).getString("id");
@@ -532,12 +541,6 @@ public class ZohoService
 						{
 							continue;
 						}
-						JSONObject commitInfo = new JSONObject();
-						commitInfo.put("commitSHA", commit.getString("short_id"));
-						commitInfo.put("commitMessage", commit.getString("message"));
-						commitInfo.put("author", commit.getString("author_email"));
-						commitInfo.put("webURL", commit.getString("web_url"));
-
 						context = new HttpContext(productConfig.getGitlabUrl().replace("/commits", "/commits/" + commit.getString("short_id") + "/merge_requests"), HttpMethod.GET.name());
 						context.setHeader("PRIVATE-TOKEN", productConfig.getGitlabToken());
 
@@ -546,21 +549,19 @@ public class ZohoService
 						if(!mrs.isEmpty())
 						{
 							JSONObject mr = mrs.getJSONObject(0);
+
+							JSONObject commitInfo = new JSONObject();
+							commitInfo.put("commitSHA", commit.getString("short_id"));
+							commitInfo.put("commitMessage", commit.getString("message"));
 							commitInfo.put("webURL", mr.getString("web_url"));
-							String authorName = mr.getJSONObject("author").getString("username");
-							String authorEmail = authorName.contains(".") ? authorName + "@zohocorp.com" : commit.getString("author_email");
+							String authorName = mr.getJSONObject("author").getString("username").toLowerCase().trim();
+							String authorEmail = (authorName.split(StringUtils.SPACE).length > 1 ? (authorName.split(StringUtils.SPACE)[0] + "." + authorName.split(StringUtils.SPACE)[1]) : authorName) + "@zohocorp.com";
 							commitInfo.put("author", authorEmail);
 							commitInfo.put("mrTitle", mr.getString("title"));
 							commitInfo.put("mergedDate", DateUtil.getFormattedTime(DateUtil.convertDateToMilliseconds(mr.getString("merged_at"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")));
 
-							if(mrsFetched.contains(mr.getString("web_url")))
-							{
-								continue;
-							}
-							mrsFetched.add(mr.getString("web_url"));
+							productChangeSet.put(commitInfo);
 						}
-
-						productChangeSet.put(commitInfo);
 
 					}
 					if(!productChangeSet.isEmpty())
@@ -893,7 +894,8 @@ public class ZohoService
 			.put("status", buildDetails.getJSONObject("status"))
 			.put("overall_status", buildDetails.getString("overall_status"))
 			.put("region", buildDetails.getString("region"))
-			.put("url", buildDetails.getString("url"));
+			.put("url", buildDetails.getString("url"))
+			.put("build_stage", buildDetails.getString("build_stage"));
 	}
 }
 

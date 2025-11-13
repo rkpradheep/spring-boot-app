@@ -51,10 +51,17 @@ public class SDStatusPollTask implements Task
 		String overallStatus = response.getString("overall_status");
 
 		canAddJobAgain = false;
+
+		if(StringUtils.equalsIgnoreCase(overallStatus, "killed"))
+		{
+			LOGGER.log(Level.INFO, "Build process was killed for build ID: {0}", buildID);
+			return;
+		}
 		String message;
 		String url = response.getString("url");
 		String region = response.getString("region");
 		String regionName = region.equals("CT") ? "LOCAL" : "CSEZ";
+		regionName = region.equals("IN") ? response.getString("build_stage").equals("production") ? "PRODUCTION" : "PRE" : regionName;
 		String buildUrlMessage = "\n\nBuild URL : " + url;
 		boolean isSuccess = false;
 		if(overallStatus.equalsIgnoreCase("Failed"))
@@ -73,30 +80,61 @@ public class SDStatusPollTask implements Task
 			return;
 		}
 
-		ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, gitlabIssueID, "MASTER BUILD", message + "\n\nPlease start the testing {@participants}");
+		String mentionAllMessage = "\n\nPlease start the testing {@participants}";
+		ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, gitlabIssueID, "MASTER BUILD", message + mentionAllMessage);
+//		if(regionName.equals("PRODUCTION") && isSuccess)
+//		{
+//			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, null, "MASTER BUILD", "Build Automation Bot signing off for now \uD83D\uDC4B");
+//		}
 		String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
-		if(StringUtils.isNotEmpty(buildOwnerEmail) && regionName.equals("LOCAL"))
+		if(regionName.equals("LOCAL"))
 		{
-			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, gitlabIssueID, "MASTER BUILD","Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
+			if(StringUtils.isNotEmpty(buildOwnerEmail))
+			{
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, null, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
+
+			}
+			if(isSuccess)
+			{
+				JSONObject reference = new JSONObject()
+					.put("type", "button")
+					.put("object", new JSONObject()
+						.put("label", "Move To Pre")
+						.put("action", new JSONObject()
+							.put("type", "invoke.function")
+							.put("data", new JSONObject().put("name", "payoutuploadtopre")))
+						.put("arguments", new JSONObject()
+							.put("key", "movetopre")
+							.put("value", jsonObject.optString("monitor_id")))
+						.put("type", "+")
+					);
+
+				JSONObject references = new JSONObject().put("1", reference);
+
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, null, null, "MASTER BUILD", "[Move To Pre]($1)", references);
+			}
 		}
-		if(isSuccess)
+		else if(regionName.equals("PRE"))
 		{
-			JSONObject reference = new JSONObject()
-				.put("type", "button")
-				.put("object", new JSONObject()
-					.put("label", "Move To Pre")
-					.put("action", new JSONObject()
-						.put("type", "invoke.function")
-						.put("data", new JSONObject().put("name", "payoutuploadtopre")))
-					.put("arguments", new JSONObject()
-						.put("key", "movetopre")
-						.put("value", jsonObject.optString("monitor_id")))
-					.put("type", "+")
-				);
+			if(isSuccess)
+			{
+				JSONObject reference = new JSONObject()
+					.put("type", "button")
+					.put("object", new JSONObject()
+						.put("label", "Move To Production")
+						.put("action", new JSONObject()
+							.put("type", "invoke.function")
+							.put("data", new JSONObject().put("name", "payoutuploadtoproduction")))
+						.put("arguments", new JSONObject()
+							.put("key", "movetopre")
+							.put("value", jsonObject.optString("monitor_id")))
+						.put("type", "+")
+					);
 
-			JSONObject references = new JSONObject().put("1", reference);
+				JSONObject references = new JSONObject().put("1", reference);
 
-			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, gitlabIssueID, "MASTER BUILD", "[Move To Pre]($1)", references);
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, null, null, "MASTER BUILD", "[Move To Production]($1)", references);
+			}
 		}
 	}
 

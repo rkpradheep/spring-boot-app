@@ -235,7 +235,7 @@ public class IntegService
 					if(StringUtils.isNotEmpty(gitlabIssueID))
 					{
 						context.put("gitlabIssueID", gitlabIssueID);
-						ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "[GITLAB ISSUE CREATED](https://zpaygit.csez.zohocorpin.com/zohopay/" + serverRepoOptional.get() + "/-/issues/" + gitlabIssueID + ")");
+						ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, null, null, message, "[GITLAB ISSUE CREATED](https://zpaygit.csez.zohocorpin.com/zohopay/" + serverRepoOptional.get() + "/-/issues/" + gitlabIssueID + ")");
 					}
 				}
 

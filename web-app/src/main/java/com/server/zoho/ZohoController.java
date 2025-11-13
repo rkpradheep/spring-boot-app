@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -40,13 +41,20 @@ import javax.crypto.spec.SecretKeySpec;
 import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.AppProperties;
 import com.server.framework.common.CommonService;
+import com.server.framework.common.DateUtil;
 import com.server.framework.error.AppException;
 import com.server.framework.http.HttpService;
 import com.server.framework.http.HttpContext;
 import com.server.framework.http.HttpResponse;
+import com.server.framework.job.TaskEnum;
 import com.server.framework.security.SecurityUtil;
+import com.server.framework.service.JobService;
 import com.server.framework.service.OAuthService;
 import com.server.framework.builder.ApiResponseBuilder;
+import com.server.framework.workflow.WorkflowEngine;
+import com.server.framework.workflow.model.WorkflowInstance;
+import com.server.zoho.entity.BuildProductEntity;
+import com.server.zoho.service.BuildProductService;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -413,24 +421,76 @@ public class ZohoController
 		{
 			ZohoService.doAuthentication();
 
-			Pair<String, String> milestoneAndComment = ZohoService.getLatestMilestoneAndCommentForBuildUpload(productName, stage);
+			Map<String, Object> context = null;
+			Pair<String, String> milestoneAndComment  = ZohoService.getLatestMilestoneAndCommentForBuildUpload(productName, stage);
 			if(Objects.isNull(milestoneAndComment))
 			{
-				Map<String, Object> response = ApiResponseBuilder.error("No milestone found to upload build", HttpStatus.BAD_REQUEST.value());
+				Map<String, Object> response = ApiResponseBuilder.error("No milestone found to update build", HttpStatus.BAD_REQUEST.value());
 				return ResponseEntity.ok(response);
 			}
 
+			String monitorId = SecurityUtil.getCurrentRequest().getParameter("monitor_id");
+			if(StringUtils.isNotEmpty(monitorId))
+			{
+				Optional<WorkflowInstance> workflowInstanceOptional = AppContextHolder.getBean(WorkflowEngine.class).getInstance(monitorId);
+				if(workflowInstanceOptional.isEmpty())
+				{
+					Map<String, Object> response = ApiResponseBuilder.error("Invalid monitor id provided", HttpStatus.BAD_REQUEST.value());
+					return ResponseEntity.ok(response);
+				}
+				WorkflowInstance workflowInstance = workflowInstanceOptional.get();
+				context = (Map<String, Object>) workflowInstance.getContext();
+
+				Optional<BuildProductEntity> buildProductEntityOptional = AppContextHolder.getBean(BuildProductService.class).getProductsForMonitor(Long.valueOf(monitorId)).stream().filter(buildProductEntity -> StringUtils.equals(buildProductEntity.getProductName(), "payout_server")).findFirst();
+				if(buildProductEntityOptional.isEmpty())
+				{
+					Map<String, Object> response = ApiResponseBuilder.error("No product found for the given monitor id and product name", HttpStatus.BAD_REQUEST.value());
+					return ResponseEntity.ok(response);
+				}
+				String milestoneVersion = buildProductEntityOptional.get().getMilestoneVersion();
+				if(!StringUtils.equals(milestoneVersion, milestoneAndComment.getLeft()))
+				{
+					Map<String, Object> response = ApiResponseBuilder.error("Milestone version mismatch for the current build and latest milestone build updated in SD", HttpStatus.BAD_REQUEST.value());
+					return ResponseEntity.ok(response);
+				}
+			}
+
+			String comment = milestoneAndComment.getRight();
+			comment = comment.replaceAll("(.*)\\(\\s*Initiated by .*", "$1").trim();
+
 			String initiatorDetails = StringUtils.EMPTY;
+
 			if(StringUtils.isNotEmpty(ZohoService.getCurrentUserEmail()))
 			{
-				initiatorDetails = "(Initiated by " + ZohoService.getCurrentUserEmail() + " )";
+				initiatorDetails = " ( Initiated by " + ZohoService.getCurrentUserEmail() + " )";
 			}
-			String sdResponse = ZohoService.uploadBuild(productName, milestoneAndComment.getLeft(), "IN2", "IN", stage, milestoneAndComment.getRight() + initiatorDetails, false, null);
 
-			boolean isUploadSuccessful = new JSONObject(sdResponse).getString("code").equals("SUCCESS");
-			String preBuildMessage = new JSONObject(sdResponse).getString("message");
+			String sdResponse = ZohoService.uploadBuild(productName, milestoneAndComment.getLeft(), "IN2", "IN", stage, comment + initiatorDetails, false, null);
+			JSONObject responseJSON = new JSONObject(sdResponse);
+			boolean isUploadSuccessful = responseJSON.getString("code").equals("SUCCESS");
+			String preBuildMessage = responseJSON.getString("message");
 
-			Map<String, Object> response = isUploadSuccessful ? ApiResponseBuilder.success("Build upload to " + stage +  " initiated successfully", null) : ApiResponseBuilder.error("Build upload to " + stage +  " failed: " + preBuildMessage, HttpStatus.BAD_REQUEST.value());
+			Map<String, Object> response = isUploadSuccessful ? ApiResponseBuilder.success("Build update to " + stage +  " initiated successfully", null) : ApiResponseBuilder.error("Build upload to " + stage +  " failed: " + preBuildMessage, HttpStatus.BAD_REQUEST.value());
+
+			if(isUploadSuccessful && Objects.nonNull(context))
+			{
+				String initiatorEmail = ZohoService.getCurrentUserEmail();
+				String initiatorMessage = StringUtils.equals(initiatorEmail, "SCHEDULER") ? initiatorEmail : "{@" + initiatorEmail + "}";
+				initiatorMessage = "\n\nInitiated By : " + initiatorMessage;
+
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update initiated successfully for " + stage.toUpperCase() + " (" + milestoneAndComment.getLeft() + ")" + initiatorMessage);
+
+				String buildId = responseJSON.getJSONArray("details").getJSONObject(0).get("build_id") + "";
+
+				JSONObject data = new JSONObject()
+					.put("message_id", context.get("messageID"))
+					.put("gitlab_issue_id", context.get("gitlabIssueID"))
+					.put("server_repo_name", context.get("serverProductName"))
+					.put("monitor_id", monitorId)
+					.put("build_id", buildId);
+
+				AppContextHolder.getBean(JobService.class).scheduleJob(TaskEnum.SD_STATUS_POLL_TASK.getTaskName(), data.toString(), DateUtil.ONE_MINUTE_IN_MILLISECOND);
+			}
 			return ResponseEntity.ok(response);
 		}
 		catch(AppException ae)
@@ -480,7 +540,7 @@ public class ZohoController
 
 		String encodedHeader = Base64Url.encode(headerClaims.toJson().getBytes());
 		String encodedPayload = Base64Url.encode(payloadClaims.toJson().getBytes());
-		;
+
 
 		String encodedPrivateKey = AppProperties.getProperty("security.private.key.".concat(service).concat("-").concat(dc));
 		byte[] privateKeyBytes = HEX.decode(encodedPrivateKey.getBytes());

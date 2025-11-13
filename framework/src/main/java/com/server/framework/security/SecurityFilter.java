@@ -17,6 +17,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.AppProperties;
 import com.server.framework.common.SecurityRequestWrapper;
 import com.server.framework.entity.UserEntity;
@@ -78,7 +80,9 @@ public class SecurityFilter implements Filter
 		try
 		{
 			//Instrumentation code start
-			_doFilter(new SecurityRequestWrapper((HttpServletRequest) request), response, chain);
+			HttpServletRequest httpServletRequest = (HttpServletRequest) request;
+			boolean isMultipart = AppContextHolder.getBean(MultipartResolver.class).isMultipart(httpServletRequest);
+			_doFilter(!isMultipart ? new SecurityRequestWrapper(httpServletRequest): request, response, chain);
 			//Instrumentation code end
 		}
 		finally

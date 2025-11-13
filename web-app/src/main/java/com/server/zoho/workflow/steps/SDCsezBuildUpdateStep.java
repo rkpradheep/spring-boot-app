@@ -75,11 +75,12 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 			boolean isCSEZBuildSuccessful = responseJSON.getString("code").equals("SUCCESS");
 			String csezBuildMessage = responseJSON.getString("message");
 
-			String buildId = responseJSON.getJSONArray("details").getJSONObject(0).get("build_id") + "";
-
 			if(isCSEZBuildSuccessful)
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update initiated for CSEZ ( " + milestoneVersion + " )");
+				String buildId = responseJSON.getJSONArray("details").getJSONObject(0).get("build_id") + "";
+
+				String initiatorMessage = "\n\nInitiated By : SCHEDULER";
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update initiated successfully for CSEZ ( " + milestoneVersion + " )" + initiatorMessage);
 
 				JSONObject data = new JSONObject()
 					.put("message_id", context.get("messageID"))
@@ -101,7 +102,7 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
 				if(StringUtils.isNotEmpty(buildOwnerEmail))
 				{
-					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
+					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.", false);
 				}
 
 				LOGGER.severe("SD Build Update Failed: " + "CSEZ Message : " + csezBuildMessage);
@@ -116,7 +117,7 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 			String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
 			if(StringUtils.isNotEmpty(buildOwnerEmail))
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.", false);
 			}
 
 			LOGGER.log(Level.SEVERE, "Error in SDBuildUploadStep execute", e);

@@ -3,6 +3,8 @@ package com.server.zoho.workflow.steps;
 import io.micrometer.common.util.StringUtils;
 
 import java.util.Map;
+import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -58,10 +60,17 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 
 		try
 		{
+			try {
+				TimeUnit.MINUTES.sleep(1);
+			} catch (InterruptedException e) {
+				LOGGER.log(Level.SEVERE, "Exception occurred", e);
+			}
+
 			LOGGER.info("Preparing SD Build Update for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion + ", productName: " + productName);
 
 			String commentMessageFormat = Boolean.TRUE.equals(isBugFixBuild) ? "'Master Bugfix Build' dd MMMM yyyy" : "'Master Build' dd MMMM yyyy";
 			String comments = DateUtil.getFormattedCurrentTime(commentMessageFormat).toUpperCase();
+
 			String response = ZohoService.uploadBuild(productName, milestoneVersion, "CT1", "CT", comments);
 			LOGGER.info("SD Build Update Response LOCAL : " + response);
 
@@ -69,11 +78,12 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 			boolean isLocalBuildSuccessful = responseJSON.getString("code").equals("SUCCESS");
 			String localBuildMessage = responseJSON.getString("message");
 
-			String buildId = responseJSON.getJSONArray("details").getJSONObject(0).get("build_id") + "";
-
 			if(isLocalBuildSuccessful)
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update initiated for LOCAL ( " + milestoneVersion + " )");
+				String initiatorMessage = "\n\nInitiated By : SCHEDULER";
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update initiated successfully for LOCAL ( " + milestoneVersion + " )" + initiatorMessage);
+
+				String buildId = responseJSON.getJSONArray("details").getJSONObject(0).get("build_id") + "";
 
 				JSONObject data = new JSONObject()
 					.put("message_id", context.get("messageID"))
@@ -100,7 +110,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
 				if(StringUtils.isNotEmpty(buildOwnerEmail))
 				{
-					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
+					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.", false);
 				}
 
 				LOGGER.severe("SD Build Update Failed: " + "LOCAL Message : " + localBuildMessage);
@@ -117,7 +127,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 			String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
 			if(StringUtils.isNotEmpty(buildOwnerEmail))
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.", false);
 			}
 
 			LOGGER.log(Level.SEVERE, "Error in SDBuildUploadStep execute", e);
