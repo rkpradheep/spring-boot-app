@@ -319,7 +319,7 @@ public class ZohoController
 		String operation = requestBody.get("operation");
 		if(StringUtils.equals("get", operation))
 		{
-			return ResponseEntity.ok(Map.of("data", TaskEngineService.getInstance(dc, serviceId, queueName).getRepetitionDetails(repetitionName, userId, customerId)));
+			return ResponseEntity.ok(ApiResponseBuilder.success("Details fetched successfully", TaskEngineService.getInstance(dc, serviceId, queueName).getRepetitionDetails(repetitionName, userId, customerId)));
 		}
 
 		ZohoService.doAuthentication();
@@ -328,7 +328,7 @@ public class ZohoController
 			Integer periodicity = Integer.parseInt(StringUtils.defaultIfEmpty(requestBody.get("periodicity"), "-1"));
 			periodicity = periodicity == -1 ? null : periodicity;
 			Boolean isExecutionStartTimePolicy = Boolean.parseBoolean(requestBody.get("is_execution_start_time_policy"));
-			return ResponseEntity.ok(Map.of("data", TaskEngineService.getInstance(dc, serviceId, queueName).addOrUpdatePeriodicRepetition(repetitionName, userId, customerId, periodicity, isCommon, isExecutionStartTimePolicy)));
+			return ResponseEntity.ok(ApiResponseBuilder.create().message(TaskEngineService.getInstance(dc, serviceId, queueName).addOrUpdatePeriodicRepetition(repetitionName, userId, customerId, periodicity, isCommon, isExecutionStartTimePolicy)).build());
 		}
 		else if(StringUtils.equals("add_calender", operation))
 		{
@@ -336,11 +336,11 @@ public class ZohoController
 			String frequency = requestBody.get("frequency");
 			String dayOfWeek = requestBody.get("day_of_week");
 			String dateOfMonth = requestBody.get("date_of_month");
-			return ResponseEntity.ok(Map.of("data", TaskEngineService.getInstance(dc, serviceId, queueName).addOrUpdateCalenderRepetition(repetitionName, userId, customerId, isCommon, hourMinSec, frequency, dayOfWeek, dateOfMonth)));
+			return ResponseEntity.ok(ApiResponseBuilder.create().message(TaskEngineService.getInstance(dc, serviceId, queueName).addOrUpdateCalenderRepetition(repetitionName, userId, customerId, isCommon, hourMinSec, frequency, dayOfWeek, dateOfMonth)).build());
 		}
 		else if(StringUtils.equals("delete", operation))
 		{
-			return ResponseEntity.ok(Map.of("data", TaskEngineService.getInstance(dc, serviceId, queueName).deleteRepetition(repetitionName, userId, customerId)));
+			return ResponseEntity.ok(ApiResponseBuilder.create().message(TaskEngineService.getInstance(dc, serviceId, queueName).deleteRepetition(repetitionName, userId, customerId)).build());
 		}
 		return null;
 	}

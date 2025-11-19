@@ -64,9 +64,16 @@ public class SDStatusPollTask implements Task
 		regionName = region.equals("IN") ? response.getString("build_stage").equals("production") ? "PRODUCTION" : "PRE" : regionName;
 		String buildUrlMessage = "\n\nBuild URL : " + url;
 		boolean isSuccess = false;
+		String mentionAllMessage = "\n\nPlease start the testing {@participants}";
+		String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
 		if(overallStatus.equalsIgnoreCase("Failed"))
 		{
 			message = "Build update failed in " + regionName + buildUrlMessage;
+			mentionAllMessage = "\n\nPlease check {@participants}";
+			if(StringUtils.isNotEmpty(buildOwnerEmail))
+			{
+				mentionAllMessage = "\n\nPlease check {@" + buildOwnerEmail + "}";
+			}
 		}
 		else if(overallStatus.equalsIgnoreCase("Completed"))
 		{
@@ -80,13 +87,11 @@ public class SDStatusPollTask implements Task
 			return;
 		}
 
-		String mentionAllMessage = "\n\nPlease start the testing {@participants}";
 		ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, gitlabIssueID, "MASTER BUILD", message + mentionAllMessage);
 //		if(regionName.equals("PRODUCTION") && isSuccess)
 //		{
 //			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, null, "MASTER BUILD", "Build Automation Bot signing off for now \uD83D\uDC4B");
 //		}
-		String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
 		if(regionName.equals("LOCAL"))
 		{
 			if(StringUtils.isNotEmpty(buildOwnerEmail))

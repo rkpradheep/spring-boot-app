@@ -1,5 +1,7 @@
 package com.server.zoho;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -8,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -33,6 +36,15 @@ public class TaskEngineService
 	private final String queueId;
 	private final String taskEngineUrl;
 	private final Map<String, String> headersMap;
+	private static final  Map<String, Integer> FREQUENCY_META = new HashMap<>()
+	{
+		{
+			put("daily", 0);
+			put("weekly", 1);
+			put("monthly", 2);
+			put("yearly", 3);
+		}
+	};
 
 	public TaskEngineService(String dc, String serviceId, String queueName) throws Exception
 	{
@@ -340,6 +352,9 @@ public class TaskEngineService
 		boolean isPeriodic = StringUtils.equals("3", repetitionDetails.getString("md"));
 		repetitionDetails.remove("md");
 		repetitionDetails.keySet().forEach(key -> repetitionResponse.put(getNameForRepetition(key, isPeriodic), repetitionDetails.get(key)));
+		repetitionResponse.put("DATE_OF_MONTH", decodeDatesMask((Integer) repetitionResponse.get("DATE_OF_MONTH")));
+		Integer repeatFrequency = (Integer) repetitionResponse.get("REPEAT_FREQUENCY");
+		repetitionResponse.put("REPEAT_FREQUENCY", FREQUENCY_META.entrySet().stream().filter(entrySet-> entrySet.getValue().equals(repeatFrequency)).map(Map.Entry::getKey).findFirst().orElse(null));
 
 		return repetitionResponse;
 	}
@@ -391,21 +406,12 @@ public class TaskEngineService
 		return jobMethodId.equals("s3") ? "Periodic Repetition updated successfully" : "Periodic Repetition added successfully";
 	}
 
-	public String addOrUpdateCalenderRepetition(String repetition, long userId, long customerId, boolean isCommon, String hourMinSec, String frequency, String dayOfWeek, String dateOfMonth) throws Exception
+	public String addOrUpdateCalenderRepetition(String repetition, long userId, long customerId, boolean isCommon, String hourMinSec, String frequency, String dayOfWeek, String dateOfMonth)
+		throws Exception
 	{
-		Map<String, Integer> frequencyMeta = new HashMap<>()
-		{
-			{
-				put("daily", 0);
-				put("weekly", 1);
-				put("monthly", 2);
-				//				put("yearly", 3);
-			}
-		};
-
 		hourMinSec = Pattern.compile("(?<=^|:)([0-9])(?=(:|$))").matcher(hourMinSec).replaceAll("0$1");
 		String[] hourMinSecArray = StringUtils.isNotEmpty(hourMinSec) ? hourMinSec.split(":") : null;
-		if(Objects.nonNull(hourMinSecArray) && !Pattern.matches("[0-2][0-3]:[0-5][0-9]:[0-5][0-9]", hourMinSec))
+		if(Objects.nonNull(hourMinSecArray) && !Pattern.matches("[0-2][0-9]:[0-5][0-9]:[0-5][0-9]", hourMinSec))
 		{
 			throw new AppException("Invalid vale passed for time of day");
 		}
@@ -418,7 +424,7 @@ public class TaskEngineService
 			.put(getIdForRepetition("USER_ID", false), userId)
 			.put(getIdForRepetition("DAY_OF_WEEK", false), dayOfWeek)
 			.put(getIdForRepetition("SCHEMAID", false), customerId)
-			.put(getIdForRepetition("DATE_OF_MONTH", false), dateOfMonth);
+			.put(getIdForRepetition("DATE_OF_MONTH", false), encodeDates(dateOfMonth));
 
 		Iterator<String> iterator = jobDetails.keys();
 
@@ -435,15 +441,15 @@ public class TaskEngineService
 		try
 		{
 			repetitionDetails = getRepetitionDetails(repetition, userId, customerId);
-			jobDetails.put(getIdForRepetition("REPEAT_FREQUENCY", false), repetitionDetails.get("REPEAT_FREQUENCY"));
+			jobDetails.put(getIdForRepetition("REPEAT_FREQUENCY", false),  FREQUENCY_META.get(ObjectUtils.defaultIfNull(frequency,(String) repetitionDetails.get("REPEAT_FREQUENCY"))));
 			jobDetails.put(getIdForRepetition("TIME_OF_DAY", false), ObjectUtils.defaultIfNull(timeOfDay, repetitionDetails.get("TIME_OF_DAY")));
 			jobDetails.put(getIdForRepetition("DAY_OF_WEEK", false), ObjectUtils.defaultIfNull(dayOfWeek, repetitionDetails.get("DAY_OF_WEEK")));
-			jobDetails.put(getIdForRepetition("DATE_OF_MONTH", false), ObjectUtils.defaultIfNull(dayOfWeek, repetitionDetails.get("DATE_OF_MONTH")));
+			jobDetails.put(getIdForRepetition("DATE_OF_MONTH", false), !frequency.equals("monthly") ? -1 : encodeDates(ObjectUtils.defaultIfNull(dateOfMonth, (String) repetitionDetails.get("DATE_OF_MONTH"))));
 			jobMethodId = "s4";
 		}
 		catch(Exception ignored)
 		{
-			if(Objects.isNull(frequencyMeta.get(frequency)))
+			if(Objects.isNull(FREQUENCY_META.get(frequency)))
 			{
 				throw new AppException("Invalid value passed for Frequency");
 			}
@@ -451,7 +457,7 @@ public class TaskEngineService
 			{
 				throw new AppException("Invalid value passed for Time Of Day");
 			}
-			jobDetails.put(getIdForRepetition("REPEAT_FREQUENCY", false), frequencyMeta.get(frequency));
+			jobDetails.put(getIdForRepetition("REPEAT_FREQUENCY", false), FREQUENCY_META.get(frequency));
 		}
 
 		if(Objects.nonNull(repetitionDetails) && Objects.isNull(repetitionDetails.get("REPEAT_FREQUENCY")))
@@ -489,6 +495,71 @@ public class TaskEngineService
 		{
 			throw new AppException(httpResponse.getResponseHeaders().get("excp").replaceAll("((java|com)[\\.\\w]+: )(.*)", "$3"));
 		}
+	}
+
+	private static final int[] BIT_MASK = new int[] {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, Integer.MIN_VALUE};
+
+	static String encodeDates(String datesString)
+	{
+		if(StringUtils.isEmpty(datesString))
+		{
+			return "-1";
+		}
+
+		int[] dates = Arrays.stream(datesString.split(",")).mapToInt(Integer::parseInt).toArray();
+		if(dates.length == 1)
+		{
+			return dates[0] + "";
+		}
+		else
+		{
+			int result = 0;
+
+			for(int i = 0; i < dates.length; ++i)
+			{
+				result |= BIT_MASK[dates[i]];
+			}
+
+			if(result == Integer.MAX_VALUE)
+			{
+				return "32";
+			}
+			else
+			{
+				result |= BIT_MASK[32];
+				return result + "";
+			}
+		}
+	}
+
+	static String decodeDatesMask(Integer datesMask)
+	{
+		if(Objects.isNull(datesMask) || datesMask == -1 || datesMask == 0)
+		{
+			return "-1";
+		}
+		else if(datesMask == 32)
+		{
+			return "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31";
+		}
+		else if((datesMask & BIT_MASK[32]) != 0)
+		{
+			List<Integer> datesList = new ArrayList<>();
+			for(int i = 1; i < 32; i++)
+			{
+				if((datesMask & BIT_MASK[i]) != 0)
+				{
+					datesList.add(i);
+				}
+			}
+			return datesList.stream().map(v-> v+"").collect(Collectors.joining(","));
+		}
+		else if(datesMask < 32)
+		{
+			return datesMask + "";
+		}
+
+		throw new IllegalArgumentException("Incorrect Date value [" + datesMask + "]");
 	}
 
 }
