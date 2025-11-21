@@ -52,7 +52,6 @@ public class HttpResponse
 
 	public InputStream getInputStream() throws IOException
 	{
-		inputStream.reset();
 		return StringUtils.equals(responseHeaders.get("Content-Encoding"), "gzip") ? new GZIPInputStream(inputStream) : inputStream;
 	}
 

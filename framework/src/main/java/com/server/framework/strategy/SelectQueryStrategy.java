@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.server.framework.common.DateUtil;
+
 @Component
 public class SelectQueryStrategy implements QueryStrategy {
     
@@ -55,11 +57,15 @@ public class SelectQueryStrategy implements QueryStrategy {
                     String columnName = metaData.getColumnLabel(i).toUpperCase();
                     String value = resultSet.getString(i);
                     row.put(columnName, value);
+
+                    if(columnName.equals("CREATEDTIME")) {
+                        Long timeValue = resultSet.getLong(i);
+                        row.put("CREATEDTIME_FORMATTED", DateUtil.getFormattedTime(timeValue, DateUtil.DATE_WITH_TIME_FORMAT));
+                    }
                 }
                 results.add(row);
             }
-            
-            // Return empty row if no results
+
             if (results.isEmpty()) {
                 Map<String, String> emptyRow = new LinkedHashMap<>();
                 for (int i = 1; i <= metaData.getColumnCount(); i++) {

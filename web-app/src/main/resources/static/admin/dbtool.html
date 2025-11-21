@@ -838,7 +838,7 @@
                 predicate = " Where " + criteriaColumn + " < " + num;
             } else if (criteriaVal.trim().length != 0) {
                 const value = criteriaVal.trim();
-                const comparator = isNaN(value) ? " LIKE" + "'%" + value + "%'" :  " = " + value
+                const comparator = isNaN(value) ? " LIKE" + " '%" + value + "%'" :  " = " + value
                 predicate = " Where " + criteriaColumn + comparator
             } else {
                 alert("Invalid criteria");

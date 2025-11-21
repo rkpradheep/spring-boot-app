@@ -478,7 +478,8 @@ public class ZohoController
 			boolean isUploadSuccessful = responseJSON.getString("code").equals("SUCCESS");
 			String preBuildMessage = responseJSON.getString("message");
 
-			Map<String, Object> response = isUploadSuccessful ? ApiResponseBuilder.success("Build update to " + stage + " initiated successfully", null) : ApiResponseBuilder.error("Build upload to " + stage + " failed: " + preBuildMessage, HttpStatus.BAD_REQUEST.value());
+			String message = isUploadSuccessful ? "Build update to " + stage + " initiated successfully" : "Build upload to " + stage + " failed: " + preBuildMessage;
+			Map<String, Object> response = isUploadSuccessful ? ApiResponseBuilder.success(message, null) : ApiResponseBuilder.error(message, HttpStatus.BAD_REQUEST.value());
 
 			if(Objects.nonNull(context))
 			{
@@ -486,7 +487,7 @@ public class ZohoController
 				String initiatorMessage = StringUtils.equals(initiatorEmail, "SCHEDULER") ? initiatorEmail : "{@" + initiatorEmail + "}";
 				initiatorMessage = "\n\nInitiated By : " + initiatorMessage;
 
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update initiated successfully for " + stage.toUpperCase() + " (" + milestoneAndComment.getLeft() + ")" + initiatorMessage);
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", message + initiatorMessage);
 
 				if(isUploadSuccessful)
 				{
@@ -526,11 +527,11 @@ public class ZohoController
 			{
 				throw new AppException("Invalid old build URL provided");
 			}
-			if(newBuildFile.isEmpty() && !validUrlPattern.matcher(newBuildUrl).matches())
+			if((Objects.isNull(newBuildFile) || newBuildFile.isEmpty()) && !validUrlPattern.matcher(newBuildUrl).matches())
 			{
 				throw new AppException("Invalid new build URL provided");
 			}
-			if(newBuildFile.isEmpty() || !StringUtils.endsWith(oldBuildUrl, newBuildFile.getOriginalFilename()))
+			if(Objects.nonNull(newBuildFile) && !newBuildFile.isEmpty() && !StringUtils.endsWith(oldBuildUrl, newBuildFile.getOriginalFilename()))
 			{
 				throw new AppException("Invalid new build provided");
 			}
@@ -541,7 +542,7 @@ public class ZohoController
 			ConfigurationEntity configurationEntity = AppContextHolder.getBean(ConfigurationService.class).setValue(tempDir.toString(), "PENDING");
 			String referenceID = configurationEntity.getId().toString();
 
-			InputStream newBuildFileInputStream = newBuildFile.isEmpty() ? null : newBuildFile.getInputStream();
+			InputStream newBuildFileInputStream = (Objects.isNull(newBuildFile) || newBuildFile.isEmpty()) ? null : newBuildFile.getInputStream();
 			AppContextHolder.getBean(JobService.class).scheduleJob(() -> DDDiffService.downloadBuilds(oldBuildUrl, newBuildUrl, newBuildFileInputStream, tempDir, referenceID), DateUtil.ONE_SECOND_IN_MILLISECOND);
 
 			Map<String, Object> response = ApiResponseBuilder.success("DD Diff generation triggered successfully", Map.of("reference_id", referenceID));

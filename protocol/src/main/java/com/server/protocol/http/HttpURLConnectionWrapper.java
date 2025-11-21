@@ -263,7 +263,9 @@ public class HttpURLConnectionWrapper extends HttpsURLConnection
 		if(Objects.nonNull(inputStreamWrapper))
 		{
 			inputStreamWrapper.reset();
-			return inputStreamWrapper;
+			ByteArrayInputStream newByteArrayInputStream =  new ByteArrayInputStream(inputStreamWrapper.readAllBytes());
+			inputStreamWrapper.reset();
+			return newByteArrayInputStream;
 		}
 		inputStreamWrapper = new ByteArrayInputStream(connection.getInputStream().readAllBytes());
 		return inputStreamWrapper;
@@ -274,7 +276,9 @@ public class HttpURLConnectionWrapper extends HttpsURLConnection
 		if(Objects.nonNull(errorStreamWrapper))
 		{
 			errorStreamWrapper.reset();
-			return errorStreamWrapper;
+			ByteArrayInputStream newByteArrayInputStream =  new ByteArrayInputStream(errorStreamWrapper.readAllBytes());
+			errorStreamWrapper.reset();
+			return newByteArrayInputStream;
 		}
 
 		InputStream errorStream = connection.getErrorStream();
