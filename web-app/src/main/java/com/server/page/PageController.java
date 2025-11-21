@@ -116,6 +116,12 @@ public class PageController
 		return "forward:/zoho/dbtool.html";
 	}
 
+	@GetMapping({"/zoho/dd-diff-tool"})
+	public String zohoDDDiffTool()
+	{
+		return "forward:/zoho/dd-diff-tool.html";
+	}
+
 	@GetMapping("/admin/dbtool")
 	public String adminDbtoolJspPage()
 	{

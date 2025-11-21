@@ -23,6 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.server.framework.error.AppException;
 import com.server.framework.security.SecurityUtil;
 
 @RestController
@@ -198,9 +199,18 @@ public class ShellCommandExecutionController
 
 	public static String execute(String[] cmdArray) throws Exception
 	{
+		return execute(cmdArray, null);
+	}
+
+	public static String execute(String[] cmdArray, String workingDir) throws Exception
+	{
 		File[] dbusFiles = new File("/run/user/").listFiles();
 
 		ProcessBuilder pb = new ProcessBuilder(cmdArray);
+		if(StringUtils.isNotEmpty(workingDir))
+		{
+			pb.directory(new File(workingDir));
+		}
 		Map<String, String> env = pb.environment();
 		env.put("DISPLAY", ":1");
 
@@ -210,7 +220,7 @@ public class ShellCommandExecutionController
 		}
 
 		Process process = pb.start();
-		process.waitFor();
+		int status = process.waitFor();
 
 		StringWriter stringWriter = new StringWriter();
 
@@ -219,6 +229,13 @@ public class ShellCommandExecutionController
 		{
 			IOUtils.copy(process.getInputStream(), stringWriter);
 		}
-		return stringWriter.toString();
+		String output  = stringWriter.toString();
+
+		if(status != 0)
+		{
+			throw new AppException("Command execution failed with status " + status + " and output : " + output);
+		}
+
+		return output;
 	}
 }

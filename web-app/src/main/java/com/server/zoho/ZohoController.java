@@ -17,8 +17,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.InputStream;
 import java.net.Inet4Address;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
@@ -32,6 +38,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.crypto.Cipher;
@@ -42,12 +49,14 @@ import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.AppProperties;
 import com.server.framework.common.CommonService;
 import com.server.framework.common.DateUtil;
+import com.server.framework.entity.ConfigurationEntity;
 import com.server.framework.error.AppException;
 import com.server.framework.http.HttpService;
 import com.server.framework.http.HttpContext;
 import com.server.framework.http.HttpResponse;
 import com.server.framework.job.TaskEnum;
 import com.server.framework.security.SecurityUtil;
+import com.server.framework.service.ConfigurationService;
 import com.server.framework.service.JobService;
 import com.server.framework.service.OAuthService;
 import com.server.framework.builder.ApiResponseBuilder;
@@ -386,7 +395,6 @@ public class ZohoController
 		httpResponse.getWriter().println(authHtml);
 	}
 
-
 	@PostMapping("/zoho/payout/trigger-build")
 	public ResponseEntity<Map<String, Object>> triggerPayoutBuild()
 	{
@@ -422,7 +430,7 @@ public class ZohoController
 			ZohoService.doAuthentication();
 
 			Map<String, Object> context = null;
-			Pair<String, String> milestoneAndComment  = ZohoService.getLatestMilestoneAndCommentForBuildUpload(productName, stage);
+			Pair<String, String> milestoneAndComment = ZohoService.getLatestMilestoneAndCommentForBuildUpload(productName, stage);
 			if(Objects.isNull(milestoneAndComment))
 			{
 				Map<String, Object> response = ApiResponseBuilder.error("No milestone found to update build", HttpStatus.BAD_REQUEST.value());
@@ -470,9 +478,9 @@ public class ZohoController
 			boolean isUploadSuccessful = responseJSON.getString("code").equals("SUCCESS");
 			String preBuildMessage = responseJSON.getString("message");
 
-			Map<String, Object> response = isUploadSuccessful ? ApiResponseBuilder.success("Build update to " + stage +  " initiated successfully", null) : ApiResponseBuilder.error("Build upload to " + stage +  " failed: " + preBuildMessage, HttpStatus.BAD_REQUEST.value());
+			Map<String, Object> response = isUploadSuccessful ? ApiResponseBuilder.success("Build update to " + stage + " initiated successfully", null) : ApiResponseBuilder.error("Build upload to " + stage + " failed: " + preBuildMessage, HttpStatus.BAD_REQUEST.value());
 
-			if(isUploadSuccessful && Objects.nonNull(context))
+			if(Objects.nonNull(context))
 			{
 				String initiatorEmail = ZohoService.getCurrentUserEmail();
 				String initiatorMessage = StringUtils.equals(initiatorEmail, "SCHEDULER") ? initiatorEmail : "{@" + initiatorEmail + "}";
@@ -480,17 +488,102 @@ public class ZohoController
 
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update initiated successfully for " + stage.toUpperCase() + " (" + milestoneAndComment.getLeft() + ")" + initiatorMessage);
 
-				String buildId = responseJSON.getJSONArray("details").getJSONObject(0).get("build_id") + "";
+				if(isUploadSuccessful)
+				{
+					String buildId = responseJSON.getJSONArray("details").getJSONObject(0).get("build_id") + "";
 
-				JSONObject data = new JSONObject()
-					.put("message_id", context.get("messageID"))
-					.put("gitlab_issue_id", context.get("gitlabIssueID"))
-					.put("server_repo_name", context.get("serverProductName"))
-					.put("monitor_id", monitorId)
-					.put("build_id", buildId);
+					JSONObject data = new JSONObject()
+						.put("message_id", context.get("messageID"))
+						.put("gitlab_issue_id", context.get("gitlabIssueID"))
+						.put("server_repo_name", context.get("serverProductName"))
+						.put("monitor_id", monitorId)
+						.put("build_id", buildId);
 
-				AppContextHolder.getBean(JobService.class).scheduleJob(TaskEnum.SD_STATUS_POLL_TASK.getTaskName(), data.toString(), DateUtil.ONE_MINUTE_IN_MILLISECOND);
+					AppContextHolder.getBean(JobService.class).scheduleJob(TaskEnum.SD_STATUS_POLL_TASK.getTaskName(), data.toString(), DateUtil.ONE_MINUTE_IN_MILLISECOND);
+				}
 			}
+			return ResponseEntity.ok(response);
+		}
+		catch(AppException ae)
+		{
+			throw ae;
+		}
+		catch(Exception e)
+		{
+			Map<String, Object> response = ApiResponseBuilder.error("API call failed : " + e.getMessage(), 400);
+			return ResponseEntity.badRequest().body(response);
+		}
+	}
+
+	@PostMapping("/zoho/dd-diff")
+	public ResponseEntity<Map<String, Object>> generateDDDiff(@RequestPart("old_build_url") String oldBuildUrl, @RequestPart(value = "new_build_url", required = false) String newBuildUrl, @RequestPart(value = "new_build", required = false) MultipartFile newBuildFile)
+	{
+		try
+		{
+			Pattern validUrlPattern = Pattern.compile("^https://build(-new)?\\.zohocorp\\.com/zoho/(\\w+)/(\\w+)/(\\w+)/[\\w\\.]+/(\\w+)\\.zip$");
+
+			if(!validUrlPattern.matcher(oldBuildUrl).matches())
+			{
+				throw new AppException("Invalid old build URL provided");
+			}
+			if(newBuildFile.isEmpty() && !validUrlPattern.matcher(newBuildUrl).matches())
+			{
+				throw new AppException("Invalid new build URL provided");
+			}
+			if(newBuildFile.isEmpty() || !StringUtils.endsWith(oldBuildUrl, newBuildFile.getOriginalFilename()))
+			{
+				throw new AppException("Invalid new build provided");
+			}
+
+
+			Path tempDir = Files.createTempDirectory("dd-diff-");
+
+			ConfigurationEntity configurationEntity = AppContextHolder.getBean(ConfigurationService.class).setValue(tempDir.toString(), "PENDING");
+			String referenceID = configurationEntity.getId().toString();
+
+			InputStream newBuildFileInputStream = newBuildFile.isEmpty() ? null : newBuildFile.getInputStream();
+			AppContextHolder.getBean(JobService.class).scheduleJob(() -> DDDiffService.downloadBuilds(oldBuildUrl, newBuildUrl, newBuildFileInputStream, tempDir, referenceID), DateUtil.ONE_SECOND_IN_MILLISECOND);
+
+			Map<String, Object> response = ApiResponseBuilder.success("DD Diff generation triggered successfully", Map.of("reference_id", referenceID));
+			return ResponseEntity.ok(response);
+		}
+		catch(AppException ae)
+		{
+			throw ae;
+		}
+		catch(Exception e)
+		{
+			Map<String, Object> response = ApiResponseBuilder.error("API call failed : " + e.getMessage(), 400);
+			return ResponseEntity.badRequest().body(response);
+		}
+	}
+
+	@GetMapping("/zoho/dd-diff/{referenceID}/status")
+	public ResponseEntity<Map<String, Object>> getDDDiffStatus(@PathVariable("referenceID") String referenceID)
+	{
+		try
+		{
+			Optional<ConfigurationEntity> configurationEntityOptional = AppContextHolder.getBean(ConfigurationService.class).get(Long.parseLong(referenceID));
+			if(configurationEntityOptional.isEmpty())
+			{
+				throw new AppException("Invalid reference ID provided");
+			}
+
+			String status = configurationEntityOptional.get().getCValue();
+			String output = StringUtils.EMPTY;
+			if(status.equals("COMPLETED"))
+			{
+				Path tempDir = Path.of(configurationEntityOptional.get().getCKey());
+				try(BufferedReader bufferedReader = new BufferedReader(new FileReader(tempDir.resolve("old_build/AdventNet/Sas/tomcat/webapps/ROOT/WEB-INF/isu/dd-changes.sql").toString())))
+				{
+					output = bufferedReader.lines().collect(Collectors.joining("\n"));
+				}
+				catch(Exception e)
+				{
+					status = "DIFF_REPORT_NOT_FOUND";
+				}
+			}
+			Map<String, Object> response = ApiResponseBuilder.success("Status fetched successfully", Map.of("status", status, "diff", output));
 			return ResponseEntity.ok(response);
 		}
 		catch(AppException ae)
@@ -540,7 +633,6 @@ public class ZohoController
 
 		String encodedHeader = Base64Url.encode(headerClaims.toJson().getBytes());
 		String encodedPayload = Base64Url.encode(payloadClaims.toJson().getBytes());
-
 
 		String encodedPrivateKey = AppProperties.getProperty("security.private.key.".concat(service).concat("-").concat(dc));
 		byte[] privateKeyBytes = HEX.decode(encodedPrivateKey.getBytes());

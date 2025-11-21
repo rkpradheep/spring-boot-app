@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DD Diff Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem auto;
+      max-width: 720px;
+      line-height: 1.5;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    form,
+    section {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+    input[type="text"],
+    input[type="url"],
+    input[type="file"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .radio-group {
+      margin-bottom: 1rem;
+    }
+    .radio-option {
+      margin-bottom: 0.5rem;
+    }
+    .radio-option input[type="radio"] {
+      margin-right: 0.5rem;
+    }
+    .conditional-input {
+      margin-top: 0.5rem;
+    }
+    pre {
+      background: #f0f0f0;
+      padding: 0.75rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    button {
+      padding: 0.6rem 1.4rem;
+      border: none;
+      border-radius: 4px;
+      background: #005bef;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #9fb9ff;
+      cursor: not-allowed;
+    }
+    .copy-btn {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.875rem;
+      margin-left: 0.5rem;
+      background: #28a745;
+    }
+    .copy-btn:hover {
+      background: #218838;
+    }
+    .copy-btn:active {
+      background: #1e7e34;
+    }
+    .response {
+      background: #f6f8fb;
+      border: 1px solid #dbe3f5;
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin-top: 1rem;
+      word-break: break-word;
+    }
+    .error {
+      color: #b42318;
+    }
+    .output-container {
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>DD Diff Tool</h1>
+
+  <form id="diff-form">
+    <label for="old-build">Old Build URL</label>
+    <input type="url" id="old-build" name="old_build" placeholder="https://example.com/old.zip" required />
+
+    <label>New Build</label>
+    <div class="radio-group">
+      <div class="radio-option">
+        <input type="radio" id="new-build-url-option" name="new-build-type" value="url" checked />
+        <label for="new-build-url-option" style="display: inline; font-weight: normal;">URL</label>
+      </div>
+      <div class="radio-option">
+        <input type="radio" id="new-build-file-option" name="new-build-type" value="file" />
+        <label for="new-build-file-option" style="display: inline; font-weight: normal;">Upload ZIP File</label>
+      </div>
+    </div>
+    <div id="new-build-url-container" class="conditional-input">
+      <input type="url" id="new-build-url" name="new_build_url" placeholder="https://example.com/new.zip" required />
+    </div>
+    <div id="new-build-file-container" class="conditional-input" style="display: none;">
+      <input type="file" id="new-build-file" name="new_build" accept=".zip" />
+    </div>
+
+    <button id="generate-btn" type="submit">Generate Diff</button>
+    <div id="diff-response" class="response" hidden></div>
+  </form>
+
+  <section>
+    <label for="status-reference-id">Reference ID</label>
+    <input type="text" id="status-reference-id" placeholder="Enter Reference ID" />
+    <button id="status-btn" type="button">Fetch Status</button>
+    <div id="status-response" class="response" hidden></div>
+  </section>
+
+  <script>
+    const diffForm = document.getElementById('diff-form');
+    const diffResponse = document.getElementById('diff-response');
+    const generateBtn = document.getElementById('generate-btn');
+    const oldBuildInput = document.getElementById('old-build');
+    const newBuildUrlInput = document.getElementById('new-build-url');
+    const newBuildFileInput = document.getElementById('new-build-file');
+    const newBuildUrlOption = document.getElementById('new-build-url-option');
+    const newBuildFileOption = document.getElementById('new-build-file-option');
+    const newBuildUrlContainer = document.getElementById('new-build-url-container');
+    const newBuildFileContainer = document.getElementById('new-build-file-container');
+
+    const statusBtn = document.getElementById('status-btn');
+    const statusReferenceInput = document.getElementById('status-reference-id');
+    const statusResponse = document.getElementById('status-response');
+
+    const POST_ENDPOINT = '/api/v1/zoho/dd-diff';
+
+    // Handle radio button switching
+    newBuildUrlOption.addEventListener('change', () => {
+      if (newBuildUrlOption.checked) {
+        newBuildUrlContainer.style.display = 'block';
+        newBuildFileContainer.style.display = 'none';
+        newBuildUrlInput.required = true;
+        newBuildFileInput.required = false;
+      }
+    });
+
+    newBuildFileOption.addEventListener('change', () => {
+      if (newBuildFileOption.checked) {
+        newBuildUrlContainer.style.display = 'none';
+        newBuildFileContainer.style.display = 'block';
+        newBuildUrlInput.required = false;
+        newBuildFileInput.required = true;
+      }
+    });
+
+    diffForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      diffResponse.hidden = true;
+      diffResponse.classList.remove('error');
+      diffResponse.textContent = '';
+      generateBtn.disabled = true;
+
+      try {
+        const formData = new FormData();
+        formData.append('old_build_url', oldBuildInput.value.trim());
+
+        if (newBuildUrlOption.checked) {
+          formData.append('new_build_url', newBuildUrlInput.value.trim());
+        } else {
+          if (newBuildFileInput.files.length === 0) {
+            throw new Error('Please select a ZIP file for new build.');
+          }
+          formData.append('new_build', newBuildFileInput.files[0]);
+        }
+
+        const response = await fetch(POST_ENDPOINT, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Request failed: ${response.status}`);
+        }
+
+        const payload = await response.json();
+        const referenceId = payload?.data?.reference_id;
+
+        diffResponse.hidden = false;
+
+        if (referenceId) {
+          diffResponse.textContent = `Reference ID: ${referenceId}`;
+          statusReferenceInput.value = referenceId;
+          fetchStatus()
+        } else {
+          diffResponse.textContent = 'No reference ID returned.';
+        }
+      } catch (error) {
+        diffResponse.hidden = false;
+        diffResponse.classList.add('error');
+        diffResponse.textContent = error.message || 'Unexpected error.';
+      } finally {
+        generateBtn.disabled = false;
+      }
+    });
+
+    statusBtn.addEventListener('click', async () => {
+      fetchStatus()
+    });
+
+
+    async function fetchStatus()
+    {
+
+    const referenceId = statusReferenceInput.value.trim();
+
+      statusResponse.hidden = true;
+      statusResponse.classList.remove('error');
+      statusResponse.innerHTML = '';
+
+      if (!referenceId) {
+        statusResponse.hidden = false;
+        statusResponse.classList.add('error');
+        statusResponse.textContent = 'Please enter a reference ID.';
+        return;
+      }
+
+      statusBtn.disabled = true;
+
+      try {
+        const response = await fetch(`${POST_ENDPOINT}/${encodeURIComponent(referenceId)}/status`);
+
+        if (!response.ok) {
+          throw new Error(`Status request failed: ${response.status}`);
+        }
+
+        const payload = await response.json();
+        const status = payload?.data?.status;
+
+        statusResponse.hidden = false;
+
+        if (status) {
+          const statusText = document.createTextNode(`Status: ${status}`);
+          statusResponse.appendChild(statusText);
+
+          if (status === 'COMPLETED' && payload?.data?.diff !== undefined) {
+            const output = payload.data.diff;
+            const outputText = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
+
+            // Create copy button
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.textContent = 'Copy Diff';
+            copyBtn.type = 'button';
+            copyBtn.addEventListener('click', async () => {
+              try {
+                await navigator.clipboard.writeText(outputText);
+                const originalText = copyBtn.textContent;
+                alert('Diff copied to clipboard');
+              } catch (err) {
+                alert('Failed to copy to clipboard');
+              }
+            });
+            statusResponse.appendChild(copyBtn);
+
+            // Create output container
+            const outputContainer = document.createElement('div');
+            outputContainer.className = 'output-container';
+            const outputLabel = document.createElement('div');
+            outputLabel.textContent = 'Output:';
+            outputLabel.style.marginBottom = '0.5rem';
+            outputLabel.style.fontWeight = '600';
+            const outputPre = document.createElement('pre');
+            outputPre.textContent = outputText;
+            outputContainer.appendChild(outputLabel);
+            outputContainer.appendChild(outputPre);
+            statusResponse.appendChild(document.createElement('br'));
+            statusResponse.appendChild(outputContainer);
+          }
+        } else {
+          statusResponse.textContent = 'Status not found in response.';
+        }
+      } catch (error) {
+        statusResponse.hidden = false;
+        statusResponse.classList.add('error');
+        statusResponse.textContent = error.message || 'Unexpected error.';
+      } finally {
+        statusBtn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
+

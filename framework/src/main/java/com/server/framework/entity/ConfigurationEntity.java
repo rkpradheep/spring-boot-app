@@ -2,11 +2,15 @@ package com.server.framework.entity;
 
 import jakarta.persistence.*;
 
+import org.hibernate.annotations.GenericGenerator;
+
 @Entity(name = "Configuration")
 @Table(name = "Configuration")
 public class ConfigurationEntity
 {
-    
+
+    @GeneratedValue(generator = "custom-id")
+    @GenericGenerator(name = "custom-id", type = com.server.framework.id.CustomIdGenerator.class)
     @Id
     @Column(name = "Id")
     private Long id;

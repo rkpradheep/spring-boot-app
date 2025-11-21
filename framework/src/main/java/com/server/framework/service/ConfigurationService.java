@@ -32,6 +32,16 @@ public class ConfigurationService
 		return configurationEntityOptional.map(ConfigurationEntity::getCValue);
 	}
 
+	public Optional<ConfigurationEntity> get(Long id)
+	{
+		return configurationRepository.findById(id);
+	}
+
+	public void save(ConfigurationEntity configurationEntity)
+	{
+		configurationRepository.save(configurationEntity);
+	}
+
 	public ConfigurationEntity setValue(String key, String value)
 	{
 		return setValue(key, value, -1L);
@@ -42,7 +52,6 @@ public class ConfigurationService
 		Optional<ConfigurationEntity> existing = configurationRepository.findByCKey(key);
 		ConfigurationEntity conf = existing.orElseGet(() -> {
 			ConfigurationEntity c = new ConfigurationEntity();
-			c.setId(generateNextId());
 			c.setCKey(key);
 			c.setExpiryTime(expiryTime);
 			return c;
@@ -55,10 +64,5 @@ public class ConfigurationService
 	public void delete(String key)
 	{
 		configurationRepository.deleteByCKey(key);
-	}
-
-	private Long generateNextId()
-	{
-		return configurationRepository.findAll().stream().map(ConfigurationEntity::getId).filter(id -> id != null).max(Long::compareTo).orElse(0L) + 1;
 	}
 }

@@ -113,6 +113,7 @@ public class HttpURLConnectionWrapper extends HttpsURLConnection
 
 	public void disconnect()
 	{
+		end();
 		connection.disconnect();
 	}
 
@@ -200,82 +201,38 @@ public class HttpURLConnectionWrapper extends HttpsURLConnection
 
 	public String getHeaderField(int arg0)
 	{
-		try
-		{
-			start();
-			return connection.getHeaderField(arg0);
-		}
-		finally
-		{
-			end();
-		}
+		start();
+		return connection.getHeaderField(arg0);
 	}
 
 	public String getHeaderField(String name)
 	{
-		try
-		{
-			start();
-			return connection.getHeaderField(name);
-		}
-		finally
-		{
-			end();
-		}
+		start();
+		return connection.getHeaderField(name);
 	}
 
 	public long getHeaderFieldDate(String name, long Default)
 	{
-
-		try
-		{
-			start();
-			return connection.getHeaderFieldDate(name, Default);
-		}
-		finally
-		{
-			end();
-		}
+		start();
+		return connection.getHeaderFieldDate(name, Default);
 	}
 
 	public int getHeaderFieldInt(String name, int Default)
 	{
-
-		try
-		{
-			start();
-			return connection.getHeaderFieldInt(name, Default);
-		}
-		finally
-		{
-			end();
-		}
+		start();
+		return connection.getHeaderFieldInt(name, Default);
 	}
 
 	public String getHeaderFieldKey(int arg0)
 	{
-		try
-		{
-			start();
-			return connection.getHeaderFieldKey(arg0);
-		}
-		finally
-		{
-			end();
-		}
+		start();
+		return connection.getHeaderFieldKey(arg0);
 	}
 
 	public Map<String, List<String>> getHeaderFields()
 	{
-		try
-		{
-			start();
-			return connection.getHeaderFields();
-		}
-		finally
-		{
-			end();
-		}
+		start();
+		return connection.getHeaderFields();
 	}
 
 	public HostnameVerifier getHostnameVerifier()
@@ -395,23 +352,12 @@ public class HttpURLConnectionWrapper extends HttpsURLConnection
 		{
 			return -1;
 		}
-		finally
-		{
-			end();
-		}
 	}
 
 	public String getResponseMessage() throws IOException
 	{
-		try
-		{
-			start();
-			return connection.getResponseMessage();
-		}
-		finally
-		{
-			end();
-		}
+		start();
+		return connection.getResponseMessage();
 	}
 
 	public SSLSocketFactory getSSLSocketFactory()
