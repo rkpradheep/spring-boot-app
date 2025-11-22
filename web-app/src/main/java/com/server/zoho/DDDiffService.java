@@ -1,21 +1,22 @@
 package com.server.zoho;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
+import org.json.JSONObject;
 
 import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.AppProperties;
+import com.server.framework.common.CommonService;
+import com.server.framework.common.DateUtil;
 import com.server.framework.common.ShellCommandExecutionController;
 import com.server.framework.entity.ConfigurationEntity;
 import com.server.framework.http.HttpContext;
@@ -29,13 +30,13 @@ public class DDDiffService
 
 	private static final ConfigurationService CONFIGURATION_SERVICE = AppContextHolder.getBean(ConfigurationService.class);
 
-	public static void downloadBuilds(String oldBuildUrl, String newBuildUrl, InputStream newBuildFileInputStream, Path tempDir, String referenceID) throws Exception
+	public static void downloadBuildsAndGenerateDiff(String oldBuildUrl, String newBuildUrl, Path tempDir, String referenceID) throws Exception
 	{
 		try
 		{
 			ConfigurationEntity configurationEntity = CONFIGURATION_SERVICE.get(Long.parseLong(referenceID)).get();
 
-			CONFIGURATION_SERVICE.setValue(configurationEntity.getCKey(), "DOWNLOADING_OLD_BUILD");
+			setValue(configurationEntity.getCKey(), "DOWNLOADING_OLD_BUILD");
 
 			HttpContext httpContext = new HttpContext(oldBuildUrl, "GET");
 			httpContext.setHeader("Authorization", "Basic " + AppProperties.getProperty("zoho.build.download.basic.header.token"));
@@ -47,15 +48,9 @@ public class DDDiffService
 			Files.copy(inputStream, oldBuildPath);
 			inputStream.close();
 
-			if(Objects.nonNull(newBuildFileInputStream))
+			if(StringUtils.isNotEmpty(newBuildUrl))
 			{
-				Path newBuildPath = tempDir.resolve("new_build.zip");
-				Files.copy(newBuildFileInputStream, newBuildPath);
-				newBuildFileInputStream.close();
-			}
-			else
-			{
-				CONFIGURATION_SERVICE.setValue(configurationEntity.getCKey(), "DOWNLOADING_NEW_BUILD");
+				setValue(configurationEntity.getCKey(), "DOWNLOADING_NEW_BUILD");
 
 				httpContext = new HttpContext(newBuildUrl, "GET");
 				httpContext.setHeader("Authorization", "Basic " + AppProperties.getProperty("zoho.build.download.basic.header.token"));
@@ -68,13 +63,26 @@ public class DDDiffService
 			}
 			generateDiffReport(referenceID);
 
-			CONFIGURATION_SERVICE.setValue(configurationEntity.getCKey(), "COMPLETED");
+			setValue(configurationEntity.getCKey(), "COPYING_DIFF_REPORT");
+
+			String status = "COMPLETED";
+			String diff;
+			try(BufferedReader bufferedReader = new BufferedReader(new FileReader(tempDir.resolve("old_build/AdventNet/Sas/tomcat/webapps/ROOT/WEB-INF/isu/dd-changes.sql").toString())))
+			{
+				diff = bufferedReader.lines().collect(Collectors.joining("\n"));
+			}
+			CONFIGURATION_SERVICE.setValue(configurationEntity.getCKey(), new JSONObject().put("status", status).put("diff", diff).toString(), DateUtil.getCurrentTimeInMillis() + (DateUtil.ONE_DAY_IN_MILLISECOND * 7));
 		}
 		catch(Exception e)
 		{
 			ConfigurationEntity configurationEntity = CONFIGURATION_SERVICE.get(Long.parseLong(referenceID)).get();
-			CONFIGURATION_SERVICE.setValue(configurationEntity.getCKey(), configurationEntity.getCValue().concat("_FAILED"));
+			JSONObject statusObject = new JSONObject(configurationEntity.getCValue());
+			setValue(configurationEntity.getCKey(), statusObject.getString("status").concat("_FAILED"));
 			throw e;
+		}
+		finally
+		{
+			CommonService.cleanAndDeleteDirectory(tempDir);
 		}
 	}
 
@@ -84,17 +92,17 @@ public class DDDiffService
 
 		Path tempDir = Path.of(configurationEntity.getCKey());
 
-		CONFIGURATION_SERVICE.setValue(configurationEntity.getCKey(), "UNZIPPING_OLD_BUILD");
-		unzip(tempDir.resolve("old_build.zip").toString(), tempDir.resolve("old_build").toString());
+		setValue(configurationEntity.getCKey(), "UNZIPPING_OLD_BUILD");
+		CommonService.unzip(tempDir.resolve("old_build.zip").toString(), tempDir.resolve("old_build").toString());
 
-		CONFIGURATION_SERVICE.setValue(configurationEntity.getCKey(), "UNZIPPING_NEW_BUILD");
-		unzip(tempDir.resolve("new_build.zip").toString(), tempDir.resolve("new_build").toString());
+		setValue(configurationEntity.getCKey(), "UNZIPPING_NEW_BUILD");
+		CommonService.unzip(tempDir.resolve("new_build.zip").toString(), tempDir.resolve("new_build").toString());
 
-		CONFIGURATION_SERVICE.setValue(configurationEntity.getCKey(), "EXTRACTING_OLD_BUILD_ROOT_WAR");
-		unzip(tempDir.resolve("old_build/AdventNet/Sas/tomcat/webapps/ROOT.war").toString(), tempDir.resolve("old_build/AdventNet/Sas/tomcat/webapps/ROOT").toString());
+		setValue(configurationEntity.getCKey(), "EXTRACTING_OLD_BUILD_ROOT_WAR");
+		CommonService.unzip(tempDir.resolve("old_build/AdventNet/Sas/tomcat/webapps/ROOT.war").toString(), tempDir.resolve("old_build/AdventNet/Sas/tomcat/webapps/ROOT").toString());
 
-		CONFIGURATION_SERVICE.setValue(configurationEntity.getCKey(), "EXTRACTING_NEW_BUILD_ROOT_WAR");
-		unzip(tempDir.resolve("new_build/AdventNet/Sas/tomcat/webapps/ROOT.war").toString(), tempDir.resolve("new_build/AdventNet/Sas/tomcat/webapps/ROOT").toString());
+		setValue(configurationEntity.getCKey(), "EXTRACTING_NEW_BUILD_ROOT_WAR");
+		CommonService.unzip(tempDir.resolve("new_build/AdventNet/Sas/tomcat/webapps/ROOT.war").toString(), tempDir.resolve("new_build/AdventNet/Sas/tomcat/webapps/ROOT").toString());
 
 
 		String content = Files.readString(tempDir.resolve("old_build/AdventNet/Sas/bin/sqlCreation.sh"), StandardCharsets.UTF_8);
@@ -102,57 +110,24 @@ public class DDDiffService
 
 		Files.writeString(tempDir.resolve("old_build/AdventNet/Sas/bin/sqlCreation.sh"), content, StandardCharsets.UTF_8);
 
-		CONFIGURATION_SERVICE.setValue(configurationEntity.getCKey(), "CHANGING_SQLCREATION_FILE_PERMISSION");
+		setValue(configurationEntity.getCKey(), "CHANGING_SQLCREATION_FILE_PERMISSION");
 
-		String response = ShellCommandExecutionController.execute(new String[]{"bash", "-c",
+		ShellCommandExecutionController.execute(new String[]{"bash", "-c",
 			"chmod +x " + tempDir.resolve("old_build/AdventNet/Sas/bin/sqlCreation.sh")});
 
-		LOGGER.log(Level.INFO, "SQL Creation Permission Change Response: {0}", response);
+		setValue(configurationEntity.getCKey(), "GENERATING_DIFF_REPORT");
 
-		CONFIGURATION_SERVICE.setValue(configurationEntity.getCKey(), "GENERATING_DIFF_REPORT");
-
-		response = ShellCommandExecutionController.execute(new String[]{"bash", "-c",
+		String response = ShellCommandExecutionController.execute(new String[]{"bash", "-c",
 			"sh sqlCreation.sh " + tempDir.resolve("old_build/AdventNet/Sas/tomcat/webapps/ROOT/WEB-INF") + "/" + " " + tempDir.resolve("new_build/AdventNet/Sas/tomcat/webapps/ROOT/WEB-INF") + "/" + " -Dgenerate.destructive.changes=true"
 		}, tempDir.resolve("old_build/AdventNet/Sas/bin").toString());
 
 		LOGGER.log(Level.INFO, "DD diff generation response : {0}", response);
 
 	}
-
-	public static void unzip(String zipFilePath, String destDir) throws IOException
+	
+	private static void setValue(String key, String value)
 	{
-		File dir = new File(destDir);
-		if(!dir.exists())
-			dir.mkdirs();
-
-		byte[] buffer = new byte[4096];
-
-		try(ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFilePath)))
-		{
-			ZipEntry entry;
-			while((entry = zis.getNextEntry()) != null)
-			{
-				File newFile = new File(destDir, entry.getName());
-				if(entry.isDirectory())
-				{
-					newFile.mkdirs();
-				}
-				else
-				{
-					newFile.getParentFile().mkdirs();
-
-					try(FileOutputStream fos = new FileOutputStream(newFile))
-					{
-						int len;
-						while((len = zis.read(buffer)) > 0)
-						{
-							fos.write(buffer, 0, len);
-						}
-					}
-				}
-
-				zis.closeEntry();
-			}
-		}
+		CONFIGURATION_SERVICE.setValue(key, new JSONObject().put("status", value).toString());
 	}
+
 }

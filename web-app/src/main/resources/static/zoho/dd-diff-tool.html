@@ -101,7 +101,7 @@
 
   <form id="diff-form">
     <label for="old-build">Old Build URL</label>
-    <input type="url" id="old-build" name="old_build" placeholder="https://example.com/old.zip" required />
+    <input type="url" id="old-build" name="old_build" placeholder="Enter Old Build ZIP URL" required />
 
     <label>New Build</label>
     <div class="radio-group">
@@ -115,7 +115,7 @@
       </div>
     </div>
     <div id="new-build-url-container" class="conditional-input">
-      <input type="url" id="new-build-url" name="new_build_url" placeholder="https://example.com/new.zip" required />
+      <input type="url" id="new-build-url" name="new_build_url" placeholder="Enter New Build ZIP URL" required />
     </div>
     <div id="new-build-file-container" class="conditional-input" style="display: none;">
       <input type="file" id="new-build-file" name="new_build" accept=".zip" />
@@ -127,7 +127,7 @@
 
   <section>
     <label for="status-reference-id">Reference ID</label>
-    <input type="text" id="status-reference-id" placeholder="Enter Reference ID" />
+    <input type="text" id="status-reference-id"/>
     <button id="status-btn" type="button">Fetch Status</button>
     <div id="status-response" class="response" hidden></div>
   </section>
@@ -150,7 +150,6 @@
 
     const POST_ENDPOINT = '/api/v1/zoho/dd-diff';
 
-    // Handle radio button switching
     newBuildUrlOption.addEventListener('change', () => {
       if (newBuildUrlOption.checked) {
         newBuildUrlContainer.style.display = 'block';

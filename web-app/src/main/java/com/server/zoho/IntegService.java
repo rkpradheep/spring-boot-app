@@ -337,7 +337,7 @@ public class IntegService
 						{
 							buildResponse.setMessage("BUILD_SUCCESS");
 						}
-						else if("Failure".equals(status) || "Error".equals(status))
+						else if("Failure".equals(status) || "Error".equals(status) || status.contains("Stopped"))
 						{
 							buildResponse.setMessage("BUILD_FAILED");
 							buildResponse.setSuccess(false);

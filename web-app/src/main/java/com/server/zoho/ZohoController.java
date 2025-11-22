@@ -21,7 +21,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.io.InputStream;
 import java.net.Inet4Address;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -536,14 +535,19 @@ public class ZohoController
 				throw new AppException("Invalid new build provided");
 			}
 
-
 			Path tempDir = Files.createTempDirectory("dd-diff-");
+			if(Objects.nonNull(newBuildFile) && !newBuildFile.isEmpty())
+			{
+				Path newBuildPath = tempDir.resolve("new_build.zip");
+				newBuildFile.transferTo(newBuildPath);
+				newBuildUrl = null;
+			}
 
-			ConfigurationEntity configurationEntity = AppContextHolder.getBean(ConfigurationService.class).setValue(tempDir.toString(), "PENDING");
+			ConfigurationEntity configurationEntity = AppContextHolder.getBean(ConfigurationService.class).setValue(tempDir.toString(), new JSONObject().put("status", "PENDING").toString());
 			String referenceID = configurationEntity.getId().toString();
 
-			InputStream newBuildFileInputStream = (Objects.isNull(newBuildFile) || newBuildFile.isEmpty()) ? null : newBuildFile.getInputStream();
-			AppContextHolder.getBean(JobService.class).scheduleJob(() -> DDDiffService.downloadBuilds(oldBuildUrl, newBuildUrl, newBuildFileInputStream, tempDir, referenceID), DateUtil.ONE_SECOND_IN_MILLISECOND);
+			String finalNewBuildUrl = newBuildUrl;
+			AppContextHolder.getBean(JobService.class).scheduleJob(() -> DDDiffService.downloadBuildsAndGenerateDiff(oldBuildUrl, finalNewBuildUrl, tempDir, referenceID), DateUtil.ONE_SECOND_IN_MILLISECOND);
 
 			Map<String, Object> response = ApiResponseBuilder.success("DD Diff generation triggered successfully", Map.of("reference_id", referenceID));
 			return ResponseEntity.ok(response);
@@ -570,21 +574,8 @@ public class ZohoController
 				throw new AppException("Invalid reference ID provided");
 			}
 
-			String status = configurationEntityOptional.get().getCValue();
-			String output = StringUtils.EMPTY;
-			if(status.equals("COMPLETED"))
-			{
-				Path tempDir = Path.of(configurationEntityOptional.get().getCKey());
-				try(BufferedReader bufferedReader = new BufferedReader(new FileReader(tempDir.resolve("old_build/AdventNet/Sas/tomcat/webapps/ROOT/WEB-INF/isu/dd-changes.sql").toString())))
-				{
-					output = bufferedReader.lines().collect(Collectors.joining("\n"));
-				}
-				catch(Exception e)
-				{
-					status = "DIFF_REPORT_NOT_FOUND";
-				}
-			}
-			Map<String, Object> response = ApiResponseBuilder.success("Status fetched successfully", Map.of("status", status, "diff", output));
+			JSONObject details = new JSONObject(configurationEntityOptional.get().getCValue());
+			Map<String, Object> response = ApiResponseBuilder.success("Status fetched successfully", Map.of("status", details.getString("status"), "diff", details.optString("diff")));
 			return ResponseEntity.ok(response);
 		}
 		catch(AppException ae)

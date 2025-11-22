@@ -171,7 +171,14 @@ public class SecurityFilter implements Filter
 
 		if(!isValidEndpoint)
 		{
-			httpResponse.sendError(HttpServletResponse.SC_NOT_FOUND);
+			if(requestURI.endsWith("/"))
+			{
+				httpResponse.sendRedirect(requestURI.replaceAll("/+$", ""));
+			}
+			else
+			{
+				httpResponse.sendError(HttpServletResponse.SC_NOT_FOUND);
+			}
 			return false;
 		}
 		return true;
