@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DD Diff Tool</title>
+  <script src="/js/common.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -269,9 +270,7 @@
             copyBtn.type = 'button';
             copyBtn.addEventListener('click', async () => {
               try {
-                await navigator.clipboard.writeText(outputText);
-                const originalText = copyBtn.textContent;
-                alert('Diff copied to clipboard');
+                await copyToClipboard(outputText);
               } catch (err) {
                 alert('Failed to copy to clipboard');
               }

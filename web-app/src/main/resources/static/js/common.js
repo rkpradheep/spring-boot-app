@@ -43,7 +43,7 @@ window.open(new URL(window.location.href.replace('http', 'https')) , "_self");
 
 
  async function copyToClipboard(textToCopy) {
-     if (false && navigator.clipboard && window.isSecureContext) {
+     if (navigator.clipboard && window.isSecureContext) {
          await navigator.clipboard.writeText(textToCopy);
          alert('copied')
      } else {
