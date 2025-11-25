@@ -35,6 +35,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -48,6 +49,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Component
 public class ZohoService
@@ -461,6 +463,11 @@ public class ZohoService
 
 	public static JSONObject generatePayoutChangSetsForURL(String buildURL) throws Exception
 	{
+		if(!buildURL.contains("/master"))
+		{
+			LOGGER.info("Build URL points to non-master branch. Skipping change set generation.");
+			return new JSONObject();
+		}
 		List<String> payoutProducts = (List<String>) ZohoService.getMetaConfig(("PAYOUT_PRODUCTS"));
 
 		HttpService httpService = AppContextHolder.getBean(HttpService.class);
@@ -554,8 +561,9 @@ public class ZohoService
 							commitInfo.put("commitSHA", commit.getString("short_id"));
 							commitInfo.put("commitMessage", commit.getString("message"));
 							commitInfo.put("webURL", mr.getString("web_url"));
-							String authorName = mr.getJSONObject("author").getString("username").toLowerCase().trim();
-							String authorEmail = (authorName.split(StringUtils.SPACE).length > 1 ? (authorName.split(StringUtils.SPACE)[0] + "." + authorName.split(StringUtils.SPACE)[1]) : authorName) + "@zohocorp.com";
+							String authorName = mr.getJSONObject("author").getString("username");
+							String authorDisplayName = mr.getJSONObject("author").getString("name").toLowerCase().trim();
+							String authorEmail = (!authorName.contains(".") && authorDisplayName.split(StringUtils.SPACE).length > 1 ? (authorDisplayName.split(StringUtils.SPACE)[0] + "." + authorDisplayName.split(StringUtils.SPACE)[1]) : authorName) + "@zohocorp.com";
 							commitInfo.put("author", authorEmail);
 							commitInfo.put("mrTitle", mr.getString("title"));
 							commitInfo.put("mergedDate", DateUtil.getFormattedTime(DateUtil.convertDateToMilliseconds(mr.getString("merged_at"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")));
@@ -617,7 +625,7 @@ public class ZohoService
 			context.setParam("datacenter", "IN2");
 			context.setParam("region", "IN");
 			context.setParam("build_stage", "production");
-			context.setParam("limit", 1);
+			context.setParam("limit", 5);
 			context.setParam("sort_order", "desc");
 			context.setParam("sort_by", "zac_completed_at");
 			context.setParam("process_type", "build_update");
@@ -626,10 +634,22 @@ public class ZohoService
 
 			HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(context);
 
-			JSONObject buildDetails = new JSONObject(httpResponse.getStringResponse()).getJSONArray("details").getJSONObject(0)
+			JSONArray details = new JSONObject(httpResponse.getStringResponse()).getJSONArray("details");
+			JSONObject buildDetails = details.getJSONObject(0)
 				.getJSONObject("details").getJSONObject("build_details");
+			List<Integer> buildDetailsKeys = buildDetails.keySet().stream().map(Integer::parseInt).sorted(Comparator.comparingInt(i-> (int) i).reversed()).toList();
 
-			return buildDetails.getJSONObject(buildDetails.keySet().stream().findFirst().get()).getString("url");
+			for(Integer buildDetailsKey : buildDetailsKeys)
+			{
+				String url = buildDetails.getJSONObject(String.valueOf(buildDetailsKey)).getString("url");
+				if(url.contains("/master"))
+				{
+					return url;
+				}
+			}
+			LOGGER.info("No master build found in the recent builds, fetching the latest build URL");
+
+			return buildDetails.getJSONObject(String.valueOf(buildDetailsKeys.get(0))).getString("url");
 		}
 		catch(Exception e)
 		{
@@ -820,7 +840,7 @@ public class ZohoService
 			JSONObject productsChangeSetJSON = changeSetResponse.getJSONObject("products_changesets");
 
 			Set<String> productsChangeSet = productsChangeSetJSON.keySet();
-			String message = "Current IDC Milestone : *" + changeSetResponse.getString("base_milestone") + "*\n\n";
+			String message = "Latest IDC Milestone : *" + changeSetResponse.getString("base_milestone") + "*\n\n";
 			message += "*Changesets Generated From IDC* : \n\n";
 
 			if(!isIDC)
@@ -896,6 +916,31 @@ public class ZohoService
 			.put("region", buildDetails.getString("region"))
 			.put("url", buildDetails.getString("url"))
 			.put("build_stage", buildDetails.getString("build_stage"));
+	}
+
+	public static JSONObject markScheduledBuildAsReady(String buildID) throws Exception
+	{
+		String sdScheduleUrl = AppProperties.getProperty("zoho.sd.build.scheduler.api.url");
+
+		JSONObject payload = new JSONObject();
+		JSONArray buildIDsObject = new JSONArray();
+
+		JSONObject buildIDObject = new JSONObject();
+		buildIDObject.put("build_id", buildID);
+		buildIDObject.put("provision_type", "build_update");
+
+		buildIDsObject.put(buildIDObject);
+
+		payload.put("build_ids", buildIDsObject);
+
+		HttpContext httpContext = new HttpContext(sdScheduleUrl, "POST");
+		httpContext.setHeader("Authorization", ZohoService.getSDAccessToken());
+
+		httpContext.setBody(payload);
+
+		HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(httpContext);
+		return new JSONObject(httpResponse.getStringResponse());
+
 	}
 }
 

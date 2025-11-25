@@ -251,7 +251,7 @@ public class IntegService
 				}
 			}
 
-			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "Products qualified for build : \n\n" + String.join("\n", qualifiedProducts));
+			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "Products qualified for build : \n\n" + String.join("\n\n", qualifiedProducts));
 
 			String referenceID = monitor.getId().toString();
 			workflowEngine.scheduleWorkflow("BuildWorkflow", referenceID, context, ZohoService.getCurrentUserEmail());

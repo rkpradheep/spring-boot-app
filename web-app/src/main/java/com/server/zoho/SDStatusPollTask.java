@@ -1,5 +1,6 @@
 package com.server.zoho;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -83,6 +84,11 @@ public class SDStatusPollTask implements Task
 		else
 		{
 			LOGGER.log(Level.INFO, "Build is not completed yet. Status received: {0}", overallStatus);
+			if(overallStatus.equalsIgnoreCase("Scheduled"))
+			{
+				ZohoService.markScheduledBuildAsReady(buildID);
+				LOGGER.info("Build marked as Ready in SD for build ID: " + buildID);
+			}
 			canAddJobAgain = true;
 			return;
 		}
@@ -92,55 +98,57 @@ public class SDStatusPollTask implements Task
 //		{
 //			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, null, "MASTER BUILD", "Build Automation Bot signing off for now \uD83D\uDC4B");
 //		}
+
+		if(!(isSuccess && List.of("LOCAL", "PRE").contains(regionName)))
+		{
+			return;
+		}
+
+		String buildMovementMessage;
+		JSONObject reference;
+
 		if(regionName.equals("LOCAL"))
 		{
-			if(StringUtils.isNotEmpty(buildOwnerEmail))
-			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, null, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.");
+			buildMovementMessage = "[Move To Pre]($1)";
 
-			}
-			if(isSuccess)
-			{
-				JSONObject reference = new JSONObject()
-					.put("type", "button")
-					.put("object", new JSONObject()
-						.put("label", "Move To Pre")
-						.put("action", new JSONObject()
-							.put("type", "invoke.function")
-							.put("data", new JSONObject().put("name", "payoutuploadtopre")))
-						.put("arguments", new JSONObject()
-							.put("key", "movetopre")
-							.put("value", jsonObject.optString("monitor_id")))
-						.put("type", "+")
-					);
-
-				JSONObject references = new JSONObject().put("1", reference);
-
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, null, null, "MASTER BUILD", "[Move To Pre]($1)", references);
-			}
+			reference = new JSONObject()
+				.put("type", "button")
+				.put("object", new JSONObject()
+					.put("label", "Move To Pre")
+					.put("action", new JSONObject()
+						.put("type", "invoke.function")
+						.put("data", new JSONObject().put("name", "payoutuploadtopre")))
+					.put("arguments", new JSONObject()
+						.put("key", "movetopre")
+						.put("value", jsonObject.optString("monitor_id")))
+					.put("type", "+")
+				);
 		}
-		else if(regionName.equals("PRE"))
+		else
 		{
-			if(isSuccess)
-			{
-				JSONObject reference = new JSONObject()
-					.put("type", "button")
-					.put("object", new JSONObject()
-						.put("label", "Move To Production")
-						.put("action", new JSONObject()
-							.put("type", "invoke.function")
-							.put("data", new JSONObject().put("name", "payoutuploadtoproduction")))
-						.put("arguments", new JSONObject()
-							.put("key", "movetopre")
-							.put("value", jsonObject.optString("monitor_id")))
-						.put("type", "+")
-					);
+			buildMovementMessage ="[Move To Production]($1)";
 
-				JSONObject references = new JSONObject().put("1", reference);
-
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, null, null, "MASTER BUILD", "[Move To Production]($1)", references);
-			}
+			reference = new JSONObject()
+				.put("type", "button")
+				.put("object", new JSONObject()
+					.put("label", "Move To Production")
+					.put("action", new JSONObject()
+						.put("type", "invoke.function")
+						.put("data", new JSONObject().put("name", "payoutuploadtoproduction")))
+					.put("arguments", new JSONObject()
+						.put("key", "movetopre")
+						.put("value", jsonObject.optString("monitor_id")))
+					.put("type", "+")
+				);
 		}
+
+		if(StringUtils.isNotEmpty(buildOwnerEmail))
+		{
+			buildMovementMessage+= "\n\nBuild Owner {@" + buildOwnerEmail + "}";
+		}
+
+		JSONObject references = new JSONObject().put("1", reference);
+		ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, null, null, "MASTER BUILD", buildMovementMessage, references);
 	}
 
 	@Override public boolean canAddJobAgain()
