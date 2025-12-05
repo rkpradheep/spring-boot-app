@@ -72,7 +72,7 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 			LOGGER.info("SD Build Update Response CSEZ : " + response);
 
 			JSONObject responseJSON = new JSONObject(response);
-			boolean isCSEZBuildSuccessful = responseJSON.getString("code").equals("SUCCESS");
+			boolean isCSEZBuildSuccessful = responseJSON.optString("code", "").equals("SUCCESS");
 			String csezBuildMessage = responseJSON.getString("message");
 
 			if(isCSEZBuildSuccessful)
@@ -97,7 +97,7 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 			}
 			else
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to CSEZ Failed ( " + milestoneVersion + " )");
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to CSEZ Failed ( " + milestoneVersion + " )" + " : " + csezBuildMessage);
 
 				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
 				if(StringUtils.isNotEmpty(buildOwnerEmail))

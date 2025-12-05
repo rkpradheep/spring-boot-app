@@ -113,7 +113,8 @@ public class ZohoService
 	{
 		JSONObject buildOptions = new JSONObject()
 			.put("skip_continue", true)
-			.put("iast_jar_needed", !region.equals("IN"));
+			.put("iast_jar_needed", !region.equals("IN"))
+			.put("milestone_tag_needed", false);
 
 		JSONArray notifyTo = new JSONArray().put("pradheep.rkd@zohocorp.com");
 

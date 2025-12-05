@@ -474,7 +474,7 @@ public class ZohoController
 
 			String sdResponse = ZohoService.uploadBuild(productName, milestoneAndComment.getLeft(), "IN2", "IN", stage, comment + initiatorDetails, false, null);
 			JSONObject responseJSON = new JSONObject(sdResponse);
-			boolean isUploadSuccessful = responseJSON.getString("code").equals("SUCCESS");
+			boolean isUploadSuccessful = responseJSON.optString("code", "").equals("SUCCESS");
 			String preBuildMessage = responseJSON.getString("message");
 
 			String message = isUploadSuccessful ? "Build update to " + stage + " initiated successfully" : "Build upload to " + stage + " failed: " + preBuildMessage;

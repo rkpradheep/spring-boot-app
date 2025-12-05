@@ -75,7 +75,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 			LOGGER.info("SD Build Update Response LOCAL : " + response);
 
 			JSONObject responseJSON = new JSONObject(response);
-			boolean isLocalBuildSuccessful = responseJSON.getString("code").equals("SUCCESS");
+			boolean isLocalBuildSuccessful = responseJSON.optString("code", "").equals("SUCCESS");
 			String localBuildMessage = responseJSON.getString("message");
 
 			if(isLocalBuildSuccessful)
@@ -105,7 +105,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 			}
 			else
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to LOCAL Failed ( " + milestoneVersion + " )");
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to LOCAL Failed ( " + milestoneVersion + " )" + " : " + localBuildMessage);
 
 				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
 				if(StringUtils.isNotEmpty(buildOwnerEmail))

@@ -60,12 +60,12 @@ public class SDPreBuildUpdateStep extends WorkflowStep
 			String response = ZohoService.uploadBuild(productName, milestoneVersion, "IN2", "IN", "pre", isPatchBuildUpdate, buildURL);
 			LOGGER.info("SD Build Update Response PRE : " + response);
 
-			boolean isPreBuildSuccessful = new JSONObject(response).getString("code").equals("SUCCESS");
+			boolean isPreBuildSuccessful = new JSONObject(response).optString("code", "").equals("SUCCESS");
 			String preBuildMessage = new JSONObject(response).getString("message");
 
 			if(isPreBuildSuccessful)
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update initiated for PRE ( " + milestoneVersion + " )");
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update initiated for PRE ( " + milestoneVersion + " )" + " : " + preBuildMessage);
 
 				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
 				if(StringUtils.isNotEmpty(buildOwnerEmail))
