@@ -607,7 +607,7 @@ public class ZohoService
 		HttpContext context = new HttpContext(AppProperties.getProperty("zoho.build.api.url").concat("/api/v1/patch_build_details"), "GET");
 		context.setParam("product_id", IntegService.getProductConfig(product).getId());
 		context.setParam("stage", stage);
-		context.setParam("grid_value", "IN2");
+		context.setParam("grid_value", "IN1");
 		context.setParam("product_name", "ZOHOPAYOUT");
 		context.setHeader("PRIVATE-TOKEN", AppProperties.getProperty("zoho.build.api.token"));
 
@@ -623,7 +623,7 @@ public class ZohoService
 
 			context.setParam("start_date", DateUtil.getFormattedTime(DateUtil.getCurrentTime().minusDays(10).toInstant().toEpochMilli(), "yyyy-MM-dd"));
 			context.setParam("overall_status", "Completed");
-			context.setParam("datacenter", "IN2");
+			context.setParam("datacenter", "IN1");
 			context.setParam("region", "IN");
 			context.setParam("build_stage", "production");
 			context.setParam("limit", 5);
@@ -669,7 +669,7 @@ public class ZohoService
 
 			context.setParam("deployment_mode", "live");
 			context.setParam("region", "IN");
-			context.setParam("data_center", "IN2");
+			context.setParam("data_center", "IN1");
 			context.setParam("provision_type", "build_update");
 			context.setParam("build_stage", stage);
 

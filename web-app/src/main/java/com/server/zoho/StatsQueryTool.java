@@ -47,7 +47,7 @@ public class StatsQueryTool {
         return executeSelect(schemaQuery, connection);
     }
 
-    public Map<String, String> handleStats(JSONObject credentials) {
+    public Map<String, String> handleStats(JSONObject credentials) throws Exception {
         try {
             String server = credentials.getString("server");
             String ip = credentials.getString("ip");
@@ -124,7 +124,7 @@ public class StatsQueryTool {
             return Map.of("message", "Stats request initiated successfully with RequestId : " + reqId);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Exception in handleStats", e);
-            return Map.of("error", e.getMessage());
+           throw e;
         }
     }
 

@@ -188,8 +188,9 @@
          Product &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         <select id="taskengine_product" onchange="doTaskEngineProductSwitchChanges()">
         </select>
-         &nbsp;&nbsp;&nbsp;ThreadPool Name &nbsp;&nbsp;<select id="thread_pool">
+         &nbsp;&nbsp;&nbsp;ThreadPool Name &nbsp;&nbsp;<select id="thread_pool" onchange="handleThreadPoolChange()">
          </select>
+         <input type="text" id="thread_pool_custom" placeholder="Enter thread pool name" style="display:none;margin-left: 5px;">
         <div id="idc_jobs_container" style="display:none">
           &nbsp;&nbsp;&nbsp;User Id &nbsp;&nbsp;&nbsp;<input type="text" id="user_id"/>
          &nbsp;&nbsp;&nbsp;Customer Id  &nbsp;<input type="text" id="customer_id"/>
@@ -329,12 +330,15 @@ if(document.getElementById("is_common").checked)
 function doTaskEngineProductSwitchChanges()
 {
 
-var threadPoolsOptions;
+var threadPoolsOptions = "";
 const threadPoolsList = SAS_META['taskengine_meta']['thread_pools'][getElementValue("taskengine_product").split("-")[0]];
  for (var i in threadPoolsList) {
       threadPoolsOptions += "<option value=" + threadPoolsList[i] + ">" + threadPoolsList[i] + "</option>";
  }
-document.getElementById('thread_pool').innerHTML = threadPoolsOptions
+ threadPoolsOptions += "<option value=\"__CUSTOM__\">Other</option>";
+document.getElementById('thread_pool').innerHTML = threadPoolsOptions;
+document.getElementById('thread_pool_custom').style.display = "none";
+document.getElementById('thread_pool_custom').value = "";
 if(SAS_META.db_meta[getElementValue("taskengine_product")] != undefined)
 {
 document.getElementById("idc_jobs_container").style.display="none"
@@ -345,6 +349,32 @@ else
 document.getElementById("local_jobs_container").style.display="none"
 document.getElementById("idc_jobs_container").style.display="inline"
 }
+}
+
+function handleThreadPoolChange()
+{
+    const threadPoolSelect = document.getElementById('thread_pool');
+    const customInput = document.getElementById('thread_pool_custom');
+    if(threadPoolSelect.value === "__CUSTOM__")
+    {
+        customInput.style.display = "inline";
+        customInput.focus();
+    }
+    else
+    {
+        customInput.style.display = "none";
+        customInput.value = "";
+    }
+}
+
+function getThreadPoolValue()
+{
+    const threadPoolSelect = document.getElementById('thread_pool');
+    if(threadPoolSelect.value === "__CUSTOM__")
+    {
+        return document.getElementById('thread_pool_custom').value;
+    }
+    return threadPoolSelect.value;
 }
 
 function changeIsRepetitive()
@@ -397,7 +427,7 @@ function getJobDetails()
                    "zsid": getElementValue("dataspace_id"),
                    "customer_id": getElementValue("customer_id"),
                    "job_id": getElementValue("job_id"),
-                   "thread_pool": getElementValue("thread_pool"),
+                   "thread_pool": getThreadPoolValue(),
                    "operation":"get"
                }
 
@@ -451,7 +481,7 @@ function getRepetitionDetails()
                    "zsid": getElementValue("dataspace_id"),
                    "customer_id": getElementValue("customer_id"),
                     "user_id": getElementValue("user_id"),
-                   "thread_pool": getElementValue("thread_pool"),
+                   "thread_pool": getThreadPoolValue(),
                    "operation":"get",
                    "repetition_name" : getElementValue("repetition_name"),
                     "is_common" : document.getElementById("is_common").checked,
@@ -540,7 +570,7 @@ function addOrUpdatePeriodicRepetition()
                    "zsid": getElementValue("dataspace_id"),
                    "user_id": getElementValue("user_id"),
                    "customer_id": getElementValue("customer_id"),
-                   "thread_pool": getElementValue("thread_pool"),
+                   "thread_pool": getThreadPoolValue(),
                    "repetition_name" : getElementValue("repetition_name"),
                    "periodicity" : getElementValue("periodicity"),
                    "is_common" : document.getElementById("is_common").checked,
@@ -592,7 +622,7 @@ function addOrUpdateCalenderRepetition()
                    "zsid": getElementValue("dataspace_id"),
                    "user_id": getElementValue("user_id"),
                    "customer_id": getElementValue("customer_id"),
-                   "thread_pool": getElementValue("thread_pool"),
+                   "thread_pool": getThreadPoolValue(),
                    "repetition_name" : getElementValue("repetition_name"),
                    "frequency" : getElementValue("frequency"),
                    "time" : getElementValue("time"),
@@ -648,7 +678,7 @@ function addOrUpdateJob()
                    "user_id": getElementValue("user_id"),
                    "customer_id": getElementValue("customer_id"),
                    "job_id": getElementValue("job_id"),
-                   "thread_pool": getElementValue("thread_pool"),
+                   "thread_pool": getThreadPoolValue(),
                    "class_name":getElementValue("class_name"),
                    "delay": getElementValue("delay_seconds"),
                    "repetition" : getElementValue("repetition"),
@@ -707,7 +737,7 @@ function deleteRepetition()
                    "customer_id": getElementValue("customer_id"),
                    "user_id": getElementValue("user_id"),
                    "repetition_name": getElementValue("repetition_name"),
-                   "thread_pool": getElementValue("thread_pool"),
+                   "thread_pool": getThreadPoolValue(),
                    "operation":"delete"
                }
 
@@ -760,7 +790,7 @@ function deleteJob()
                    "zsid": getElementValue("dataspace_id"),
                    "customer_id": getElementValue("customer_id"),
                    "job_id": getElementValue("job_id"),
-                   "thread_pool": getElementValue("thread_pool"),
+                   "thread_pool": getThreadPoolValue(),
                    "operation":"delete"
                }
 
