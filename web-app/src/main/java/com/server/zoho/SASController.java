@@ -29,10 +29,12 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -258,21 +260,21 @@ public class SASController
 			if(credentials.optBoolean("need_table"))
 			{
 				DatabaseMetaData databaseMetaData = connection.getMetaData();
-				List<String> tableList = new ArrayList<>();
+				Set<String> tableSet = new HashSet<>();
 				ResultSet tableResultSet = databaseMetaData.getTables(null, "jbossdb", "%", new String[] {"TABLE"});
 				while(tableResultSet.next())
 				{
 					try
 					{
 						if(!tableResultSet.getString("TABLE_NAME").equalsIgnoreCase("Table"))
-							tableList.add(tableResultSet.getString("TABLE_NAME"));
+							tableSet.add(tableResultSet.getString("TABLE_NAME"));
 					}
 					catch(Exception e)
 					{
 					}
 				}
 				Map<String, Object> result = new HashMap<>();
-				result.put("tables", tableList);
+				result.put("tables", tableSet);
 				result.put("is_multigrid", sasService.isMultiGrid(connection));
 				return result;
 			}

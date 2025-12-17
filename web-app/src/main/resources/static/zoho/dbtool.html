@@ -65,6 +65,15 @@
         tr:nth-child(even) {
             background-color: #dddddd;
         }
+
+        .table-search-input {
+            width: 200px;
+            height: 25px;
+            padding: 2px 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 14px;
+        }
     </style>
     <body style="padding:30px">
         <div class="loading" id="loading" style="display:none">Loading&#8230;</div>
@@ -105,7 +114,9 @@
         <button id="quickExe" onclick="getTables()">Populate tables</button><br />
         <div id="tableSelection" style="display: none;">
             Table&nbsp;&nbsp;&nbsp;
-            <select name="tableList" id="tableList" onchange="getColumns()">
+            <input type="text" class="table-search-input" id="tableListSearch" list="tableListOptions" placeholder="Search tables..." onchange="handleTableListChange()" autocomplete="off">
+            <datalist id="tableListOptions"></datalist>
+            <select name="tableList" id="tableList" onchange="handleTableListChange()" style="display: none;">
                 <option value="" disabled selected>Loading .. </option>
             </select>
             &nbsp;&nbsp;&nbsp;Limit :
@@ -127,6 +138,7 @@
              </select>
              &nbsp;&nbsp;&nbsp<input type="text" id="where_column_value"/>
             &nbsp;&nbsp;&nbsp<button onclick="updateRow()">UPDATE</button> &nbsp;&nbsp;&nbsp
+            <button style='background-color:red' onclick="deleteRow()">DELETE</button>
 
         </div>
         <br />
@@ -136,7 +148,7 @@
         <br />
         <br />
 
-        <b>Select Query</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br />
+        <b>Plain Query</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br />
         <br />
         <textarea id="query" rows="10" cols="50" style="height: 100px; width: 500px;"> </textarea><br />
         <p style="font-size: 11px; display: none;" id="suggestionHint">* Click on the matching suggestion to autocomplete</p>
@@ -244,7 +256,7 @@
          <button onclick="addOrUpdateRepetition()">ADD OR UPDATE REPETITION </button>
          <button onclick="deleteRepetition()">DELETE REPETITION </button>
         </div>
-        <p id="taskengine" style=""></p>
+        <p id="taskengine"></p>
         <br>
         <br>
         <script>
@@ -293,6 +305,27 @@
             }
 
             document.getElementById("query").value = updateQuery
+            confirmAndExecute();
+        }
+
+
+         function deleteRow()
+        {
+            const tableName = document.getElementById("tableList").value;
+            const columnName = document.getElementById("columnListForWhere").value;
+            const columnValue = document.getElementById("where_column_value").value;
+
+            var deleteQuery = "Delete from " + tableName;
+
+            if(columnValue == undefined || columnValue.length < 1)
+            {
+                alert('Criteria is mandatory for delete query')
+                return;
+            }
+            else
+                deleteQuery = deleteQuery + " Where " + columnName + " = '" + columnValue + "'"
+
+            document.getElementById("query").value = deleteQuery;
             confirmAndExecute();
         }
 
@@ -1390,6 +1423,7 @@ function handleZohoAuth(authURI)
                     tableName = "sasaccounts";
                 }
                 document.getElementById("tableList").value = tableName;
+                document.getElementById("tableListSearch").value = tableName;
             }
             
             if (!tableName || tableName.trim() === "") {
@@ -1466,16 +1500,33 @@ function handleZohoAuth(authURI)
 
         function populateTables() {
             var tableListOptions = "";
+            var datalist = document.getElementById("tableListOptions");
+            datalist.innerHTML = ""; // Clear existing options
+            
             for (var i in TABLE_LIST) {
-                tableListOptions += "<option >" + TABLE_LIST[i] + "</option>";
+                var tableName = TABLE_LIST[i];
+                tableListOptions += "<option value=\"" + tableName + "\">" + tableName + "</option>";
+                // Add to datalist for search
+                var option = document.createElement("option");
+                option.value = tableName;
+                datalist.appendChild(option);
             }
             document.getElementById("tableList").innerHTML = tableListOptions;
-            if (getElementValue("zsid") == "admin")
-                if (document.getElementById("mysql").checked)
-                    document.querySelector("#tableList").value = "SASAccounts";
-                else
-                    document.querySelector("#tableList").value = "sasaccounts";
+            
+            if (getElementValue("zsid") == "admin") {
+                var defaultTable = document.getElementById("mysql").checked ? "SASAccounts" : "sasaccounts";
+                document.getElementById("tableList").value = defaultTable;
+                document.getElementById("tableListSearch").value = defaultTable;
+            } else {
+                document.getElementById("tableListSearch").value = "";
+            }
+        }
 
+        function handleTableListChange() {
+            // Sync the hidden select with the search input value
+            var searchValue = document.getElementById("tableListSearch").value;
+            document.getElementById("tableList").value = searchValue;
+            getColumns();
         }
 
         function populateColumn(columnMeta) {

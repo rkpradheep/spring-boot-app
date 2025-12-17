@@ -64,10 +64,6 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 
 		try
 		{
-			if(true)
-			{
-				return new WorkflowEvent(BuildEventType.SD_LOCAL_BUILD_UPDATE, Map.of("message", "SD csez build upload completed"));
-			}
 			LOGGER.info("Preparing SD Build Update for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion + ", productName: " + productName);
 
 			String commentMessageFormat = Boolean.TRUE.equals(isBugFixBuild) ? "'Master Bugfix Build' dd MMMM yyyy" : "'Master Build' dd MMMM yyyy";

@@ -6,9 +6,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.server.framework.common.CommonService;
 import com.server.framework.http.HttpService;
 import com.server.zoho.controller.BuildWorkflowController;
 
@@ -38,6 +40,10 @@ public class BuildAutomationService
 
 		if(productsForBuild.isEmpty())
 		{
+			String initiatorEmail = ZohoService.getCurrentUserEmail();
+			String initiatorMessage = StringUtils.equals(initiatorEmail, "SCHEDULER") ? initiatorEmail : "{@" + initiatorEmail + "}";
+			initiatorMessage = "\n\nInitiated By : " + initiatorMessage;
+			ZohoService.postMessageToChannel(CommonService.getDefaultChannelUrl(), "Build cannot be initiated since no products qualified for build." + initiatorMessage);
 			LOGGER.info("Build Automation: No products found for build");
 			return productsForBuild;
 		}
