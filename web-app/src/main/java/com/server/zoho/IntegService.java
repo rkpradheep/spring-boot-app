@@ -410,7 +410,7 @@ public class IntegService
 
 			JSONObject request = new JSONObject()
 				.put("stage", "pre")
-				.put("grid_value", "IN1")
+				.put("grid_value", "IN2")
 				.put("product_id", IntegService.getProductConfig(product).getId())
 				.put("checkout_label", branchName)
 				.put("product_name", "ZOHOPAYOUT")

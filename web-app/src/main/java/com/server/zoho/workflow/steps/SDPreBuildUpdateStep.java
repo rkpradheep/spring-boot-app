@@ -57,7 +57,7 @@ public class SDPreBuildUpdateStep extends WorkflowStep
 		{
 			LOGGER.info("Preparing SD Build Update for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion + ", productName: " + productName);
 
-			String response = ZohoService.uploadBuild(productName, milestoneVersion, "IN1", "IN", "pre", isPatchBuildUpdate, buildURL);
+			String response = ZohoService.uploadBuild(productName, milestoneVersion, "IN2", "IN", "pre", isPatchBuildUpdate, buildURL);
 			LOGGER.info("SD Build Update Response PRE : " + response);
 
 			boolean isPreBuildSuccessful = new JSONObject(response).optString("code", "").equals("SUCCESS");
