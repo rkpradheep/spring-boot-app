@@ -310,7 +310,7 @@ public class ZohoService
 		{
 			return;
 		}
-		if(SecurityUtil.getCurrentRequestURI().matches("/api/v1/zoho/(mark-as-paid-org|mark-as-test-org|org-count-increment)"))
+		if(SecurityUtil.getCurrentRequestURI().matches("/api/v1/zoho/(mark-as-paid-org|mark-as-test-org|org-count-increment|mark-as-non-test-org)"))
 		{
 			return;
 		}

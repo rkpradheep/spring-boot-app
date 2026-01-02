@@ -176,13 +176,23 @@
             <option value="payout-csez">PAYOUT CSEZ</option>
         </select>&nbsp;&nbsp;ZSID &nbsp;&nbsp;<input type="text" id="test_org_zsid"/> <button onclick="markAsTestOrPaidOrg(false)">Mark As Test Org</button>
         <br>
+        <select id="non_test_org_products">
+            <option value="payout-local">PAYOUT LOCAL</option>
+            <option value="books-local">BOOKS LOCAL</option>
+            <option value="payout-csez">PAYOUT CSEZ</option>
+        </select>&nbsp;&nbsp;ZSID &nbsp;&nbsp;<input type="text" id="non_test_org_zsid"/> <button onclick="markAsNonTestOrg(false)">Mark As Non Test Org</button>
+        <br>
         <select id="paid_org_products">
             <option value="books-local">BOOKS LOCAL</option>
+            <option value="erp-local">ERP LOCAL</option>
         </select>&nbsp;&nbsp;ZSID &nbsp;&nbsp;<input type="text" id="paid_org_zsid"/> <button onclick="markAsTestOrPaidOrg(true)">Mark As Paid Org</button>
         <br>
         <select id="org_count_increase_products">
             <option value="books-local">BOOKS LOCAL</option>
         </select>&nbsp;&nbsp;ZUID &nbsp;&nbsp;<input type="text" id="org_count_increase_zuid"/> &nbsp;&nbsp;Count &nbsp;&nbsp;<input type="text" id="org_count_increase_value"/> <button onclick="increaseOrgCount()">Update Free Org Creation Count</button>
+        <br>
+        <input type="text" id="erp-unique-id" placeholder="ERP Unique ID"/>
+        <button onclick="setupSBI()">Setup SBI</button>
         <br>
         <br>
         <br>
@@ -260,1583 +270,1653 @@
         <br>
         <br>
         <script>
-        var SAS_META;
-        var QUERY_OUTPUT = "";
-        var CURRENT_TABLE_PK = "";
-        var TABLE_LIST = [];
-        var COLUMN_LIST = [];
-        var isEncrypted = true;
+                    var SAS_META;
+                    var QUERY_OUTPUT = "";
+                    var CURRENT_TABLE_PK = "";
+                    var TABLE_LIST = [];
+                    var COLUMN_LIST = [];
+                    var isEncrypted = true;
 
 
-        function updateRow()
-        {
-            const tableName = document.getElementById("tableList").value;
-            const setColumnName = document.getElementById("columnListForSet").value;
-            if(setColumnName == 'Select Column')
-            {
-                alert("Please choose column name to update!");
-                return;
-            }
-            const whereColumnName = document.getElementById("columnListForWhere").value;
-            if(setColumnName == 'Select Column')
-            {
-                alert("Please choose column name for criteria!");
-                return;
-            }
-            const setColumnValue = document.getElementById("set_column_value").value;
-            const whereColumnValue = document.getElementById("where_column_value").value;
-             var gotConsent = true;
-            if(setColumnValue == undefined || setColumnValue.length < 1)
-            {
-                alert("Please enter valid column value");
-                return;
-            }
-
-            var updateQuery = "Update " + tableName + " set " + setColumnName + " = '" + setColumnValue + "'";
-
-           if(whereColumnValue == undefined || whereColumnValue.length < 1)
-           {
-                alert('Criteria is mandatory for update query')
-                return;
-           }
-            else
-            {
-            updateQuery = updateQuery + " Where " + whereColumnName + " = '" + whereColumnValue + "'"
-            }
-
-            document.getElementById("query").value = updateQuery
-            confirmAndExecute();
-        }
-
-
-         function deleteRow()
-        {
-            const tableName = document.getElementById("tableList").value;
-            const columnName = document.getElementById("columnListForWhere").value;
-            const columnValue = document.getElementById("where_column_value").value;
-
-            var deleteQuery = "Delete from " + tableName;
-
-            if(columnValue == undefined || columnValue.length < 1)
-            {
-                alert('Criteria is mandatory for delete query')
-                return;
-            }
-            else
-                deleteQuery = deleteQuery + " Where " + columnName + " = '" + columnValue + "'"
-
-            document.getElementById("query").value = deleteQuery;
-            confirmAndExecute();
-        }
-
-        function confirmAndExecute()
-        {
-        if(confirm("Do you want to continue?\n\nQuery to be executed : \n" + document.getElementById("query").value))
-        {
-            execute();
-         }
-        }
-
-function doChangeForTaskEngineManagement()
-{
-
-if(document.querySelector('input[name="taskengine-manage"]:checked').value == 'jobEntity-manage')
-{
-    hideElement('repetition-management')
-    unHideElement('jobEntity-management')
-}
-else
-{
-    hideElement('jobEntity-management')
-    unHideElement('repetition-management')
-}
-}
-
-function showAlertForIsCommon()
-{
-if(document.getElementById("is_common").checked)
-{
-    alert("Common repetitions cannot be updated or deleted")
-}
-
-}
-function doTaskEngineProductSwitchChanges()
-{
-
-var threadPoolsOptions = "";
-const threadPoolsList = SAS_META['taskengine_meta']['thread_pools'][getElementValue("taskengine_product").split("-")[0]];
- for (var i in threadPoolsList) {
-      threadPoolsOptions += "<option value=" + threadPoolsList[i] + ">" + threadPoolsList[i] + "</option>";
- }
- threadPoolsOptions += "<option value=\"__CUSTOM__\">Other</option>";
-document.getElementById('thread_pool').innerHTML = threadPoolsOptions;
-document.getElementById('thread_pool_custom').style.display = "none";
-document.getElementById('thread_pool_custom').value = "";
-if(SAS_META.db_meta[getElementValue("taskengine_product")] != undefined)
-{
-document.getElementById("idc_jobs_container").style.display="none"
-document.getElementById("local_jobs_container").style.display="inline"
-}
-else
-{
-document.getElementById("local_jobs_container").style.display="none"
-document.getElementById("idc_jobs_container").style.display="inline"
-}
-}
-
-function handleThreadPoolChange()
-{
-    const threadPoolSelect = document.getElementById('thread_pool');
-    const customInput = document.getElementById('thread_pool_custom');
-    if(threadPoolSelect.value === "__CUSTOM__")
-    {
-        customInput.style.display = "inline";
-        customInput.focus();
-    }
-    else
-    {
-        customInput.style.display = "none";
-        customInput.value = "";
-    }
-}
-
-function getThreadPoolValue()
-{
-    const threadPoolSelect = document.getElementById('thread_pool');
-    if(threadPoolSelect.value === "__CUSTOM__")
-    {
-        return document.getElementById('thread_pool_custom').value;
-    }
-    return threadPoolSelect.value;
-}
-
-function changeIsRepetitive()
-{
-
-if(document.getElementById("is_repetitive").checked)
-{
-document.getElementById("repetition").style.display="inline"
-document.getElementById("repetition_label").style.display="inline"
-}
-else
-{
-document.getElementById("repetition").style.display="none"
-document.getElementById("repetition_label").style.display="none"
-}
-}
-
-function doChangeForFrequency()
-{
-if(getElementValue("frequency") == 'weekly')
-{
-document.getElementById("day-of-week").style.display="inline"
-document.getElementById("day-of-week-label").style.display="inline"
-document.getElementById("date-of-month").style.display="none"
-document.getElementById("date-of-month-label").style.display="none"
-}
-else if(getElementValue("frequency") == 'daily')
-{
-document.getElementById("day-of-week").style.display="none"
-document.getElementById("day-of-week-label").style.display="none"
-document.getElementById("date-of-month").style.display="none"
-document.getElementById("date-of-month-label").style.display="none"
-}
-
-else if(getElementValue("frequency") == 'monthly')
-{
-document.getElementById("date-of-month").style.display="inline"
-document.getElementById("date-of-month-label").style.display="inline"
-document.getElementById("day-of-week").style.display="none"
-document.getElementById("day-of-week-label").style.display="none"
-}
-
-}
-function getJobDetails()
-{
-
-               const data = {
-                   "service":getElementValue("taskengine_product").split("-")[0],
-                   "dc": getElementValue("taskengine_product").split("-")[1],
-                   "zsid": getElementValue("dataspace_id"),
-                   "customer_id": getElementValue("customer_id"),
-                   "job_id": getElementValue("job_id"),
-                   "thread_pool": getThreadPoolValue(),
-                   "operation":"get"
-               }
-
-                    unHideElement("loading");
-                    var res;
-                    fetch("/api/v1/zoho/jobs", {
-                            method: "POST",
-                     headers: {
-                         'Content-Type': 'application/json'
-                     },
-                     body: JSON.stringify(data)
-                        })
-                        .then((response) => {
-                            hideElement("loading");
-                            return response.text();
-                        })
-                        .then((data) => {
-                            res = JSON.parse(data)
-                            if(handleRedirection(res))
-                            {
-                                return;
-                            }
-                            // Handle new standardized response format
-                            if (!res.success) {
-                                alert(res.message || res.error || "An error occurred");
-                                console.log(res.message || res.error);
-                                document.getElementById("taskengine").innerHTML=""
-                                return;
-                            }
-                            
-                            var output= ""
-                            var jsonObj = res.data || JSON.parse(data).data;
-                            for (const key in jsonObj) {
-                                output+="<b>" + key + "</b> : " + jsonObj[key] +"<br/><br/>";
-                            }
-                             document.getElementById("taskengine").innerHTML=output
-                        })
-                        .catch((error) => {
-                            hideElement("loading");
-                            console.log(error);
-                            alert("Something went wrong. Please try again later.");
-                        });
-}
-
-
-function getRepetitionDetails()
-{
-               const data = {
-                   "service":getElementValue("taskengine_product").split("-")[0],
-                   "dc": getElementValue("taskengine_product").split("-")[1],
-                   "zsid": getElementValue("dataspace_id"),
-                   "customer_id": getElementValue("customer_id"),
-                    "user_id": getElementValue("user_id"),
-                   "thread_pool": getThreadPoolValue(),
-                   "operation":"get",
-                   "repetition_name" : getElementValue("repetition_name"),
-                    "is_common" : document.getElementById("is_common").checked,
-               }
-
-                    unHideElement("loading");
-                    var res;
-                    fetch("/api/v1/zoho/repetitions", {
-                            method: "POST",
-                     headers: {
-                         'Content-Type': 'application/json'
-                     },
-                     body: JSON.stringify(data)
-                        })
-                        .then((response) => {
-                            hideElement("loading");
-                            return response.text();
-                        })
-                        .then((data) => {
-                            res = JSON.parse(data)
-                            if(handleRedirection(res))
-                            {
-                                return;
-                            }
-                            // Handle new standardized response format
-                            if (!res.success) {
-                                alert(res.message || res.error || "An error occurred");
-                                console.log(res.message || res.error);
-                                document.getElementById("taskengine").innerHTML= ""
-                                return;
-                            }
-                            
-                            var output= ""
-                            var jsonObj = res.data || JSON.parse(data).data;
-                            for (const key in jsonObj) {
-                                output+="<b>" + key + "</b> : " + jsonObj[key] +"<br/><br/>";
-                            }
-                             document.getElementById("taskengine").innerHTML=output
-                        })
-                        .catch((error) => {
-                            hideElement("loading");
-                            console.log(error);
-                            alert("Something went wrong. Please try again later.");
-                        });
-}
-
-
-function addOrUpdateRepetition()
-{
-if(document.querySelector('input[name="repetition-type"]:checked').value == 'periodic_repetition')
-    addOrUpdatePeriodicRepetition()
-else
-    addOrUpdateCalenderRepetition();
-}
-
-function doChangeForRepetitionType()
-{
-if(document.querySelector('input[name="repetition-type"]:checked').value == 'periodic_repetition')
-{
-document.getElementById("periodicity").style.display="inline"
-document.getElementById("periodicity_label").style.display="inline"
-
-document.getElementById("frequency").style.display="none"
-document.getElementById("frequency_label").style.display="none"
-document.getElementById("time").style.display="none"
-document.getElementById("time_label").style.display="none"
-}
-else
-{
-document.getElementById("frequency").style.display="inline"
-document.getElementById("frequency_label").style.display="inline"
-document.getElementById("time").style.display="inline"
-document.getElementById("time_label").style.display="inline"
-
-document.getElementById("periodicity").style.display="none"
-document.getElementById("periodicity_label").style.display="none"
-}
-}
-
-function addOrUpdatePeriodicRepetition()
-{
-
-               const data = {
-                   "service":getElementValue("taskengine_product").split("-")[0],
-                   "dc": getElementValue("taskengine_product").split("-")[1],
-                   "zsid": getElementValue("dataspace_id"),
-                   "user_id": getElementValue("user_id"),
-                   "customer_id": getElementValue("customer_id"),
-                   "thread_pool": getThreadPoolValue(),
-                   "repetition_name" : getElementValue("repetition_name"),
-                   "periodicity" : getElementValue("periodicity"),
-                   "is_common" : document.getElementById("is_common").checked,
-                   "operation":"add_periodic"
-               }
-
-                    unHideElement("loading");
-                    var res;
-                    fetch("/api/v1/zoho/repetitions", {
-                            method: "POST",
-                     headers: {
-                         'Content-Type': 'application/json'
-                     },
-                     body: JSON.stringify(data)
-                        })
-                        .then((response) => {
-                            hideElement("loading");
-                            return response.text();
-                        })
-                        .then((data) => {
-                            res = JSON.parse(data)
-                            if(handleRedirection(res))
-                            {
-                                return;
-                            }
-                    if(res.error_code == "reauth_required")
+                    function updateRow()
                     {
-                      handleZohoAuth(res.data.auth_uri)
-                      return;
-                     }
-                            alert(res.message)
-
-                        })
-                        .catch((error) => {
-                            hideElement("loading");
-                            console.log(error);
-                            alert("Something went wrong. Please try again later.");
-                        });
-
-}
-
-
-function addOrUpdateCalenderRepetition()
-{
-
-               const data = {
-                   "service":getElementValue("taskengine_product").split("-")[0],
-                   "dc": getElementValue("taskengine_product").split("-")[1],
-                   "zsid": getElementValue("dataspace_id"),
-                   "user_id": getElementValue("user_id"),
-                   "customer_id": getElementValue("customer_id"),
-                   "thread_pool": getThreadPoolValue(),
-                   "repetition_name" : getElementValue("repetition_name"),
-                   "frequency" : getElementValue("frequency"),
-                   "time" : getElementValue("time"),
-                   "day-of-week" : getElementValue("day-of-week"),
-                   "is_common" : document.getElementById("is_common").checked,
-                   "date_of_month" : getElementValue("date-of-month"),
-                   "operation":"add_calender"
-               }
-
-                    unHideElement("loading");
-                    var res;
-                    fetch("/api/v1/zoho/repetitions", {
-                            method: "POST",
-                     headers: {
-                         'Content-Type': 'application/json'
-                     },
-                     body: JSON.stringify(data)
-                        })
-                        .then((response) => {
-                            hideElement("loading");
-                            return response.text();
-                        })
-                        .then((data) => {
-                            res = JSON.parse(data)
-                            if(handleRedirection(res))
-                            {
-                                return;
-                            }
-
-                    if(res.error_code == "reauth_required")
-                    {
-                      handleZohoAuth(res.data.auth_uri)
-                      return;
-                     }
-                      alert(res.message)
-
-                        })
-                        .catch((error) => {
-                            hideElement("loading");
-                            console.log(error);
-                            alert("Something went wrong. Please try again later.");
-                        });
-
-}
-
-function addOrUpdateJob()
-{
-
-               const data = {
-                   "service":getElementValue("taskengine_product").split("-")[0],
-                   "dc": getElementValue("taskengine_product").split("-")[1],
-                   "zsid": getElementValue("dataspace_id"),
-                   "user_id": getElementValue("user_id"),
-                   "customer_id": getElementValue("customer_id"),
-                   "job_id": getElementValue("job_id"),
-                   "thread_pool": getThreadPoolValue(),
-                   "class_name":getElementValue("class_name"),
-                   "delay": getElementValue("delay_seconds"),
-                   "repetition" : getElementValue("repetition"),
-                   "retry_repetition" : getElementValue("retry_repetition"),
-                   "operation":"add",
-                   "is_repetitive" : document.getElementById("is_repetitive").checked
-               }
-
-                    unHideElement("loading");
-                    var res;
-                    fetch("/api/v1/zoho/jobs", {
-                            method: "POST",
-                     headers: {
-                         'Content-Type': 'application/json'
-                     },
-                     body: JSON.stringify(data)
-                        })
-                        .then((response) => {
-                            hideElement("loading");
-                            return response.text();
-                        })
-                        .then((data) => {
-                            res = JSON.parse(data)
-                            if(handleRedirection(res))
-                            {
-                                return;
-                            }
-                            
-                            // Handle new standardized response format
-                            if (!res.success) {
-                    if(res.error_code == "reauth_required")
-                    {
-                      handleZohoAuth(res.data.auth_uri)
-                      return;
-                     }
-                                alert(res.message || res.error || "An error occurred");
-                                console.log(res.message || res.error);
-                                return;
-                            }
-                            alert(res.message);
-                        })
-                        .catch((error) => {
-                            hideElement("loading");
-                            console.log(error);
-                            alert("Something went wrong. Please try again later.");
-                        });
-}
-
-function deleteRepetition()
-{
-
-               const data = {
-                   "service":getElementValue("taskengine_product").split("-")[0],
-                   "dc": getElementValue("taskengine_product").split("-")[1],
-                   "zsid": getElementValue("dataspace_id"),
-                   "customer_id": getElementValue("customer_id"),
-                   "user_id": getElementValue("user_id"),
-                   "repetition_name": getElementValue("repetition_name"),
-                   "thread_pool": getThreadPoolValue(),
-                   "operation":"delete"
-               }
-
-                    unHideElement("loading");
-                    var res;
-                    fetch("/api/v1/zoho/repetitions", {
-                            method: "POST",
-                     headers: {
-                         'Content-Type': 'application/json'
-                     },
-                     body: JSON.stringify(data)
-                        })
-                        .then((response) => {
-                            hideElement("loading");
-                            return response.text();
-                        })
-                        .then((data) => {
-                            res = JSON.parse(data)
-                            if(handleRedirection(res))
-                            {
-                                return;
-                            }
-                            var error = res["error"]
-                            if (error != undefined) {
-                                alert(error)
-                                console.log(error);
-                            }
-                            else{
-                    if(res.error_code == "reauth_required")
-                    {
-                      handleZohoAuth(res.data.auth_uri)
-                      return;
-                     }
-                            alert(res.message)
-                            }
-                        })
-                        .catch((error) => {
-                            hideElement("loading");
-                            console.log(error);
-                            alert("Something went wrong. Please try again later.");
-                        });
-}
-
-function deleteJob()
-{
-
-               const data = {
-                   "service":getElementValue("taskengine_product").split("-")[0],
-                   "dc": getElementValue("taskengine_product").split("-")[1],
-                   "zsid": getElementValue("dataspace_id"),
-                   "customer_id": getElementValue("customer_id"),
-                   "job_id": getElementValue("job_id"),
-                   "thread_pool": getThreadPoolValue(),
-                   "operation":"delete"
-               }
-
-                    unHideElement("loading");
-                    var res;
-                    fetch("/api/v1/zoho/jobs", {
-                            method: "POST",
-                     headers: {
-                         'Content-Type': 'application/json'
-                     },
-                     body: JSON.stringify(data)
-                        })
-                        .then((response) => {
-                            hideElement("loading");
-                            return response.text();
-                        })
-                        .then((data) => {
-                            res = JSON.parse(data)
-                            if(handleRedirection(res))
-                            {
-                                return;
-                            }
-                            
-                            // Handle new standardized response format
-                            if (!res.success) {
-                    if(res.error_code == "reauth_required")
-                    {
-                      handleZohoAuth(res.data.auth_uri)
-                      return;
-                     }
-                                alert(res.message || res.error || "An error occurred");
-                                console.log(res.message || res.error);
-                                return;
-                            }
-
-                            alert(res.message);
-                        })
-                        .catch((error) => {
-                            hideElement("loading");
-                            console.log(error);
-                            alert("Something went wrong. Please try again later.");
-                        });
-}
-
-var initCompleted = false;
-
-        function getSASMeta() {
-            fetch("/api/v1/sas/meta", {
-                    method: "GET",
-                })
-                .then((response) => {
-                    return response.text();
-                })
-                .then((data) => {
-                    var res = JSON.parse(data);
-                    if(handleRedirection(res))
-                    {
-                        hideElement("loading");
-                        return;
-                    }
-                    // Handle new standardized response format
-                    if (!res.success) {
-                        console.log("Failed to get SAS meta:", res.message || res.error);
-                        return;
-                    }
-                    
-                    SAS_META = res.data || res;
-                    if(initCompleted)
-                    {
-                       getDBCredential(false);
-                        return
-                     }
-                    populateISCProducts();
-                    populateTaskEngineProducts();
-                    populateEARProducts()
-                    populateDBProducts()
-                    setElementValue("zsid", "admin");
-                    getDBCredential(false);
-                    initCompleted = true;
-                })
-                .catch((error) => {
-                    console.log(error);
-                });
-        }
-        const textArea = document.getElementById("query");
-        const autocompleteContainer = document.getElementById("autocomplete-container");
-
-        const isMobile =
-            navigator.userAgent.match(/Android/i) ||
-            navigator.userAgent.match(/webOS/i) ||
-            navigator.userAgent.match(/iPhone/i) ||
-            navigator.userAgent.match(/iPad/i) ||
-            navigator.userAgent.match(/iPod/i) ||
-            navigator.userAgent.match(/BlackBerry/i) ||
-            navigator.userAgent.match(/Windows Phone/i);
-        if (!isMobile) {
-            textArea.addEventListener("input", function() {
-                autocompleteContainer.style.display = "block";
-                document.getElementById("suggestionHint").style.display = "block";
-                autocompleteContainer.innerHTML = "";
-                const userInput = textArea.value;
-                var lastWords = userInput.split(" ");
-                var lastWord = lastWords.pop();
-                lastWord = lastWord == "" ? lastWords.pop() : lastWord;
-                const defaultList = ["Select", "Where", "From", "Order By", "Group By", "Top", "Having", "Limit", "DESC", "ASC", "Count(*)", "LIKE"];
-                const filteredSuggestions = defaultList.concat(COLUMN_LIST.map(column => document.getElementById("tableList").value + "." + column)).concat(TABLE_LIST).filter((suggestion) => suggestion.toLowerCase().match(lastWord.toLowerCase() + "(.*)"));
-                //console.log(filteredSuggestions);
-                if (filteredSuggestions.length == 0) {
-                    autocompleteContainer.style.display = "none";
-                    document.getElementById("suggestionHint").style.display = "none";
-                    return;
-                }
-                autocompleteContainer.innerHTML = "";
-                filteredSuggestions.forEach((suggestion) => {
-                    const li = document.createElement("option");
-                    li.textContent = suggestion;
-                    li.addEventListener("click", function() {
-                        const words = userInput.split(" ");
-                        if (words.pop() == " ") words.pop(); // Remove the last incomplete word
-                        words.push(suggestion.split(".").length > 1 ? suggestion.split(".")[1] : suggestion);
-                        textArea.value = words.join(" ") + " "; // Update the textarea content
-                        autocompleteContainer.innerHTML = "";
-                        autocompleteContainer.style.display = "none";
-                        document.getElementById("suggestionHint").style.display = "none";
-                        textArea.focus();
-                    });
-                    autocompleteContainer.appendChild(li);
-                });
-                autocompleteContainer.size = autocompleteContainer.options.length == 1 ? 2 : autocompleteContainer.options.length;
-            });
-        }
-
-
-
-function populateISCProducts()
-{
-
-var iscProductOptions;
-const iscProducts = SAS_META['isc_meta'];
- for (var key in iscProducts) {
-      iscProductOptions += "<option value=" + key + ">" + iscProducts[key] + "</option>";
- }
- document.getElementById("isc_product").innerHTML = iscProductOptions
-}
-
-function populateEARProducts()
-{
-
-var earProductOptions;
-const earProducts = SAS_META['ear_meta'];
- for (var key in earProducts) {
-      earProductOptions += "<option value=" + key + ">" + earProducts[key] + "</option>";
- }
- document.getElementById("ear_product").innerHTML = earProductOptions
-}
-
-function populateTaskEngineProducts()
-{
-
-var taskEngineProductOptions;
-const taskEngineProducts = SAS_META['taskengine_meta'].products;
- for (var key in taskEngineProducts) {
-      taskEngineProductOptions += "<option value=" + key + ">" + taskEngineProducts[key] + "</option>";
- }
- document.getElementById("taskengine_product").innerHTML = taskEngineProductOptions
- doTaskEngineProductSwitchChanges()
-}
-
-function populateDBProducts()
-{
- var dbProductOptions = ""
- const dbProducts = SAS_META['db_meta'];
- for (var key in dbProducts) {
-     dbProductOptions += "<option value=" + key + ">" + dbProducts[key].display_name + "</option>";
- }
- document.getElementById("product").innerHTML = dbProductOptions + document.getElementById("product").innerHTML;
-
-}
-
-        getSASMeta();
-        function execute() {
-            unHideElement("response");
-            if (!preExecutionValidation()) {
-                return;
-            }
-
-            if (document.getElementById("pk").value.length == 0 && document.getElementById("zsid").value.length == 0) {
-                alert("Please enter a valid ZSID or PK value");
-                return;
-            }
-
-            unHideElement("loading");
-
-            const data = {
-                "server": document.querySelector('input[name="server"]:checked').value,
-                "ip": document.getElementById("ip").value,
-                "user": document.getElementById("user").value,
-                "password": document.getElementById("password").value,
-                "zsid": document.getElementById("zsid").value,
-                "pk": document.getElementById("pk").value,
-                "skip_scoping" : document.getElementById("skip_scoping").checked,
-                "query": document.getElementById("query").value,
-                "is_encrypted": isEncrypted,
-            }
-
-            var res;
-            fetch("/api/v1/sas/execute", {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                })
-                .then((response) => {
-                    return response.text();
-                })
-                .then((data) => {
-                    res = JSON.parse(data)
-                    if(handleRedirection(res))
-                    {
-                        hideElement("loading");
-                        return;
-                    }
-                    // Handle new standardized response format
-                    if (!res.success) {
-                        if (res.error_code == "key_expired") {
-                            getSASMeta();
-                            return;
-                        }
-                    if(res.error_code == "reauth_required")
-                    {
-                      hideElement("loading");
-                      handleZohoAuth(res.data.auth_uri)
-                      return;
-                     }
-                     if (res.message) {
-                        hideElement("loading");
-                        alert(res.message)
-                        console.log(res.message);
-                        return;
-                     }
-                    }
-                    hideElement("loading");
-                    // Use data from the new format, fallback to old format
-                    var responseData = res.data || res;
-                    var temp = responseData;
-
-                    if (Array.isArray(temp["query_output"])) {
-                        console.log("Query output is array:", temp["query_output"]);
-                        QUERY_OUTPUT = temp["query_output"];
-                        // Create a copy for handleQueryOutput without modifying the original
-                        var outputData = Object.assign({}, temp);
-                        console.log("Calling handleQueryOutput with:", outputData);
-                        handleQueryOutput(outputData, "", "");
-                        setElementValue("output", "EXECUTION_INFO : \n" + JSON.stringify(temp.sas_meta, null, 2));
-                        return;
-                    }
-                     else if (temp["query_output"] != undefined && temp["query_output"] != null) {
-                        if(temp["query_output"].includes("query executed successfully"))
+                        const tableName = document.getElementById("tableList").value;
+                        const setColumnName = document.getElementById("columnListForSet").value;
+                        if(setColumnName == 'Select Column')
                         {
-                            refreshTable();
-                            alert(temp["query_output"])
+                            alert("Please choose column name to update!");
                             return;
                         }
-                        alert(temp["query_output"]);
-                        handleQueryOutputForFailed();
-                        setElementValue("output", temp["query_output"]);
-                        return;
-                    }
-                    setElementValue("output", "EXECUTION_INFO : \n" + JSON.stringify(temp.sas_meta, null, 2));
-                    handleQueryOutput(temp, "", "");
-                })
-                .catch((error) => {
-                    hideElement("loading");
-                    console.log(error);
-                    setElementValue("output", JSON.stringify(res, null, 2));
-                    alert("Something went wrong. Please check the error response below and try again.");
-                    handleQueryOutputForFailed();
-                });
-        }
-
-        function runStats() {
-            unHideElement("response");
-            if (!preExecutionValidation()) {
-                return;
-            }
-
-            unHideElement("loading");
-
-            const data = {
-                "server": document.querySelector('input[name="server"]:checked').value,
-                "ip": document.getElementById("ip").value,
-                "user": document.getElementById("user").value,
-                "password": document.getElementById("password").value,
-                "zsid": document.getElementById("zsid").value,
-                "pk": document.getElementById("pk").value,
-                "query": document.getElementById("query").value,
-                "is_encrypted": isEncrypted,
-                "is_stats" : true
-            }
-
-            var res;
-            fetch("/api/v1/sas/execute", {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                })
-                .then((response) => {
-                    return response.text();
-                })
-                .then((data) => {
-                    res = JSON.parse(data)
-                    if(handleRedirection(res))
-                    {
-                        hideElement("loading");
-                        return;
-                    }
-                    
-                    // Handle new standardized response format
-                    if (!res.success) {
-                        var error = res.error_code;
-                        if (error == "key_expired") {
-                            getSASMeta();
+                        const whereColumnName = document.getElementById("columnListForWhere").value;
+                        if(setColumnName == 'Select Column')
+                        {
+                            alert("Please choose column name for criteria!");
                             return;
                         }
-                        hideElement("loading");
-                        alert(error)
-                        return
+                        const setColumnValue = document.getElementById("set_column_value").value;
+                        const whereColumnValue = document.getElementById("where_column_value").value;
+                         var gotConsent = true;
+                        if(setColumnValue == undefined || setColumnValue.length < 1)
+                        {
+                            alert("Please enter valid column value");
+                            return;
+                        }
+
+                        var updateQuery = "Update " + tableName + " set " + setColumnName + " = '" + setColumnValue + "'";
+
+                       if(whereColumnValue == undefined || whereColumnValue.length < 1)
+                       {
+                            alert('Criteria is mandatory for update query')
+                            return;
+                       }
+                        else
+                        {
+                        updateQuery = updateQuery + " Where " + whereColumnName + " = '" + whereColumnValue + "'"
+                        }
+
+                        document.getElementById("query").value = updateQuery
+                        confirmAndExecute();
                     }
-                    
-                    hideElement("loading");
-                    // Use data from the new format, fallback to old format
-                    var responseData = res.data || res;
-                    if(res.error_code == "reauth_required")
+
+
+                     function deleteRow()
                     {
-                      handleZohoAuth(res.data.auth_uri)
-                      return;
+                        const tableName = document.getElementById("tableList").value;
+                        const columnName = document.getElementById("columnListForWhere").value;
+                        const columnValue = document.getElementById("where_column_value").value;
+
+                        var deleteQuery = "Delete from " + tableName;
+
+                        if(columnValue == undefined || columnValue.length < 1)
+                        {
+                            alert('Criteria is mandatory for delete query')
+                            return;
+                        }
+                        else
+                            deleteQuery = deleteQuery + " Where " + columnName + " = '" + columnValue + "'"
+
+                        document.getElementById("query").value = deleteQuery;
+                        confirmAndExecute();
+                    }
+
+                    function confirmAndExecute()
+                    {
+                    if(confirm("Do you want to continue?\n\nQuery to be executed : \n" + document.getElementById("query").value))
+                    {
+                        execute();
                      }
-                     alert(res.message)
-                })
-                .catch((error) => {
-                    hideElement("loading");
-                    console.log(error);
-                    setElementValue("output", JSON.stringify(res, null, 2));
-                    alert("Something went wrong. Please check the error response below and try again.");
-                });
-        }
+                    }
 
-function handleZohoAuth(authURI)
-{
-                              let screenX = screen.width / 2 - 325;
-                              let screenY = screen.height / 2 - 400;
-                              var popupOptions = "width=650,height=750,top="+ screenY + ",left=" + screenX;
-                              window.open(authURI, "Authentication", popupOptions);
+            function doChangeForTaskEngineManagement()
+            {
 
-}
-        function generateIsc()
-        {
+            if(document.querySelector('input[name="taskengine-manage"]:checked').value == 'jobEntity-manage')
+            {
+                hideElement('repetition-management')
+                unHideElement('jobEntity-management')
+            }
+            else
+            {
+                hideElement('jobEntity-management')
+                unHideElement('repetition-management')
+            }
+            }
 
-                    unHideElement("loading");
+            function showAlertForIsCommon()
+            {
+            if(document.getElementById("is_common").checked)
+            {
+                alert("Common repetitions cannot be updated or deleted")
+            }
 
-                    var res;
-                    fetch("/api/v1/zoho/isc?service=" + getElementValue("isc_product").split("-")[0] +"&dc=" + getElementValue("isc_product").split("-")[1], {
-                      method: "POST"
-                        })
-                        .then((response) => {
-                            hideElement("loading");
-                            return response.text();
-                        })
-                        .then((data) => {
-                            res = JSON.parse(data)
-                            if(handleRedirection(res))
-                            {
-                                return;
-                            }
-                            // Handle new standardized response format
-                            if (!res.success) {
-                                console.log(res.message || res.error);
-                                throw new Error("API error")
-                            }
+            }
+            function doTaskEngineProductSwitchChanges()
+            {
 
-                            document.getElementById("isc").innerText= res.data || JSON.parse(data).data
-                        })
-                        .catch((error) => {
-                            hideElement("loading");
-                            console.log(error);
-                            alert("Something went wrong. Please try again later.");
-                        });
+            var threadPoolsOptions = "";
+            const threadPoolsList = SAS_META['taskengine_meta']['thread_pools'][getElementValue("taskengine_product").split("-")[0]];
+             for (var i in threadPoolsList) {
+                  threadPoolsOptions += "<option value=" + threadPoolsList[i] + ">" + threadPoolsList[i] + "</option>";
+             }
+             threadPoolsOptions += "<option value=\"__CUSTOM__\">Other</option>";
+            document.getElementById('thread_pool').innerHTML = threadPoolsOptions;
+            document.getElementById('thread_pool_custom').style.display = "none";
+            document.getElementById('thread_pool_custom').value = "";
+            if(SAS_META.db_meta[getElementValue("taskengine_product")] != undefined)
+            {
+            document.getElementById("idc_jobs_container").style.display="none"
+            document.getElementById("local_jobs_container").style.display="inline"
+            }
+            else
+            {
+            document.getElementById("local_jobs_container").style.display="none"
+            document.getElementById("idc_jobs_container").style.display="inline"
+            }
+            }
 
-        }
-
-        function markAsTestOrPaidOrg(isPaidOrgMarking)
-        {
-
-                    unHideElement("loading");
-                    var endpoint = "/api/v1/zoho/mark-as-test-org" + "?service=" + getElementValue("test_org_products").split("-")[0] +"&dc=" + getElementValue("test_org_products").split("-")[1] + "&zsid=" + getElementValue("test_org_zsid")
-                    endpoint = isPaidOrgMarking ?  "/api/v1/zoho/mark-as-paid-org" + "?service=" + getElementValue("paid_org_products").split("-")[0] +"&dc=" + getElementValue("paid_org_products").split("-")[1] + "&zsid=" + getElementValue("paid_org_zsid") : endpoint;
-                    var res;
-                    fetch(endpoint, {
-                      method: "POST"
-                        })
-                        .then((response) => {
-                            hideElement("loading");
-                            return response.text();
-                        })
-                        .then((data) => {
-                            res = JSON.parse(data)
-                            if(handleRedirection(res))
-                            {
-                                return;
-                            }
-                           alert(res.message)
-                        })
-                        .catch((error) => {
-                            hideElement("loading");
-                            console.log(error);
-                            alert("Something went wrong. Please try again later.");
-                        });
-
-        }
-
-
-        function increaseOrgCount()
-        {
-
-                    unHideElement("loading");
-                    var endpoint = "/api/v1/zoho/org-count-increment" + "?service=" + getElementValue("org_count_increase_products").split("-")[0] +"&dc=" + getElementValue("org_count_increase_products").split("-")[1] + "&zuid=" + getElementValue("org_count_increase_zuid") + "&count=" + getElementValue("org_count_increase_value")
-                    var res;
-                    fetch(endpoint, {
-                      method: "POST"
-                        })
-                        .then((response) => {
-                            hideElement("loading");
-                            return response.text();
-                        })
-                        .then((data) => {
-                            res = JSON.parse(data)
-                            if(handleRedirection(res))
-                            {
-                                return;
-                            }
-                           alert(res.message)
-                        })
-                        .catch((error) => {
-                            hideElement("loading");
-                            console.log(error);
-                            alert("Something went wrong. Please try again later.");
-                        });
-
-        }
-
-        function doEARDecrypt()
-        {
-
-               if (getElementValue("key_label").length == 0) {
-                   alert("Please enter a valid Key Label");
-                   return;
-               }
-                if (getElementValue("cipher_text").length == 0) {
-                    alert("Please enter a valid Cipher Text");
-                    return;
+            function handleThreadPoolChange()
+            {
+                const threadPoolSelect = document.getElementById('thread_pool');
+                const customInput = document.getElementById('thread_pool_custom');
+                if(threadPoolSelect.value === "__CUSTOM__")
+                {
+                    customInput.style.display = "inline";
+                    customInput.focus();
                 }
-               const data = {
-                   "service":getElementValue("ear_product").split("-")[0],
-                   "dc": getElementValue("ear_product").split("-")[1],
-                   "key_label": getElementValue("key_label"),
-                   "cipher_text": getElementValue("cipher_text"),
-                   "is_oek": document.getElementById("is_oek").checked,
-                   "is_searchable": document.getElementById("is_searchable").checked,
-               }
+                else
+                {
+                    customInput.style.display = "none";
+                    customInput.value = "";
+                }
+            }
 
-                    unHideElement("loading");
-                    var res;
-                    fetch("/api/v1/zoho/ear", {
-                            method: "POST",
-                     headers: {
-                         'Content-Type': 'application/json'
-                     },
-                     body: JSON.stringify(data)
-                        })
-                        .then((response) => {
-                            hideElement("loading");
-                            return response.text();
-                        })
-                        .then((data) => {
-                            res = JSON.parse(data)
-                            if(handleRedirection(res))
-                            {
-                                return;
-                            }
-                            var error = res["error"]
-                            document.getElementById("ear_decrypted").innerText= error
-                            if (error != undefined) {
+            function getThreadPoolValue()
+            {
+                const threadPoolSelect = document.getElementById('thread_pool');
+                if(threadPoolSelect.value === "__CUSTOM__")
+                {
+                    return document.getElementById('thread_pool_custom').value;
+                }
+                return threadPoolSelect.value;
+            }
+
+            function changeIsRepetitive()
+            {
+
+            if(document.getElementById("is_repetitive").checked)
+            {
+            document.getElementById("repetition").style.display="inline"
+            document.getElementById("repetition_label").style.display="inline"
+            }
+            else
+            {
+            document.getElementById("repetition").style.display="none"
+            document.getElementById("repetition_label").style.display="none"
+            }
+            }
+
+            function doChangeForFrequency()
+            {
+            if(getElementValue("frequency") == 'weekly')
+            {
+            document.getElementById("day-of-week").style.display="inline"
+            document.getElementById("day-of-week-label").style.display="inline"
+            document.getElementById("date-of-month").style.display="none"
+            document.getElementById("date-of-month-label").style.display="none"
+            }
+            else if(getElementValue("frequency") == 'daily')
+            {
+            document.getElementById("day-of-week").style.display="none"
+            document.getElementById("day-of-week-label").style.display="none"
+            document.getElementById("date-of-month").style.display="none"
+            document.getElementById("date-of-month-label").style.display="none"
+            }
+
+            else if(getElementValue("frequency") == 'monthly')
+            {
+            document.getElementById("date-of-month").style.display="inline"
+            document.getElementById("date-of-month-label").style.display="inline"
+            document.getElementById("day-of-week").style.display="none"
+            document.getElementById("day-of-week-label").style.display="none"
+            }
+
+            }
+            function getJobDetails()
+            {
+
+                           const data = {
+                               "service":getElementValue("taskengine_product").split("-")[0],
+                               "dc": getElementValue("taskengine_product").split("-")[1],
+                               "zsid": getElementValue("dataspace_id"),
+                               "customer_id": getElementValue("customer_id"),
+                               "job_id": getElementValue("job_id"),
+                               "thread_pool": getThreadPoolValue(),
+                               "operation":"get"
+                           }
+
+                                unHideElement("loading");
+                                var res;
+                                fetch("/api/v1/zoho/jobs", {
+                                        method: "POST",
+                                 headers: {
+                                     'Content-Type': 'application/json'
+                                 },
+                                 body: JSON.stringify(data)
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+                                        // Handle new standardized response format
+                                        if (!res.success) {
+                                            alert(res.message || res.error || "An error occurred");
+                                            console.log(res.message || res.error);
+                                            document.getElementById("taskengine").innerHTML=""
+                                            return;
+                                        }
+
+                                        var output= ""
+                                        var jsonObj = res.data || JSON.parse(data).data;
+                                        for (const key in jsonObj) {
+                                            output+="<b>" + key + "</b> : " + jsonObj[key] +"<br/><br/>";
+                                        }
+                                         document.getElementById("taskengine").innerHTML=output
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+            }
+
+
+            function getRepetitionDetails()
+            {
+                           const data = {
+                               "service":getElementValue("taskengine_product").split("-")[0],
+                               "dc": getElementValue("taskengine_product").split("-")[1],
+                               "zsid": getElementValue("dataspace_id"),
+                               "customer_id": getElementValue("customer_id"),
+                                "user_id": getElementValue("user_id"),
+                               "thread_pool": getThreadPoolValue(),
+                               "operation":"get",
+                               "repetition_name" : getElementValue("repetition_name"),
+                                "is_common" : document.getElementById("is_common").checked,
+                           }
+
+                                unHideElement("loading");
+                                var res;
+                                fetch("/api/v1/zoho/repetitions", {
+                                        method: "POST",
+                                 headers: {
+                                     'Content-Type': 'application/json'
+                                 },
+                                 body: JSON.stringify(data)
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+                                        // Handle new standardized response format
+                                        if (!res.success) {
+                                            alert(res.message || res.error || "An error occurred");
+                                            console.log(res.message || res.error);
+                                            document.getElementById("taskengine").innerHTML= ""
+                                            return;
+                                        }
+
+                                        var output= ""
+                                        var jsonObj = res.data || JSON.parse(data).data;
+                                        for (const key in jsonObj) {
+                                            output+="<b>" + key + "</b> : " + jsonObj[key] +"<br/><br/>";
+                                        }
+                                         document.getElementById("taskengine").innerHTML=output
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+            }
+
+
+            function addOrUpdateRepetition()
+            {
+            if(document.querySelector('input[name="repetition-type"]:checked').value == 'periodic_repetition')
+                addOrUpdatePeriodicRepetition()
+            else
+                addOrUpdateCalenderRepetition();
+            }
+
+            function doChangeForRepetitionType()
+            {
+            if(document.querySelector('input[name="repetition-type"]:checked').value == 'periodic_repetition')
+            {
+            document.getElementById("periodicity").style.display="inline"
+            document.getElementById("periodicity_label").style.display="inline"
+
+            document.getElementById("frequency").style.display="none"
+            document.getElementById("frequency_label").style.display="none"
+            document.getElementById("time").style.display="none"
+            document.getElementById("time_label").style.display="none"
+            }
+            else
+            {
+            document.getElementById("frequency").style.display="inline"
+            document.getElementById("frequency_label").style.display="inline"
+            document.getElementById("time").style.display="inline"
+            document.getElementById("time_label").style.display="inline"
+
+            document.getElementById("periodicity").style.display="none"
+            document.getElementById("periodicity_label").style.display="none"
+            }
+            }
+
+            function addOrUpdatePeriodicRepetition()
+            {
+
+                           const data = {
+                               "service":getElementValue("taskengine_product").split("-")[0],
+                               "dc": getElementValue("taskengine_product").split("-")[1],
+                               "zsid": getElementValue("dataspace_id"),
+                               "user_id": getElementValue("user_id"),
+                               "customer_id": getElementValue("customer_id"),
+                               "thread_pool": getThreadPoolValue(),
+                               "repetition_name" : getElementValue("repetition_name"),
+                               "periodicity" : getElementValue("periodicity"),
+                               "is_common" : document.getElementById("is_common").checked,
+                               "operation":"add_periodic"
+                           }
+
+                                unHideElement("loading");
+                                var res;
+                                fetch("/api/v1/zoho/repetitions", {
+                                        method: "POST",
+                                 headers: {
+                                     'Content-Type': 'application/json'
+                                 },
+                                 body: JSON.stringify(data)
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+                                if(res.error_code == "reauth_required")
+                                {
+                                  handleZohoAuth(res.data.auth_uri)
+                                  return;
+                                 }
+                                        alert(res.message)
+
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+
+            }
+
+
+            function addOrUpdateCalenderRepetition()
+            {
+
+                           const data = {
+                               "service":getElementValue("taskengine_product").split("-")[0],
+                               "dc": getElementValue("taskengine_product").split("-")[1],
+                               "zsid": getElementValue("dataspace_id"),
+                               "user_id": getElementValue("user_id"),
+                               "customer_id": getElementValue("customer_id"),
+                               "thread_pool": getThreadPoolValue(),
+                               "repetition_name" : getElementValue("repetition_name"),
+                               "frequency" : getElementValue("frequency"),
+                               "time" : getElementValue("time"),
+                               "day-of-week" : getElementValue("day-of-week"),
+                               "is_common" : document.getElementById("is_common").checked,
+                               "date_of_month" : getElementValue("date-of-month"),
+                               "operation":"add_calender"
+                           }
+
+                                unHideElement("loading");
+                                var res;
+                                fetch("/api/v1/zoho/repetitions", {
+                                        method: "POST",
+                                 headers: {
+                                     'Content-Type': 'application/json'
+                                 },
+                                 body: JSON.stringify(data)
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+
+                                if(res.error_code == "reauth_required")
+                                {
+                                  handleZohoAuth(res.data.auth_uri)
+                                  return;
+                                 }
+                                  alert(res.message)
+
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+
+            }
+
+            function addOrUpdateJob()
+            {
+
+                           const data = {
+                               "service":getElementValue("taskengine_product").split("-")[0],
+                               "dc": getElementValue("taskengine_product").split("-")[1],
+                               "zsid": getElementValue("dataspace_id"),
+                               "user_id": getElementValue("user_id"),
+                               "customer_id": getElementValue("customer_id"),
+                               "job_id": getElementValue("job_id"),
+                               "thread_pool": getThreadPoolValue(),
+                               "class_name":getElementValue("class_name"),
+                               "delay": getElementValue("delay_seconds"),
+                               "repetition" : getElementValue("repetition"),
+                               "retry_repetition" : getElementValue("retry_repetition"),
+                               "operation":"add",
+                               "is_repetitive" : document.getElementById("is_repetitive").checked
+                           }
+
+                                unHideElement("loading");
+                                var res;
+                                fetch("/api/v1/zoho/jobs", {
+                                        method: "POST",
+                                 headers: {
+                                     'Content-Type': 'application/json'
+                                 },
+                                 body: JSON.stringify(data)
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+
+                                        // Handle new standardized response format
+                                        if (!res.success) {
+                                if(res.error_code == "reauth_required")
+                                {
+                                  handleZohoAuth(res.data.auth_uri)
+                                  return;
+                                 }
+                                            alert(res.message || res.error || "An error occurred");
+                                            console.log(res.message || res.error);
+                                            return;
+                                        }
+                                        alert(res.message);
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+            }
+
+            function deleteRepetition()
+            {
+
+                           const data = {
+                               "service":getElementValue("taskengine_product").split("-")[0],
+                               "dc": getElementValue("taskengine_product").split("-")[1],
+                               "zsid": getElementValue("dataspace_id"),
+                               "customer_id": getElementValue("customer_id"),
+                               "user_id": getElementValue("user_id"),
+                               "repetition_name": getElementValue("repetition_name"),
+                               "thread_pool": getThreadPoolValue(),
+                               "operation":"delete"
+                           }
+
+                                unHideElement("loading");
+                                var res;
+                                fetch("/api/v1/zoho/repetitions", {
+                                        method: "POST",
+                                 headers: {
+                                     'Content-Type': 'application/json'
+                                 },
+                                 body: JSON.stringify(data)
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+                                        var error = res["error"]
+                                        if (error != undefined) {
+                                            alert(error)
+                                            console.log(error);
+                                        }
+                                        else{
+                                if(res.error_code == "reauth_required")
+                                {
+                                  handleZohoAuth(res.data.auth_uri)
+                                  return;
+                                 }
+                                        alert(res.message)
+                                        }
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+            }
+
+            function deleteJob()
+            {
+
+                           const data = {
+                               "service":getElementValue("taskengine_product").split("-")[0],
+                               "dc": getElementValue("taskengine_product").split("-")[1],
+                               "zsid": getElementValue("dataspace_id"),
+                               "customer_id": getElementValue("customer_id"),
+                               "job_id": getElementValue("job_id"),
+                               "thread_pool": getThreadPoolValue(),
+                               "operation":"delete"
+                           }
+
+                                unHideElement("loading");
+                                var res;
+                                fetch("/api/v1/zoho/jobs", {
+                                        method: "POST",
+                                 headers: {
+                                     'Content-Type': 'application/json'
+                                 },
+                                 body: JSON.stringify(data)
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+
+                                        // Handle new standardized response format
+                                        if (!res.success) {
+                                if(res.error_code == "reauth_required")
+                                {
+                                  handleZohoAuth(res.data.auth_uri)
+                                  return;
+                                 }
+                                            alert(res.message || res.error || "An error occurred");
+                                            console.log(res.message || res.error);
+                                            return;
+                                        }
+
+                                        alert(res.message);
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+            }
+
+            var initCompleted = false;
+
+                    function getSASMeta() {
+                        fetch("/api/v1/sas/meta", {
+                                method: "GET",
+                            })
+                            .then((response) => {
+                                return response.text();
+                            })
+                            .then((data) => {
+                                var res = JSON.parse(data);
+                                if(handleRedirection(res))
+                                {
+                                    hideElement("loading");
+                                    return;
+                                }
+                                // Handle new standardized response format
+                                if (!res.success) {
+                                    console.log("Failed to get SAS meta:", res.message || res.error);
+                                    return;
+                                }
+
+                                SAS_META = res.data || res;
+                                if(initCompleted)
+                                {
+                                   getDBCredential(false);
+                                    return
+                                 }
+                                populateISCProducts();
+                                populateTaskEngineProducts();
+                                populateEARProducts()
+                                populateDBProducts()
+                                setElementValue("zsid", "admin");
+                                getDBCredential(false);
+                                initCompleted = true;
+                            })
+                            .catch((error) => {
                                 console.log(error);
-                                throw new Error(error)
+                            });
+                    }
+                    const textArea = document.getElementById("query");
+                    const autocompleteContainer = document.getElementById("autocomplete-container");
+
+                    const isMobile =
+                        navigator.userAgent.match(/Android/i) ||
+                        navigator.userAgent.match(/webOS/i) ||
+                        navigator.userAgent.match(/iPhone/i) ||
+                        navigator.userAgent.match(/iPad/i) ||
+                        navigator.userAgent.match(/iPod/i) ||
+                        navigator.userAgent.match(/BlackBerry/i) ||
+                        navigator.userAgent.match(/Windows Phone/i);
+                    if (!isMobile) {
+                        textArea.addEventListener("input", function() {
+                            autocompleteContainer.style.display = "block";
+                            document.getElementById("suggestionHint").style.display = "block";
+                            autocompleteContainer.innerHTML = "";
+                            const userInput = textArea.value;
+                            var lastWords = userInput.split(" ");
+                            var lastWord = lastWords.pop();
+                            lastWord = lastWord == "" ? lastWords.pop() : lastWord;
+                            const defaultList = ["Select", "Where", "From", "Order By", "Group By", "Top", "Having", "Limit", "DESC", "ASC", "Count(*)", "LIKE"];
+                            const filteredSuggestions = defaultList.concat(COLUMN_LIST.map(column => document.getElementById("tableList").value + "." + column)).concat(TABLE_LIST).filter((suggestion) => suggestion.toLowerCase().match(lastWord.toLowerCase() + "(.*)"));
+                            //console.log(filteredSuggestions);
+                            if (filteredSuggestions.length == 0) {
+                                autocompleteContainer.style.display = "none";
+                                document.getElementById("suggestionHint").style.display = "none";
+                                return;
+                            }
+                            autocompleteContainer.innerHTML = "";
+                            filteredSuggestions.forEach((suggestion) => {
+                                const li = document.createElement("option");
+                                li.textContent = suggestion;
+                                li.addEventListener("click", function() {
+                                    const words = userInput.split(" ");
+                                    if (words.pop() == " ") words.pop(); // Remove the last incomplete word
+                                    words.push(suggestion.split(".").length > 1 ? suggestion.split(".")[1] : suggestion);
+                                    textArea.value = words.join(" ") + " "; // Update the textarea content
+                                    autocompleteContainer.innerHTML = "";
+                                    autocompleteContainer.style.display = "none";
+                                    document.getElementById("suggestionHint").style.display = "none";
+                                    textArea.focus();
+                                });
+                                autocompleteContainer.appendChild(li);
+                            });
+                            autocompleteContainer.size = autocompleteContainer.options.length == 1 ? 2 : autocompleteContainer.options.length;
+                        });
+                    }
+
+
+
+            function populateISCProducts()
+            {
+
+            var iscProductOptions;
+            const iscProducts = SAS_META['isc_meta'];
+             for (var key in iscProducts) {
+                  iscProductOptions += "<option value=" + key + ">" + iscProducts[key] + "</option>";
+             }
+             document.getElementById("isc_product").innerHTML = iscProductOptions
+            }
+
+            function populateEARProducts()
+            {
+
+            var earProductOptions;
+            const earProducts = SAS_META['ear_meta'];
+             for (var key in earProducts) {
+                  earProductOptions += "<option value=" + key + ">" + earProducts[key] + "</option>";
+             }
+             document.getElementById("ear_product").innerHTML = earProductOptions
+            }
+
+            function populateTaskEngineProducts()
+            {
+
+            var taskEngineProductOptions;
+            const taskEngineProducts = SAS_META['taskengine_meta'].products;
+             for (var key in taskEngineProducts) {
+                  taskEngineProductOptions += "<option value=" + key + ">" + taskEngineProducts[key] + "</option>";
+             }
+             document.getElementById("taskengine_product").innerHTML = taskEngineProductOptions
+             doTaskEngineProductSwitchChanges()
+            }
+
+            function populateDBProducts()
+            {
+             var dbProductOptions = ""
+             const dbProducts = SAS_META['db_meta'];
+             for (var key in dbProducts) {
+                 dbProductOptions += "<option value=" + key + ">" + dbProducts[key].display_name + "</option>";
+             }
+             document.getElementById("product").innerHTML = dbProductOptions + document.getElementById("product").innerHTML;
+
+            }
+
+                    getSASMeta();
+                    function execute() {
+                        unHideElement("response");
+                        if (!preExecutionValidation()) {
+                            return;
+                        }
+
+                        if (document.getElementById("pk").value.length == 0 && document.getElementById("zsid").value.length == 0) {
+                            alert("Please enter a valid ZSID or PK value");
+                            return;
+                        }
+
+                        unHideElement("loading");
+
+                        const data = {
+                            "server": document.querySelector('input[name="server"]:checked').value,
+                            "ip": document.getElementById("ip").value,
+                            "user": document.getElementById("user").value,
+                            "password": document.getElementById("password").value,
+                            "zsid": document.getElementById("zsid").value,
+                            "pk": document.getElementById("pk").value,
+                            "skip_scoping" : document.getElementById("skip_scoping").checked,
+                            "query": document.getElementById("query").value,
+                            "is_encrypted": isEncrypted,
+                        }
+
+                        var res;
+                        fetch("/api/v1/sas/execute", {
+                                method: "POST",
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(data)
+                            })
+                            .then((response) => {
+                                return response.text();
+                            })
+                            .then((data) => {
+                                res = JSON.parse(data)
+                                if(handleRedirection(res))
+                                {
+                                    hideElement("loading");
+                                    return;
+                                }
+                                // Handle new standardized response format
+                                if (!res.success) {
+                                    if (res.error_code == "key_expired") {
+                                        getSASMeta();
+                                        return;
+                                    }
+                                if(res.error_code == "reauth_required")
+                                {
+                                  hideElement("loading");
+                                  handleZohoAuth(res.data.auth_uri)
+                                  return;
+                                 }
+                                 if (res.message) {
+                                    hideElement("loading");
+                                    alert(res.message)
+                                    console.log(res.message);
+                                    return;
+                                 }
+                                }
+                                hideElement("loading");
+                                // Use data from the new format, fallback to old format
+                                var responseData = res.data || res;
+                                var temp = responseData;
+
+                                if (Array.isArray(temp["query_output"])) {
+                                    console.log("Query output is array:", temp["query_output"]);
+                                    QUERY_OUTPUT = temp["query_output"];
+                                    // Create a copy for handleQueryOutput without modifying the original
+                                    var outputData = Object.assign({}, temp);
+                                    console.log("Calling handleQueryOutput with:", outputData);
+                                    handleQueryOutput(outputData, "", "");
+                                    setElementValue("output", "EXECUTION_INFO : \n" + JSON.stringify(temp.sas_meta, null, 2));
+                                    return;
+                                }
+                                 else if (temp["query_output"] != undefined && temp["query_output"] != null) {
+                                    if(temp["query_output"].includes("query executed successfully"))
+                                    {
+                                        refreshTable();
+                                        alert(temp["query_output"])
+                                        return;
+                                    }
+                                    alert(temp["query_output"]);
+                                    handleQueryOutputForFailed();
+                                    setElementValue("output", temp["query_output"]);
+                                    return;
+                                }
+                                setElementValue("output", "EXECUTION_INFO : \n" + JSON.stringify(temp.sas_meta, null, 2));
+                                handleQueryOutput(temp, "", "");
+                            })
+                            .catch((error) => {
+                                hideElement("loading");
+                                console.log(error);
+                                setElementValue("output", JSON.stringify(res, null, 2));
+                                alert("Something went wrong. Please check the error response below and try again.");
+                                handleQueryOutputForFailed();
+                            });
+                    }
+
+                    function runStats() {
+                        unHideElement("response");
+                        if (!preExecutionValidation()) {
+                            return;
+                        }
+
+                        unHideElement("loading");
+
+                        const data = {
+                            "server": document.querySelector('input[name="server"]:checked').value,
+                            "ip": document.getElementById("ip").value,
+                            "user": document.getElementById("user").value,
+                            "password": document.getElementById("password").value,
+                            "zsid": document.getElementById("zsid").value,
+                            "pk": document.getElementById("pk").value,
+                            "query": document.getElementById("query").value,
+                            "is_encrypted": isEncrypted,
+                            "is_stats" : true
+                        }
+
+                        var res;
+                        fetch("/api/v1/sas/execute", {
+                                method: "POST",
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(data)
+                            })
+                            .then((response) => {
+                                return response.text();
+                            })
+                            .then((data) => {
+                                res = JSON.parse(data)
+                                if(handleRedirection(res))
+                                {
+                                    hideElement("loading");
+                                    return;
+                                }
+
+                                // Handle new standardized response format
+                                if (!res.success) {
+                                    var error = res.error_code;
+                                    if (error == "key_expired") {
+                                        getSASMeta();
+                                        return;
+                                    }
+                                    hideElement("loading");
+                                    alert(error)
+                                    return
+                                }
+
+                                hideElement("loading");
+                                // Use data from the new format, fallback to old format
+                                var responseData = res.data || res;
+                                if(res.error_code == "reauth_required")
+                                {
+                                  handleZohoAuth(res.data.auth_uri)
+                                  return;
+                                 }
+                                 alert(res.message)
+                            })
+                            .catch((error) => {
+                                hideElement("loading");
+                                console.log(error);
+                                setElementValue("output", JSON.stringify(res, null, 2));
+                                alert("Something went wrong. Please check the error response below and try again.");
+                            });
+                    }
+
+            function handleZohoAuth(authURI)
+            {
+                                          let screenX = screen.width / 2 - 325;
+                                          let screenY = screen.height / 2 - 400;
+                                          var popupOptions = "width=650,height=750,top="+ screenY + ",left=" + screenX;
+                                          window.open(authURI, "Authentication", popupOptions);
+
+            }
+                    function generateIsc()
+                    {
+
+                                unHideElement("loading");
+
+                                var res;
+                                fetch("/api/v1/zoho/isc?service=" + getElementValue("isc_product").split("-")[0] +"&dc=" + getElementValue("isc_product").split("-")[1], {
+                                  method: "POST"
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+                                        // Handle new standardized response format
+                                        if (!res.success) {
+                                            console.log(res.message || res.error);
+                                            throw new Error("API error")
+                                        }
+
+                                        document.getElementById("isc").innerText= res.data || JSON.parse(data).data
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+
+                    }
+
+
+                    function setupSBI()
+                    {
+
+                        if(!getElementValue("erp-unique-id") || getElementValue("erp-unique-id").length < 5)
+                        {
+                            alert("Please enter valid ERP unique ID");
+                            return;
+                        }
+                                unHideElement("loading");
+
+                                var res;
+                                fetch("/api/v1/zoho/setup-sbi?is_csez=false&erp_unique_id=" + getElementValue("erp-unique-id"), {
+                                  method: "POST"
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+                                        // Handle new standardized response format
+                                        if (!res.success) {
+                                            console.log(res.message || res.error);
+                                            throw new Error("API error")
+                                        }
+
+                                        alert(JSON.parse(data).data)
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+
+                    }
+
+                    function markAsTestOrPaidOrg(isPaidOrgMarking)
+                    {
+
+                                unHideElement("loading");
+                                var endpoint = "/api/v1/zoho/mark-as-test-org" + "?service=" + getElementValue("test_org_products").split("-")[0] +"&dc=" + getElementValue("test_org_products").split("-")[1] + "&zsid=" + getElementValue("test_org_zsid")
+                                endpoint = isPaidOrgMarking ?  "/api/v1/zoho/mark-as-paid-org" + "?service=" + getElementValue("paid_org_products").split("-")[0] +"&dc=" + getElementValue("paid_org_products").split("-")[1] + "&zsid=" + getElementValue("paid_org_zsid") : endpoint;
+                                var res;
+                                fetch(endpoint, {
+                                  method: "POST"
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+                                       alert(res.message)
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+
+                    }
+
+                    function markAsNonTestOrg()
+                    {
+
+                                unHideElement("loading");
+                                var endpoint = "/api/v1/zoho/mark-as-non-test-org" + "?service=" + getElementValue("non_test_org_products").split("-")[0] +"&dc=" + getElementValue("non_test_org_products").split("-")[1] + "&zsid=" + getElementValue("non_test_org_zsid")
+
+                                var res;
+                                fetch(endpoint, {
+                                  method: "POST"
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+                                       alert(res.message)
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+
+                    }
+
+                    function increaseOrgCount()
+                    {
+
+                                unHideElement("loading");
+                                var endpoint = "/api/v1/zoho/org-count-increment" + "?service=" + getElementValue("org_count_increase_products").split("-")[0] +"&dc=" + getElementValue("org_count_increase_products").split("-")[1] + "&zuid=" + getElementValue("org_count_increase_zuid") + "&count=" + getElementValue("org_count_increase_value")
+                                var res;
+                                fetch(endpoint, {
+                                  method: "POST"
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+                                       alert(res.message)
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+
+                    }
+
+                    function doEARDecrypt()
+                    {
+
+                           if (getElementValue("key_label").length == 0) {
+                               alert("Please enter a valid Key Label");
+                               return;
+                           }
+                            if (getElementValue("cipher_text").length == 0) {
+                                alert("Please enter a valid Cipher Text");
+                                return;
+                            }
+                           const data = {
+                               "service":getElementValue("ear_product").split("-")[0],
+                               "dc": getElementValue("ear_product").split("-")[1],
+                               "key_label": getElementValue("key_label"),
+                               "cipher_text": getElementValue("cipher_text"),
+                               "is_oek": document.getElementById("is_oek").checked,
+                               "is_searchable": document.getElementById("is_searchable").checked,
+                           }
+
+                                unHideElement("loading");
+                                var res;
+                                fetch("/api/v1/zoho/ear", {
+                                        method: "POST",
+                                 headers: {
+                                     'Content-Type': 'application/json'
+                                 },
+                                 body: JSON.stringify(data)
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+                                        var error = res["error"]
+                                        document.getElementById("ear_decrypted").innerText= error
+                                        if (error != undefined) {
+                                            console.log(error);
+                                            throw new Error(error)
+                                        }
+
+                                        document.getElementById("ear_decrypted").innerText= JSON.parse(data).data
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+
+                    }
+
+                    function getTables() {
+                        TABLE_LIST = []
+                        if (!preExecutionValidation()) {
+                            return;
+                        }
+
+
+                        unHideElement("loading");
+
+                        const data = {
+                            "server": document.querySelector('input[name="server"]:checked').value,
+                            "ip": document.getElementById("ip").value,
+                            "user": document.getElementById("user").value,
+                            "password": document.getElementById("password").value,
+                            "pk": document.getElementById("pk").value,
+                            "need_table": "true",
+                            "is_encrypted": isEncrypted
+                        }
+                        var res;
+
+                        fetch("/api/v1/sas/execute", {
+                                method: "POST",
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(data)
+                            })
+                            .then((response) => {
+                                return response.text();
+                            })
+                            .then((data) => {
+                                res = JSON.parse(data);
+                                if(handleRedirection(res))
+                                {
+                                    hideElement("loading");
+                                    return;
+                                }
+
+                                // Handle new standardized response format
+                                if (!res.success) {
+                                    var error = res.error_code
+                                    if (error == "key_expired") {
+                                        getSASMeta();
+                                        return;
+                                    }
+                                    throw new Error("API error: " + error);
+                                }
+
+                                // Use data from the new format, fallback to old format
+                                var responseData = res.data || res;
+                                if(!responseData.is_multigrid)
+                                {
+                                    unHideElement("pk");
+                                }
+                                TABLE_LIST = responseData.tables;
+                                hideElement("quickExe")
+                                hideElement("loading");
+                                unHideElement("response");
+                                populateTables();
+                                unHideElement("tableSelection")
+                                unHideElement("response");
+                                getColumns();
+                            })
+                            .catch((error) => {
+                                unHideElement("response");
+                                hideElement("loading");
+                                unHideElement("quickExe");
+                                setElementValue("output", JSON.stringify(res, null, 2));
+                                hideElement("tableSelection");
+                                hideElement("queryOutputContainer");
+                                console.log(error);
+                                alert("Something went wrong. Please check the error response below and try again.");
+                            });
+                    }
+
+                    function getColumns() {
+                        if (!preExecutionValidation()) {
+                            return;
+                        }
+
+                        let tableName = document.getElementById("tableList").value;
+
+                        // Set default table for admin users if no table is selected
+                        if ((!tableName || tableName.trim() === "") && getElementValue("zsid") == "admin") {
+                            if (document.getElementById("mysql").checked) {
+                                tableName = "SASAccounts";
+                            } else {
+                                tableName = "sasaccounts";
+                            }
+                            document.getElementById("tableList").value = tableName;
+                            document.getElementById("tableListSearch").value = tableName;
+                        }
+
+                        if (!tableName || tableName.trim() === "") {
+                            alert("Please select a table first");
+                            return;
+                        }
+
+                        COLUMN_LIST = []
+                        setElementValue("recordLimit", "50")
+
+                        const data = {
+                            "server": document.querySelector('input[name="server"]:checked').value,
+                            "ip": document.getElementById("ip").value,
+                            "user": document.getElementById("user").value,
+                            "password": document.getElementById("password").value,
+                            "need_column": "true",
+                            "table": tableName,
+                            "is_encrypted": isEncrypted
+                        }
+
+                        unHideElement("loading");
+                        var res;
+                        fetch("/api/v1/sas/execute", {
+                                method: "POST",
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(data)
+                            })
+                            .then((response) => {
+                                return response.text();
+                            })
+                            .then((data) => {
+                                res = JSON.parse(data);
+                                if(handleRedirection(res))
+                                {
+                                    hideElement("loading");
+                                    return;
+                                }
+
+                                // Handle new standardized response format
+                                if (!res.success) {
+                                    var error = res.error_code;
+                                    if (error == "key_expired") {
+                                        getSASMeta();
+                                        return;
+                                    }
+                                    if (error.toLowerCase().includes('throttle')) {
+                                        hideElement("loading");
+                                        alert(error)
+                                        console.log(error);
+                                        return;
+                                    }
+                                    throw new Error("API error: " + error);
+                                }
+
+                                // Use data from the new format, fallback to old format
+                                var responseData = res.data || res;
+                                populateColumn(responseData);
+
+                                if (getElementValue("pk").length != 0 || getElementValue("zsid").length != 0) {
+                                    setElementValue("query", "Select * from " + document.getElementById("tableList").value + getLimitAndOrderBy());
+                                    execute();
+                                }
+                            })
+                            .catch((error) => {
+                                hideElement("loading");
+                                setElementValue("output", JSON.stringify(res, null, 2));
+                                handleQueryOutputForFailed();
+                                console.log(error)
+                                alert("Something went wrong. Please check the error response below and try again.");
+                            });
+                    }
+
+                    function populateTables() {
+                        var tableListOptions = "";
+                        var datalist = document.getElementById("tableListOptions");
+                        datalist.innerHTML = ""; // Clear existing options
+
+                        for (var i in TABLE_LIST) {
+                            var tableName = TABLE_LIST[i];
+                            tableListOptions += "<option value=\"" + tableName + "\">" + tableName + "</option>";
+                            // Add to datalist for search
+                            var option = document.createElement("option");
+                            option.value = tableName;
+                            datalist.appendChild(option);
+                        }
+                        document.getElementById("tableList").innerHTML = tableListOptions;
+
+                        if (getElementValue("zsid") == "admin") {
+                            var defaultTable = document.getElementById("mysql").checked ? "SASAccounts" : "sasaccounts";
+                            document.getElementById("tableList").value = defaultTable;
+                            document.getElementById("tableListSearch").value = defaultTable;
+                        } else {
+                            document.getElementById("tableListSearch").value = "";
+                        }
+                    }
+
+                    function handleTableListChange() {
+                        // Sync the hidden select with the search input value
+                        var searchValue = document.getElementById("tableListSearch").value;
+                        document.getElementById("tableList").value = searchValue;
+                        getColumns();
+                    }
+
+                    function populateColumn(columnMeta) {
+                        const columnListRes = columnMeta.columns;
+                        CURRENT_TABLE_PK = columnMeta.pk;
+                        COLUMN_LIST = [];
+                        for (var column in columnListRes) {
+                            COLUMN_LIST.push(columnListRes[column]);
+                        }
+                        var columnListOptions = "<option>Select Column</option>";
+                        for (var i in COLUMN_LIST) {
+                            columnListOptions += "<option >" + COLUMN_LIST[i] + "</option>";
+                        }
+                        document.getElementById("columnListForWhere").innerHTML = columnListOptions;
+                        document.getElementById("columnListForSet").innerHTML = columnListOptions;
+                    }
+
+                    function getLimitAndOrderBy() {
+                        const orderBy = CURRENT_TABLE_PK.length == 0 ? "" : " Order By " + CURRENT_TABLE_PK + " DESC"
+                        const limit = getElementValue("recordLimit");
+                        return orderBy + " LIMIT " + limit;
+                    }
+
+                    function handleQueryOutput(outputJson, criteria, criteriaValue) {
+                        console.log("handleQueryOutput called with:", outputJson);
+                        console.log("query_output:", outputJson.query_output);
+
+                        if (!Array.isArray(outputJson.query_output) || outputJson.query_output.length == 0) {
+                            console.log("No query output to display");
+                            document.getElementById("queryOutput").innerHTML = "";
+                            hideElement("queryOutputContainer");
+                            return;
+                        }
+
+                        var tableOutput = "";
+                        var tableHeader = "<thead><tr><th>S.No</th>";
+                        for (var i in outputJson.query_output[0]) {
+                            var criteriaTag = "";
+                            if (criteria != i) criteriaTag = '<br><input type="text" autocomplete="off" id="' + i + '" oninput="getFiltered(' + "'" + i + "'" + ')" placeholder="Search" title="eg.(abc or >5 or <10 or>5<10)"/><br><button style="width:80px;background-color:grey;font-size: 10px;" title="Search for the criteria without applying limit" onclick="getFilteredFromDB(' + "'" + i + "'" + ')">Hit DB</button>';
+                            else criteriaTag = '<br><input type="text" autocomplete="off" value="' + criteriaValue + '" id="' + i + '" oninput="getFiltered(' + "'" + i + "'" + ')" placeholder="Search" title="eg.(abc or >5 or <10 or>5<10)"/><br><button style="width:80px;background-color:grey;font-size: 10px;" title="Search for the criteria without applying limit" onclick="getFilteredFromDB(' + "'" + i + "'" + ')">Hit DB</button>';
+                            tableHeader += "<th>" + i + criteriaTag + "</th>";
+                        }
+                        tableOutput += tableHeader + "</tr></thead>";
+
+                        var tableRows = "<tbody>";
+                        // Check if any column has "<EMPTY>" value to determine if result is empty
+                        var isEmpty = false;
+                        if (outputJson.query_output.length > 0) {
+                            var firstRow = outputJson.query_output[0];
+                            for (var col in firstRow) {
+                                if (firstRow[col] == "<EMPTY>") {
+                                    isEmpty = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        for (var i in outputJson.query_output) {
+                            if (!isEmpty) tableRows += "<tr><td>" + (Number(i) + 1) + "</td>";
+                            else tableRows += "<tr><td></td>";
+                            for (var j in outputJson.query_output[i]) {
+                                tableRows += "<td>" + escapeHtml(outputJson.query_output[i][j]) + "</td>";
+                            }
+                            tableRows += "</tr>";
+                        }
+                        tableRows += "</tbody>";
+                        tableOutput += tableRows;
+                        unHideElement("queryOutputContainer");
+                        document.getElementById("queryOutput").innerHTML = tableOutput;
+
+                        if (document.getElementById(criteria) != null) {
+                            var end = getElementValue(criteria).length;
+                            document.getElementById(criteria).setSelectionRange(end, end);
+                            document.getElementById(criteria).focus();
+                        }
+                    }
+
+                    function getFiltered(criteriaColumn) {
+                        var filteredRows = [];
+                        var criteriaVal = getElementValue(criteriaColumn);
+                        var criteriaValAux = criteriaVal;
+                        criteriaVal = criteriaVal.toLowerCase();
+                        var gl = new RegExp(">(.*)<(.+)");
+                        var gt = new RegExp(">(.+)");
+                        var lt = new RegExp("<(.+)");
+                        if (gl.exec(criteriaVal) != null) {
+                            const num1 = Number((gl.exec(criteriaVal)[1]).trim());
+                            const num2 = Number((gl.exec(criteriaVal)[2]).trim());
+
+                            for (var i in QUERY_OUTPUT) {
+                                for (var column in QUERY_OUTPUT[i]) {
+                                    const columnValue = Number(QUERY_OUTPUT[i][column]);
+                                    if (isValidColumn(criteriaColumn, column, columnValue) && columnValue > num1 && columnValue < num2) {
+                                        filteredRows.push(QUERY_OUTPUT[i]);
+                                    }
+                                }
+                            }
+                        } else if (gt.exec(criteriaVal) != null) {
+                            const num = Number((gt.exec(criteriaVal)[1]).trim());
+                            for (var i in QUERY_OUTPUT) {
+                                for (var column in QUERY_OUTPUT[i]) {
+                                    const columnValue = Number(QUERY_OUTPUT[i][column]);
+                                    if (isValidColumn(criteriaColumn, column, columnValue) && columnValue > num) {
+                                        filteredRows.push(QUERY_OUTPUT[i]);
+                                    }
+                                }
+                            }
+                        } else if (lt.exec(criteriaVal) != null) {
+                            const num = Number((lt.exec(criteriaVal)[1]).trim());
+                            for (var i in QUERY_OUTPUT) {
+                                for (var column in QUERY_OUTPUT[i]) {
+                                    const columnValue = Number(QUERY_OUTPUT[i][column]);
+                                    if (isValidColumn(criteriaColumn, column, columnValue) && columnValue < num) {
+                                        filteredRows.push(QUERY_OUTPUT[i]);
+                                    }
+                                }
+                            }
+                        } else {
+                            var filteredRowsAux = [];
+                            for (var i in QUERY_OUTPUT) {
+                                for (var j in QUERY_OUTPUT[i]) {
+                                    if (j == criteriaColumn && QUERY_OUTPUT[i][j].toLowerCase() == criteriaVal.trim()) {
+                                        filteredRows.push(QUERY_OUTPUT[i]);
+                                    } else if (j == criteriaColumn && QUERY_OUTPUT[i][j].toLowerCase().match("(.*)" + criteriaVal.trim() + "(.*)")) {
+                                        filteredRowsAux.push(QUERY_OUTPUT[i]);
+                                    }
+                                }
+                            }
+                            filteredRows = filteredRows.concat(filteredRowsAux);
+                        }
+                        if (filteredRows.length == 0) {
+                            var emptyRow = {};
+                            for (var i in QUERY_OUTPUT[0]) {
+                                emptyRow[i] = "<EMPTY>";
                             }
 
-                            document.getElementById("ear_decrypted").innerText= JSON.parse(data).data
-                        })
-                        .catch((error) => {
-                            hideElement("loading");
-                            console.log(error);
-                            alert("Something went wrong. Please try again later.");
+                            filteredRows.push(emptyRow);
+                        }
+                        handleQueryOutput({
+                            query_output: filteredRows
+                        }, criteriaColumn, criteriaValAux);
+                    }
+
+                    function getDBCredential(isProductSwitch) {
+                        var product = getElementValue("product");
+                        var space = getElementValue("zsid");
+                        var pkValue = getElementValue("pk");
+                        isEncrypted = true;
+
+                        if (isProductSwitch) {
+                            TABLE_LIST = [];
+                            COLUMN_LIST = [];
+                            setElementValue("zsid", "admin");
+                            hideElement("queryOutputContainer");
+                            hideElement("tableSelection");
+                            hideElement("pk");
+                            if (product == "custom"){
+                                unHideElement("quickExe");
+                                unHideElement("credentials_box")
+                                }
+                              else
+                                hideElement("credentials_box")
+                            setElementValue("query", "")
+                            setElementValue("where_column_value", "")
+                            setElementValue("set_column_value", "")
+                            hideElement("response", "")
+                        }
+
+                        setElementValue("recordLimit", "50");
+
+                        if (product == "custom") {
+                            isEncrypted = false;
+
+                            if (isProductSwitch) {
+                                setElementChecked("postgresql", false);
+                                setElementChecked("mysql", false);
+
+                                setElementValue("ip", "");
+                                setElementValue("user", "");
+                                setElementValue("password", "");
+                            }
+
+                            if (getElementValue("ip").length != 0 && getElementValue("user").length != 0)
+                                populateNeededEntity();
+                            else
+                                setElementValue("zsid", "admin")
+                        }
+                        else
+                        {
+                            setElementChecked("postgresql", SAS_META.db_meta[product].server == "postgresql");
+                            setElementChecked("mysql", SAS_META.db_meta[product].server == "mysql");
+
+                            setElementValue("ip", SAS_META[product].ip);
+                            setElementValue("user", SAS_META[product].user);
+                            setElementValue("password", SAS_META[product].password);
+
+                            populateNeededEntity();
+                        }
+                    }
+
+                    document.addEventListener("click", function(event) {
+                        if (!document.getElementById("query").contains(event.target)) {
+                            autocompleteContainer.style.display = "none";
+                            hideElement("suggestionHint");
+                        }
+                    });
+
+                    document.addEventListener("keyup", (event) => {
+                        if (event.code === "Space") {
+                            autocompleteContainer.style.display = "none";
+                            document.getElementById("suggestionHint").style.display = "none";
+                        }
+                    });
+
+                    function escapeHtml(text) {
+                        if (text == "<EMPTY>" || text == null)
+                            return text;
+                        var map = {
+                            '&': '&amp;',
+                            '<': '&lt;',
+                            '>': '&gt;',
+                            '"': '&quot;',
+                            "'": '&#039;'
+                        };
+                        return text.replace(/[&<>"']/g, function(m) {
+                            return map[m];
                         });
-
-        }
-
-        function getTables() {
-            TABLE_LIST = []
-            if (!preExecutionValidation()) {
-                return;
-            }
-
-
-            unHideElement("loading");
-
-            const data = {
-                "server": document.querySelector('input[name="server"]:checked').value,
-                "ip": document.getElementById("ip").value,
-                "user": document.getElementById("user").value,
-                "password": document.getElementById("password").value,
-                "pk": document.getElementById("pk").value,
-                "need_table": "true",
-                "is_encrypted": isEncrypted
-            }
-            var res;
-
-            fetch("/api/v1/sas/execute", {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                })
-                .then((response) => {
-                    return response.text();
-                })
-                .then((data) => {
-                    res = JSON.parse(data);
-                    if(handleRedirection(res))
-                    {
-                        hideElement("loading");
-                        return;
                     }
-                    
-                    // Handle new standardized response format
-                    if (!res.success) {
-                        var error = res.error_code
-                        if (error == "key_expired") {
-                            getSASMeta();
+
+                    function handleQueryOutputForFailed() {
+                        var failed = {};
+                        for (var column in COLUMN_LIST) {
+                            failed[COLUMN_LIST[column]] = "Failed";
+                        }
+                        if (COLUMN_LIST.length == 0)
+                            hideElement("queryOutputContainer")
+                        else
+                            handleQueryOutput({
+                                query_output: [failed]
+                            }, "", "");
+                    }
+
+                    function preExecutionValidation() {
+                        if (document.querySelector('input[name="server"]:checked') == null) {
+                            alert("Choose DB Server");
+                            return false;
+                        }
+                        if (document.getElementById("ip").value.length == 0) {
+                            alert("Please enter a valid Main Cluster IP ");
+                            return false;
+                        }
+                        if (document.getElementById("user").value.length == 0) {
+                            alert("Please enter a valid User");
+                            return false;
+                        }
+                        return true;
+                    }
+
+                    function isValidColumn(criteriaColumn, currentColumn, value) {
+                        return criteriaColumn == currentColumn && value == Number(value);
+                    }
+
+                    function getFilteredFromDB(criteriaColumn) {
+                        var filteredRows = [];
+                        var criteriaVal = getElementValue(criteriaColumn);
+                        var predicate = ""
+                        var gl = new RegExp(">(.*)<(.+)");
+                        var gt = new RegExp(">(.+)");
+                        var lt = new RegExp("<(.+)");
+                        if (gl.exec(criteriaVal) != null) {
+                            const num1 = Number((gl.exec(criteriaVal)[1]).trim());
+                            const num2 = Number((gl.exec(criteriaVal)[2]).trim());
+                            predicate = " Where " + criteriaColumn + " > " + num1 + " AND " + criteriaColumn + " < " + num2;
+
+                        } else if (gt.exec(criteriaVal) != null) {
+                            const num = Number((gt.exec(criteriaVal)[1]).trim());
+                            predicate = " Where " + criteriaColumn + " > " + num;
+                        } else if (lt.exec(criteriaVal) != null) {
+                            const num = Number((lt.exec(criteriaVal)[1]).trim());
+                            predicate = " Where " + criteriaColumn + " < " + num;
+                        } else if (criteriaVal.trim().length != 0) {
+                            const value = criteriaVal.trim();
+                            const comparator = isNaN(value) ? " LIKE" + " '%" + value + "%'" :  " = " + value
+                            predicate = " Where " + criteriaColumn + comparator
+                        } else {
+                            alert("Invalid criteria");
                             return;
                         }
-                        throw new Error("API error: " + error);
-                    }
-
-                    // Use data from the new format, fallback to old format
-                    var responseData = res.data || res;
-                    if(!responseData.is_multigrid)
-                    {
-                        unHideElement("pk");
-                    }
-                    TABLE_LIST = responseData.tables;
-                    hideElement("quickExe")
-                    hideElement("loading");
-                    unHideElement("response");
-                    populateTables();
-                    unHideElement("tableSelection")
-                    unHideElement("response");
-                    getColumns();
-                })
-                .catch((error) => {
-                    unHideElement("response");
-                    hideElement("loading");
-                    unHideElement("quickExe");
-                    setElementValue("output", JSON.stringify(res, null, 2));
-                    hideElement("tableSelection");
-                    hideElement("queryOutputContainer");
-                    console.log(error);
-                    alert("Something went wrong. Please check the error response below and try again.");
-                });
-        }
-
-        function getColumns() {
-            if (!preExecutionValidation()) {
-                return;
-            }
-            
-            let tableName = document.getElementById("tableList").value;
-            
-            // Set default table for admin users if no table is selected
-            if ((!tableName || tableName.trim() === "") && getElementValue("zsid") == "admin") {
-                if (document.getElementById("mysql").checked) {
-                    tableName = "SASAccounts";
-                } else {
-                    tableName = "sasaccounts";
-                }
-                document.getElementById("tableList").value = tableName;
-                document.getElementById("tableListSearch").value = tableName;
-            }
-            
-            if (!tableName || tableName.trim() === "") {
-                alert("Please select a table first");
-                return;
-            }
-            
-            COLUMN_LIST = []
-            setElementValue("recordLimit", "50")
-
-            const data = {
-                "server": document.querySelector('input[name="server"]:checked').value,
-                "ip": document.getElementById("ip").value,
-                "user": document.getElementById("user").value,
-                "password": document.getElementById("password").value,
-                "need_column": "true",
-                "table": tableName,
-                "is_encrypted": isEncrypted
-            }
-
-            unHideElement("loading");
-            var res;
-            fetch("/api/v1/sas/execute", {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                })
-                .then((response) => {
-                    return response.text();
-                })
-                .then((data) => {
-                    res = JSON.parse(data);
-                    if(handleRedirection(res))
-                    {
-                        hideElement("loading");
-                        return;
-                    }
-                    
-                    // Handle new standardized response format
-                    if (!res.success) {
-                        var error = res.error_code;
-                        if (error == "key_expired") {
-                            getSASMeta();
-                            return;
-                        }
-                        if (error.toLowerCase().includes('throttle')) {
-                            hideElement("loading");
-                            alert(error)
-                            console.log(error);
-                            return;
-                        }
-                        throw new Error("API error: " + error);
-                    }
-                    
-                    // Use data from the new format, fallback to old format
-                    var responseData = res.data || res;
-                    populateColumn(responseData);
-                    
-                    if (getElementValue("pk").length != 0 || getElementValue("zsid").length != 0) {
-                        setElementValue("query", "Select * from " + document.getElementById("tableList").value + getLimitAndOrderBy());
+                        setElementValue("query", "Select * from " + getElementValue("tableList") + predicate);
                         execute();
                     }
-                })
-                .catch((error) => {
-                    hideElement("loading");
-                    setElementValue("output", JSON.stringify(res, null, 2));
-                    handleQueryOutputForFailed();
-                    console.log(error)
-                    alert("Something went wrong. Please check the error response below and try again.");
-                });
-        }
 
-        function populateTables() {
-            var tableListOptions = "";
-            var datalist = document.getElementById("tableListOptions");
-            datalist.innerHTML = ""; // Clear existing options
-            
-            for (var i in TABLE_LIST) {
-                var tableName = TABLE_LIST[i];
-                tableListOptions += "<option value=\"" + tableName + "\">" + tableName + "</option>";
-                // Add to datalist for search
-                var option = document.createElement("option");
-                option.value = tableName;
-                datalist.appendChild(option);
-            }
-            document.getElementById("tableList").innerHTML = tableListOptions;
-            
-            if (getElementValue("zsid") == "admin") {
-                var defaultTable = document.getElementById("mysql").checked ? "SASAccounts" : "sasaccounts";
-                document.getElementById("tableList").value = defaultTable;
-                document.getElementById("tableListSearch").value = defaultTable;
-            } else {
-                document.getElementById("tableListSearch").value = "";
-            }
-        }
-
-        function handleTableListChange() {
-            // Sync the hidden select with the search input value
-            var searchValue = document.getElementById("tableListSearch").value;
-            document.getElementById("tableList").value = searchValue;
-            getColumns();
-        }
-
-        function populateColumn(columnMeta) {
-            const columnListRes = columnMeta.columns;
-            CURRENT_TABLE_PK = columnMeta.pk;
-            COLUMN_LIST = [];
-            for (var column in columnListRes) {
-                COLUMN_LIST.push(columnListRes[column]);
-            }
-            var columnListOptions = "<option>Select Column</option>";
-            for (var i in COLUMN_LIST) {
-                columnListOptions += "<option >" + COLUMN_LIST[i] + "</option>";
-            }
-            document.getElementById("columnListForWhere").innerHTML = columnListOptions;
-            document.getElementById("columnListForSet").innerHTML = columnListOptions;
-        }
-
-        function getLimitAndOrderBy() {
-            const orderBy = CURRENT_TABLE_PK.length == 0 ? "" : " Order By " + CURRENT_TABLE_PK + " DESC"
-            const limit = getElementValue("recordLimit");
-            return orderBy + " LIMIT " + limit;
-        }
-
-        function handleQueryOutput(outputJson, criteria, criteriaValue) {
-            console.log("handleQueryOutput called with:", outputJson);
-            console.log("query_output:", outputJson.query_output);
-
-            if (!Array.isArray(outputJson.query_output) || outputJson.query_output.length == 0) {
-                console.log("No query output to display");
-                document.getElementById("queryOutput").innerHTML = "";
-                hideElement("queryOutputContainer");
-                return;
-            }
-
-            var tableOutput = "";
-            var tableHeader = "<thead><tr><th>S.No</th>";
-            for (var i in outputJson.query_output[0]) {
-                var criteriaTag = "";
-                if (criteria != i) criteriaTag = '<br><input type="text" autocomplete="off" id="' + i + '" oninput="getFiltered(' + "'" + i + "'" + ')" placeholder="Search" title="eg.(abc or >5 or <10 or>5<10)"/><br><button style="width:80px;background-color:grey;font-size: 10px;" title="Search for the criteria without applying limit" onclick="getFilteredFromDB(' + "'" + i + "'" + ')">Hit DB</button>';
-                else criteriaTag = '<br><input type="text" autocomplete="off" value="' + criteriaValue + '" id="' + i + '" oninput="getFiltered(' + "'" + i + "'" + ')" placeholder="Search" title="eg.(abc or >5 or <10 or>5<10)"/><br><button style="width:80px;background-color:grey;font-size: 10px;" title="Search for the criteria without applying limit" onclick="getFilteredFromDB(' + "'" + i + "'" + ')">Hit DB</button>';
-                tableHeader += "<th>" + i + criteriaTag + "</th>";
-            }
-            tableOutput += tableHeader + "</tr></thead>";
-
-            var tableRows = "<tbody>";
-            // Check if any column has "<EMPTY>" value to determine if result is empty
-            var isEmpty = false;
-            if (outputJson.query_output.length > 0) {
-                var firstRow = outputJson.query_output[0];
-                for (var col in firstRow) {
-                    if (firstRow[col] == "<EMPTY>") {
-                        isEmpty = true;
-                        break;
+                    function populateNeededEntity() {
+                        if (TABLE_LIST.length == 0)
+                            getTables();
+                        else if (COLUMN_LIST.length == 0)
+                            getColumns()
+                        else
+                            execute();
                     }
-                }
-            }
-            
-            for (var i in outputJson.query_output) {
-                if (!isEmpty) tableRows += "<tr><td>" + (Number(i) + 1) + "</td>";
-                else tableRows += "<tr><td></td>";
-                for (var j in outputJson.query_output[i]) {
-                    tableRows += "<td>" + escapeHtml(outputJson.query_output[i][j]) + "</td>";
-                }
-                tableRows += "</tr>";
-            }
-            tableRows += "</tbody>";
-            tableOutput += tableRows;
-            unHideElement("queryOutputContainer");
-            document.getElementById("queryOutput").innerHTML = tableOutput;
 
-            if (document.getElementById(criteria) != null) {
-                var end = getElementValue(criteria).length;
-                document.getElementById(criteria).setSelectionRange(end, end);
-                document.getElementById(criteria).focus();
-            }
-        }
-
-        function getFiltered(criteriaColumn) {
-            var filteredRows = [];
-            var criteriaVal = getElementValue(criteriaColumn);
-            var criteriaValAux = criteriaVal;
-            criteriaVal = criteriaVal.toLowerCase();
-            var gl = new RegExp(">(.*)<(.+)");
-            var gt = new RegExp(">(.+)");
-            var lt = new RegExp("<(.+)");
-            if (gl.exec(criteriaVal) != null) {
-                const num1 = Number((gl.exec(criteriaVal)[1]).trim());
-                const num2 = Number((gl.exec(criteriaVal)[2]).trim());
-
-                for (var i in QUERY_OUTPUT) {
-                    for (var column in QUERY_OUTPUT[i]) {
-                        const columnValue = Number(QUERY_OUTPUT[i][column]);
-                        if (isValidColumn(criteriaColumn, column, columnValue) && columnValue > num1 && columnValue < num2) {
-                            filteredRows.push(QUERY_OUTPUT[i]);
-                        }
+                    function refreshTable() {
+                        setElementValue("query", "Select * from " + getElementValue("tableList") + getLimitAndOrderBy());
+                        execute();
                     }
-                }
-            } else if (gt.exec(criteriaVal) != null) {
-                const num = Number((gt.exec(criteriaVal)[1]).trim());
-                for (var i in QUERY_OUTPUT) {
-                    for (var column in QUERY_OUTPUT[i]) {
-                        const columnValue = Number(QUERY_OUTPUT[i][column]);
-                        if (isValidColumn(criteriaColumn, column, columnValue) && columnValue > num) {
-                            filteredRows.push(QUERY_OUTPUT[i]);
-                        }
+
+                    function handleLimitChange() {
+                        setElementValue("query", "Select * from " + document.getElementById("tableList").value + getLimitAndOrderBy())
+                        execute()
                     }
-                }
-            } else if (lt.exec(criteriaVal) != null) {
-                const num = Number((lt.exec(criteriaVal)[1]).trim());
-                for (var i in QUERY_OUTPUT) {
-                    for (var column in QUERY_OUTPUT[i]) {
-                        const columnValue = Number(QUERY_OUTPUT[i][column]);
-                        if (isValidColumn(criteriaColumn, column, columnValue) && columnValue < num) {
-                            filteredRows.push(QUERY_OUTPUT[i]);
-                        }
-                    }
-                }
-            } else {
-                var filteredRowsAux = [];
-                for (var i in QUERY_OUTPUT) {
-                    for (var j in QUERY_OUTPUT[i]) {
-                        if (j == criteriaColumn && QUERY_OUTPUT[i][j].toLowerCase() == criteriaVal.trim()) {
-                            filteredRows.push(QUERY_OUTPUT[i]);
-                        } else if (j == criteriaColumn && QUERY_OUTPUT[i][j].toLowerCase().match("(.*)" + criteriaVal.trim() + "(.*)")) {
-                            filteredRowsAux.push(QUERY_OUTPUT[i]);
-                        }
-                    }
-                }
-                filteredRows = filteredRows.concat(filteredRowsAux);
-            }
-            if (filteredRows.length == 0) {
-                var emptyRow = {};
-                for (var i in QUERY_OUTPUT[0]) {
-                    emptyRow[i] = "<EMPTY>";
-                }
-
-                filteredRows.push(emptyRow);
-            }
-            handleQueryOutput({
-                query_output: filteredRows
-            }, criteriaColumn, criteriaValAux);
-        }
-
-        function getDBCredential(isProductSwitch) {
-            var product = getElementValue("product");
-            var space = getElementValue("zsid");
-            var pkValue = getElementValue("pk");
-            isEncrypted = true;
-
-            if (isProductSwitch) {
-                TABLE_LIST = [];
-                COLUMN_LIST = [];
-                setElementValue("zsid", "admin");
-                hideElement("queryOutputContainer");
-                hideElement("tableSelection");
-                hideElement("pk");
-                if (product == "custom"){
-                    unHideElement("quickExe");
-                    unHideElement("credentials_box")
-                    }
-                  else
-                    hideElement("credentials_box")
-                setElementValue("query", "")
-                setElementValue("where_column_value", "")
-                setElementValue("set_column_value", "")
-                hideElement("response", "")
-            }
-
-            setElementValue("recordLimit", "50");
-
-            if (product == "custom") {
-                isEncrypted = false;
-
-                if (isProductSwitch) {
-                    setElementChecked("postgresql", false);
-                    setElementChecked("mysql", false);
-
-                    setElementValue("ip", "");
-                    setElementValue("user", "");
-                    setElementValue("password", "");
-                }
-
-                if (getElementValue("ip").length != 0 && getElementValue("user").length != 0)
-                    populateNeededEntity();
-                else
-                    setElementValue("zsid", "admin")
-            }
-            else
-            {
-                setElementChecked("postgresql", SAS_META.db_meta[product].server == "postgresql");
-                setElementChecked("mysql", SAS_META.db_meta[product].server == "mysql");
-
-                setElementValue("ip", SAS_META[product].ip);
-                setElementValue("user", SAS_META[product].user);
-                setElementValue("password", SAS_META[product].password);
-
-                populateNeededEntity();
-            }
-        }
-
-        document.addEventListener("click", function(event) {
-            if (!document.getElementById("query").contains(event.target)) {
-                autocompleteContainer.style.display = "none";
-                hideElement("suggestionHint");
-            }
-        });
-
-        document.addEventListener("keyup", (event) => {
-            if (event.code === "Space") {
-                autocompleteContainer.style.display = "none";
-                document.getElementById("suggestionHint").style.display = "none";
-            }
-        });
-
-        function escapeHtml(text) {
-            if (text == "<EMPTY>" || text == null)
-                return text;
-            var map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            return text.replace(/[&<>"']/g, function(m) {
-                return map[m];
-            });
-        }
-
-        function handleQueryOutputForFailed() {
-            var failed = {};
-            for (var column in COLUMN_LIST) {
-                failed[COLUMN_LIST[column]] = "Failed";
-            }
-            if (COLUMN_LIST.length == 0)
-                hideElement("queryOutputContainer")
-            else
-                handleQueryOutput({
-                    query_output: [failed]
-                }, "", "");
-        }
-
-        function preExecutionValidation() {
-            if (document.querySelector('input[name="server"]:checked') == null) {
-                alert("Choose DB Server");
-                return false;
-            }
-            if (document.getElementById("ip").value.length == 0) {
-                alert("Please enter a valid Main Cluster IP ");
-                return false;
-            }
-            if (document.getElementById("user").value.length == 0) {
-                alert("Please enter a valid User");
-                return false;
-            }
-            return true;
-        }
-
-        function isValidColumn(criteriaColumn, currentColumn, value) {
-            return criteriaColumn == currentColumn && value == Number(value);
-        }
-
-        function getFilteredFromDB(criteriaColumn) {
-            var filteredRows = [];
-            var criteriaVal = getElementValue(criteriaColumn);
-            var predicate = ""
-            var gl = new RegExp(">(.*)<(.+)");
-            var gt = new RegExp(">(.+)");
-            var lt = new RegExp("<(.+)");
-            if (gl.exec(criteriaVal) != null) {
-                const num1 = Number((gl.exec(criteriaVal)[1]).trim());
-                const num2 = Number((gl.exec(criteriaVal)[2]).trim());
-                predicate = " Where " + criteriaColumn + " > " + num1 + " AND " + criteriaColumn + " < " + num2;
-
-            } else if (gt.exec(criteriaVal) != null) {
-                const num = Number((gt.exec(criteriaVal)[1]).trim());
-                predicate = " Where " + criteriaColumn + " > " + num;
-            } else if (lt.exec(criteriaVal) != null) {
-                const num = Number((lt.exec(criteriaVal)[1]).trim());
-                predicate = " Where " + criteriaColumn + " < " + num;
-            } else if (criteriaVal.trim().length != 0) {
-                const value = criteriaVal.trim();
-                const comparator = isNaN(value) ? " LIKE" + " '%" + value + "%'" :  " = " + value
-                predicate = " Where " + criteriaColumn + comparator
-            } else {
-                alert("Invalid criteria");
-                return;
-            }
-            setElementValue("query", "Select * from " + getElementValue("tableList") + predicate);
-            execute();
-        }
-
-        function populateNeededEntity() {
-            if (TABLE_LIST.length == 0)
-                getTables();
-            else if (COLUMN_LIST.length == 0)
-                getColumns()
-            else
-                execute();
-        }
-
-        function refreshTable() {
-            setElementValue("query", "Select * from " + getElementValue("tableList") + getLimitAndOrderBy());
-            execute();
-        }
-
-        function handleLimitChange() {
-            setElementValue("query", "Select * from " + document.getElementById("tableList").value + getLimitAndOrderBy())
-            execute()
-        }
         </script>
     </body>
 </html>

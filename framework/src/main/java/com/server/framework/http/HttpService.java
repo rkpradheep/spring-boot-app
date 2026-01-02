@@ -101,7 +101,8 @@ public class HttpService
 
 		HttpURLConnection httpURLConnection = (HttpURLConnection) (Objects.nonNull(proxy) ? new URL(url).openConnection(proxy) : new URL(url).openConnection());
 		httpURLConnection.setRequestMethod(method);
-		httpURLConnection.setConnectTimeout(5000);
+		httpURLConnection.setConnectTimeout(httpContext.getConnectionTimeoutInMillis());
+		httpURLConnection.setReadTimeout(httpContext.getReadTimeoutInMillis());
 		if(Objects.nonNull(sslSocketFactory))
 		{
 			((HttpsURLConnection) httpURLConnection).setSSLSocketFactory(sslSocketFactory);

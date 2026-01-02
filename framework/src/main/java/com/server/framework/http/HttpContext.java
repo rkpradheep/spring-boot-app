@@ -20,6 +20,8 @@ public class HttpContext
 	private SSLSocketFactory sslSocketFactory;
 	private InputStream inputStream;
 	private Proxy proxy;
+	int connectionTimeoutInMillis = 15000;
+	int readTimeoutInMillis = 1000 * 60 * 10;
 
 	public HttpContext(String url, String method)
 	{
@@ -88,6 +90,18 @@ public class HttpContext
 		return this;
 	}
 
+	public HttpContext setConnectionTimeoutInMillis(int connectionTimeoutInMillis)
+	{
+		this.connectionTimeoutInMillis = connectionTimeoutInMillis;
+		return this;
+	}
+
+	public HttpContext setReadTimeoutInMillis(int readTimeoutInMillis)
+	{
+		this.readTimeoutInMillis = readTimeoutInMillis;
+		return this;
+	}
+
 	public String getUrl()
 	{
 		return url;
@@ -121,5 +135,15 @@ public class HttpContext
 	public Proxy getProxy()
 	{
 		return proxy;
+	}
+
+	public int getConnectionTimeoutInMillis()
+	{
+		return connectionTimeoutInMillis;
+	}
+
+	public int getReadTimeoutInMillis()
+	{
+		return readTimeoutInMillis;
 	}
 }

@@ -81,3 +81,29 @@ window.open(new URL(window.location.href.replace('http', 'https')) , "_self");
      }
      return "";
  }
+
+const disableUnloadWarning =
+  document.body?.dataset?.disableUnloadWarning === "true";
+
+let isDirty = false;
+
+document.addEventListener("DOMContentLoaded", () => {
+ if (disableUnloadWarning)
+ {
+    return;
+ }
+  document.querySelectorAll("input, textarea, select").forEach(el => {
+    el.addEventListener("input", () => {
+      isDirty = true;
+    });
+  });
+});
+
+window.addEventListener("beforeunload", function (e) {
+  if (isDirty) {
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
+
+

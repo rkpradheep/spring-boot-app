@@ -7,8 +7,10 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.http.client.methods.HttpPost;
 import org.json.JSONObject;
 import org.jose4j.jwt.JwtClaims;
 import org.jose4j.jwt.NumericDate;
@@ -21,7 +23,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.InputStream;
+import java.io.StringWriter;
+import java.net.HttpURLConnection;
 import java.net.Inet4Address;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyFactory;
@@ -37,6 +44,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -47,12 +55,14 @@ import javax.crypto.spec.SecretKeySpec;
 import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.AppProperties;
 import com.server.framework.common.CommonService;
+import com.server.framework.common.CustomBiFunction;
 import com.server.framework.common.DateUtil;
 import com.server.framework.entity.ConfigurationEntity;
 import com.server.framework.error.AppException;
 import com.server.framework.http.HttpService;
 import com.server.framework.http.HttpContext;
 import com.server.framework.http.HttpResponse;
+import com.server.framework.job.CustomRunnable;
 import com.server.framework.job.TaskEnum;
 import com.server.framework.security.SecurityUtil;
 import com.server.framework.service.ConfigurationService;
@@ -97,13 +107,19 @@ public class ZohoController
 	@PostMapping("/zoho/mark-as-test-org")
 	public ResponseEntity<Map<String, Object>> markAsTestOrg(@RequestParam(name = "service") String service, @RequestParam(name = "dc") String dc, @RequestParam(name = "zsid") String zsid)
 	{
-		return markAsPaidOrTestOrg(service, dc, zsid, false);
+		return markAsPaidOrTestOrg(service, dc, zsid, false, false);
 	}
 
 	@PostMapping("/zoho/mark-as-paid-org")
 	public ResponseEntity<Map<String, Object>> markAsPaidOrg(@RequestParam(name = "service") String service, @RequestParam(name = "dc") String dc, @RequestParam(name = "zsid") String zsid)
 	{
-		return markAsPaidOrTestOrg(service, dc, zsid, true);
+		return markAsPaidOrTestOrg(service, dc, zsid, true, false);
+	}
+
+	@PostMapping("/zoho/mark-as-non-test-org")
+	public ResponseEntity<Map<String, Object>> markAsNonTestOrg(@RequestParam(name = "service") String service, @RequestParam(name = "dc") String dc, @RequestParam(name = "zsid") String zsid)
+	{
+		return markAsPaidOrTestOrg(service, dc, zsid, false, true);
 	}
 
 	@PostMapping("/zoho/org-count-increment")
@@ -153,7 +169,7 @@ public class ZohoController
 		}
 	}
 
-	public ResponseEntity<Map<String, Object>> markAsPaidOrTestOrg(String service, String dc, String zsid, boolean isPaidOrgMarking)
+	public ResponseEntity<Map<String, Object>> markAsPaidOrTestOrg(String service, String dc, String zsid, boolean isPaidOrgMarking, boolean isNonTestOrgMarking)
 	{
 		try
 		{
@@ -162,11 +178,14 @@ public class ZohoController
 				throw new AppException("ZSID is required");
 			}
 
-			String queryKey = isPaidOrgMarking ? "markaspaidorg" : "markastestorg";
+			String parentService = service;
+			parentService = List.of("invoice", "erp", "inventory", "expense", "payroll").contains(service) ? "books" : parentService;
+
+			String queryKey = isNonTestOrgMarking ? "markasnontestorg" : isPaidOrgMarking ? "markaspaidorg" : "markastestorg";
 			String query = AppProperties.getProperty("sas." + service + "." + queryKey + ".query").replace("{ZSID}", zsid);
-			Map<String, Object> serviceCredentials = (Map<String, Object>) AppContextHolder.getBean(SASController.class).getServicesCredentials(null).get(service + "-" + dc);
+			Map<String, Object> serviceCredentials = (Map<String, Object>) AppContextHolder.getBean(SASController.class).getServicesCredentials(null).get(parentService + "-" + dc);
 			JSONObject credentials = new JSONObject()
-				.put("service", service)
+				.put("service", parentService)
 				.put("dc", dc)
 				.put("zsid", zsid)
 				.put("server", serviceCredentials.get("server"))
@@ -180,17 +199,22 @@ public class ZohoController
 			if(service.equals("books"))
 			{
 				String key = isPaidOrgMarking ? "AST_".concat(zsid).concat("_1") : "OST_".concat(zsid);
-				deleteKeyFromRedis(service, dc, key, 14, null);
+				deleteKeyFromRedis(parentService, dc, key, 14, null);
+			}
+			else if(service.equals("erp"))
+			{
+				String key = isPaidOrgMarking ? "AST_".concat(zsid).concat("_14") : "OST_".concat(zsid);
+				deleteKeyFromRedis(parentService, dc, key, 14, null);
 			}
 
 			String successMessage = "Marked as test org successfully";
-			successMessage = isPaidOrgMarking ? "Marked as paid org successfully" : successMessage;
+			successMessage = isPaidOrgMarking ? "Marked as paid org successfully" : isNonTestOrgMarking ? "Marked as non-test org successfully" : successMessage;
 			Map<String, Object> response = ApiResponseBuilder.create().message(successMessage).build();
 			return ResponseEntity.ok(response);
 		}
 		catch(Exception e)
 		{
-			String errorMessage = isPaidOrgMarking ? "Failed to mark as paid org: " : "Failed to mark as test org: ";
+			String errorMessage = "Operation Failed: ";
 			Map<String, Object> response = ApiResponseBuilder.error(errorMessage + e.getMessage(), 400);
 			return ResponseEntity.badRequest().body(response);
 		}
@@ -587,6 +611,107 @@ public class ZohoController
 			Map<String, Object> response = ApiResponseBuilder.error("API call failed : " + e.getMessage(), 400);
 			return ResponseEntity.badRequest().body(response);
 		}
+	}
+
+	@PostMapping("/zoho/setup-sbi")
+	public ResponseEntity<Map<String, Object>> setUpSBIIntegration(@RequestParam("erp_unique_id") String erpUniqueId, @RequestParam("is_csez") boolean isCSEZ) throws Exception
+	{
+		Function<Integer, JSONObject> getPayload = (webhookNumber) -> {
+
+			String payloadString = null;
+
+			switch(webhookNumber)
+			{
+				case 1:
+					payloadString = "{\n"
+						+ "    \"erpUniqID\": \"4XG1911AKLUWP\",\n"
+						+ "    \"enquiryRefNumber\": \"TestMock\",\n"
+						+ "    \"aggregatorID\": \"1234\",\n"
+						+ "    \"corporateId\": \"92212345678\"\n"
+						+ "}";
+					break;
+				case 2:
+					payloadString = "{\n"
+						+ "    \"erpUniqID\": \"4XG1911AKLUWP\",\n"
+						+ "    \"enquiryRefNumber\": \"TestMock\",\n"
+						+ "    \"aggregatorID\": \"1234\",\n"
+						+ "    \"corpAlias\": \"682500A\",\n"
+						+ "    \"corporateAccount\": [\n"
+						+ "        {\n"
+						+ "            \"accountNumber\": \"00000054051323747\",\n"
+						+ "            \"branchCode\": \"23456\"\n"
+						+ "        }\n"
+						+ "    ],\n"
+						+ "    \"txnUserMobile\": {\n"
+						+ "        \"mobileNumbersList\": [\n"
+						+ "            \"1234567890\",\"1234567891\"\n"
+						+ "        ]\n"
+						+ "    }\n"
+						+ "}";
+					break;
+				case 3:
+					payloadString = "{\n"
+						+ "    \"erpUniqID\": \"4XG1911AKLUWP\",\n"
+						+ "    \"enquiryRefNumber\": \"TestMock\",\n"
+						+ "    \"aggregatorID\": \"1234\",\n"
+						+ "    \"corporateToken\": \"dshjbhsdbfvbfd3843572\",\n"
+						+ "    \"tokenExpiryDate\": \"31-12-2099\"\n"
+						+ "}";
+					break;
+
+				case 4:
+					payloadString = "{\n"
+						+ "    \"erpUniqID\": \"4XG1911AKLUWP\",\n"
+						+ "    \"enquiryRefNumber\": \"TestMock\",\n"
+						+ "    \"aggregatorID\": \"1234\",\n"
+						+ "    \"corporateToken\": \"dshjbhsdbfvbfd3843572\",\n"
+						+ "    \"tokenExpiryDate\": \"31-12-2099\",\n"
+						+ "    \"tokenRefNumber\": \"test\",\n"
+						+ "    \"tokenRevReqNO\": \"test\"\n"
+						+ "}";
+					break;
+
+			}
+			JSONObject payload = new JSONObject(payloadString);
+			payload.put("erpUniqID", erpUniqueId);
+			return payload;
+		};
+
+		CustomBiFunction<String, Integer, String> connect = (endPoint, webhookNumber) -> {
+			String url = isCSEZ ? "https://payout.csez.zohocorpin.com" : "https://payout.localzoho.com";
+			HttpURLConnection connection = (HttpURLConnection) new URL(url.concat(endPoint)).openConnection();
+			connection.setRequestMethod(HttpPost.METHOD_NAME);
+			connection.setDoOutput(true);
+			connection.setRequestProperty("content-type", "application/json");
+
+			connection.getOutputStream().write(getPayload.apply(webhookNumber).toString().getBytes(StandardCharsets.UTF_8));
+			StringWriter stringWriter = new StringWriter();
+
+			InputStream stream = connection.getResponseCode() >= 200 && connection.getResponseCode() <= 299 ? connection.getInputStream() : connection.getErrorStream();
+			IOUtils.copy(stream, stringWriter);
+			try
+			{
+				JSONObject response = new JSONObject(stringWriter.toString());
+				return new JSONObject(response.getString("data")).getString("validationStatus").equals("Y") ? "Success" : "Failed";
+			}
+			catch(Exception e)
+			{
+				return "Failed";
+			}
+		};
+
+		String data = "validation status : " + connect.apply("/n/sbi/erpcorporateid/validate?account_id=31346739", 1);
+		data = data + "\nsync status : " + connect.apply("/n/sbi/corpdetails/sync?account_id=31346739", 2);
+		String grantStatus = connect.apply("/n/sbi/corptoken/grant?account_id=31346739", 3);
+		data = data + "\ngrant status : " + grantStatus;
+		if(grantStatus.equals("Success"))
+		{
+			data = data + "\nmobile_number : " + "1234567890";
+		}
+
+		Map<String, Object> response = ApiResponseBuilder.success("Success", data);
+		//System.out.println("revoke response : " + connect.apply("/n/sbi/corptoken/revoke", 4) + "\n");
+		return ResponseEntity.ok(response);
 	}
 
 	public static String generateISCSignature(String service, String dc) throws Exception

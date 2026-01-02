@@ -12,6 +12,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.AppProperties;
 import com.server.framework.common.CommonService;
 import com.server.framework.common.DateUtil;
@@ -418,14 +419,9 @@ public class IntegService
 
 			HttpEntity<String> entity = new HttpEntity<>(request.toString(), headers);
 
-			ResponseEntity<String> response = restTemplate.exchange(
-				buildApiUrl,
-				HttpMethod.POST,
-				entity,
-				String.class
-			);
+			String response = AppContextHolder.getBean(RestTemplate.class).postForObject(buildApiUrl, entity, String.class);
 
-			BuildResponse buildResponse = getBuildResponse(response.getBody());
+			BuildResponse buildResponse = getBuildResponse(response);
 
 			if(Objects.nonNull(buildResponse))
 			{
