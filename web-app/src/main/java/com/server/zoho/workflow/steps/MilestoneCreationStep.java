@@ -18,6 +18,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Component
@@ -53,14 +55,27 @@ public class MilestoneCreationStep extends WorkflowStep
 		Long buildId = Long.parseLong(instance.getVariable("buildId"));
 
 		Optional<BuildProductEntity> productOpt = buildProductService.getById(productId);
+		BuildProductEntity product = productOpt.get();
+		boolean isServerRepo = IntegService.getProductConfig(product.getProductName()).isServerRepo();
 
 		try
 		{
 			BuildResponse buildResponse = integService.checkBuildStatus(buildId);
 			String releaseVersion = buildResponse.getReleaseVersion();
-			BuildProductEntity product = productOpt.get();
+
 			if(StringUtils.isEmpty(releaseVersion))
 			{
+				if(isServerRepo)
+				{
+					try
+					{
+						TimeUnit.MINUTES.sleep(1);
+					}
+					catch(InterruptedException e)
+					{
+						LOGGER.log(Level.SEVERE, "Exception occurred", e);
+					}
+				}
 				MilestoneService.MilestoneResult result = milestoneService.moveBuildToMilestone(buildId, product.getProductName());
 				if(result.isSuccess() && result.getMilestoneVersion() != null)
 				{
@@ -83,7 +98,6 @@ public class MilestoneCreationStep extends WorkflowStep
 			buildProductService.markMilestoneCreated(product, releaseVersion);
 			instance.setVariable("milestoneVersion", releaseVersion);
 			instance.setVariable("productName", product.getProductName());
-			boolean isServerRepo = IntegService.getProductConfig(product.getProductName()).isServerRepo();
 
 			return new WorkflowEvent(!isServerRepo ? BuildEventType.CHANNEL_MAPPING : BuildEventType.SD_CSEZ_BUILD_UPDATE, Map.of("milestoneVersion", releaseVersion));
 

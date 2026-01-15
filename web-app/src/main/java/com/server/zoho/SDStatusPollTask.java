@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 
 import com.server.framework.common.CommonService;
@@ -17,6 +18,7 @@ import com.server.framework.job.Task;
 import com.server.framework.service.JobService;
 
 @Service
+@Scope("prototype")
 public class SDStatusPollTask implements Task
 {
 	@Autowired
