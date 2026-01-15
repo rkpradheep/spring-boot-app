@@ -58,7 +58,8 @@ public class TaskEngineService
 
 	static Pair<Long, Long> getUserIdCustomerIdPair(JSONObject payload) throws Exception
 	{
-		if(StringUtils.isEmpty(payload.optString("zsid")))
+		String dc = payload.getString("dc");
+		if(StringUtils.isEmpty(payload.optString("zsid")) || !List.of("csez", "local").contains(dc))
 		{
 			return new ImmutablePair<>(payload.optLong("user_id", -1L), payload.optLong("customer_id", -1L));
 		}

@@ -1,5 +1,6 @@
 package com.server.framework.service;
 
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -28,13 +29,14 @@ public class JobWrapper
 	{
 
 		LOGGER.info("Executing job: " + jobEntity.getId() + " - " + jobEntity.getTaskName());
+		Task task = null;
 
 		try
 		{
 			jobEntity.setStatus(JobStatus.JOB_RUNNING);
 			jobRepository.save(jobEntity);
 
-			Task task = TaskEnum.getTaskInstance(jobEntity.getTaskName());
+			task = TaskEnum.getTaskInstance(jobEntity.getTaskName());
 			task.run(jobEntity.getId());
 
 			LOGGER.info("Job " + jobEntity.getId() + " executed successfully");
@@ -43,14 +45,13 @@ public class JobWrapper
 		{
 			LOGGER.log(Level.SEVERE, "Error executing job task: " + jobEntity.getId(), e);
 		}
-
 		finally
 		{
-			handleJobCompletion(jobEntity);
+			handleJobCompletion(task, jobEntity);
 		}
 	}
 
-	private void handleJobCompletion(JobEntity jobEntity)
+	private void handleJobCompletion(Task task, JobEntity jobEntity)
 	{
 		try
 		{
@@ -73,8 +74,7 @@ public class JobWrapper
 				return;
 			}
 
-			Task task = TaskEnum.getTaskInstance(jobEntity.getTaskName());
-			if(task.canAddJobAgain())
+			if(Objects.nonNull(task) && task.canAddJobAgain())
 			{
 				long nextExecutionTime = DateUtil.getCurrentTimeInMillis() + task.getDelayBeforeAddJobAgain();
 

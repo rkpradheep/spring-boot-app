@@ -182,7 +182,7 @@ public class ZohoController
 			parentService = List.of("invoice", "erp", "inventory", "expense", "payroll").contains(service) ? "books" : parentService;
 
 			String queryKey = isNonTestOrgMarking ? "markasnontestorg" : isPaidOrgMarking ? "markaspaidorg" : "markastestorg";
-			String query = AppProperties.getProperty("sas." + service + "." + queryKey + ".query").replace("{ZSID}", zsid);
+			String query = AppProperties.getProperty("sas." + (isPaidOrgMarking ? service : parentService) + "." + queryKey + ".query").replace("{ZSID}", zsid);
 			Map<String, Object> serviceCredentials = (Map<String, Object>) AppContextHolder.getBean(SASController.class).getServicesCredentials(null).get(parentService + "-" + dc);
 			JSONObject credentials = new JSONObject()
 				.put("service", parentService)
