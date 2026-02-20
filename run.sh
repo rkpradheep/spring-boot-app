@@ -51,6 +51,8 @@ if [ "$os_name" = "Darwin" ]; then
 else
   if [ -d "/opt/java/zulu$JAVA_VERSION" ]; then
     export JAVA_HOME=/opt/java/zulu$JAVA_VERSION
+  elif [ -d "/home/test/rkp/jdk" ]; then
+       export JAVA_HOME=/home/test/rkp/jdk
   else
     export JAVA_HOME=/home/sas/rkp/jdk
   fi
