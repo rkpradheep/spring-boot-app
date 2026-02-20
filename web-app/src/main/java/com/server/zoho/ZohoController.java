@@ -521,6 +521,7 @@ public class ZohoController
 						.put("gitlab_issue_id", context.get("gitlabIssueID"))
 						.put("server_repo_name", context.get("serverProductName"))
 						.put("monitor_id", monitorId)
+						.put("product_id", context.get("productId"))
 						.put("build_id", buildId);
 
 					AppContextHolder.getBean(JobService.class).scheduleJob(TaskEnum.SD_STATUS_POLL_TASK.getTaskName(), data.toString(), DateUtil.ONE_MINUTE_IN_MILLISECOND);

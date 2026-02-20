@@ -10,6 +10,8 @@ import com.server.framework.http.HttpService;
 import com.server.framework.http.HttpContext;
 import com.server.framework.security.SecurityUtil;
 import com.server.framework.service.ConfigurationService;
+import com.server.framework.service.WorkflowService;
+import com.server.framework.workflow.model.WorkflowStatus;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -32,7 +34,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -49,7 +50,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Component
 public class ZohoService
@@ -306,7 +306,8 @@ public class ZohoService
 
 	public static void doAuthentication() throws Exception
 	{
-		if(Objects.isNull(SecurityUtil.getCurrentRequest()))
+		boolean isZohoAuthDisabled = AppProperties.getBoolean("isZohoAuthDisabled");
+		if(isZohoAuthDisabled || Objects.isNull(SecurityUtil.getCurrentRequest()))
 		{
 			return;
 		}
@@ -742,6 +743,7 @@ public class ZohoService
 			}
 
 			comment = comment.replace("{@participants}", "");
+			comment = comment.replace("[Retry]($1)", "");
 			comment = comment.replace("Please start the testing", "");
 			comment = comment.replaceAll("(\\*(.*)\\*)", "**$2**");
 			comment = comment.replace("{@", "");
@@ -942,6 +944,38 @@ public class ZohoService
 		HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(httpContext);
 		return new JSONObject(httpResponse.getStringResponse());
 
+	}
+
+	public static void sendRetryBuildWorkflowMessage(String workflowID, String messageID, String serverRepoName, String gitlabIssueID, String message)
+	{
+		try
+		{
+			String retryMessage = "\n\n[Retry]($1)";
+			JSONObject reference = new JSONObject()
+				.put("type", "button")
+				.put("object", new JSONObject()
+					.put("label", "Retry")
+					.put("action", new JSONObject()
+						.put("type", "invoke.function")
+						.put("data", new JSONObject().put("name", "retrybuildworkflow")))
+					.put("arguments", new JSONObject()
+						.put("key", "retry")
+						.put("value", workflowID))
+					.put("type", "+")
+				);
+
+			JSONObject references = new JSONObject().put("1", reference);
+			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, gitlabIssueID, "MASTER BUILD", message + retryMessage, references);
+		}
+		catch(Exception e)
+		{
+			LOGGER.log(Level.SEVERE, "Exception while setting retry message for build workflow", e);
+		}
+	}
+
+	public static void sendRetryBuildWorkflowMessage(Map<String, Object> context, String message)
+	{
+		sendRetryBuildWorkflowMessage(context.get("monitorId").toString(), (String) context.get("messageID"), (String) context.get("serverProductName"), (String) context.get("gitlabIssueID"), message);
 	}
 }
 

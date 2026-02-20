@@ -16,6 +16,12 @@ import com.server.framework.common.DateUtil;
 import com.server.framework.entity.JobEntity;
 import com.server.framework.job.Task;
 import com.server.framework.service.JobService;
+import com.server.framework.service.WorkflowService;
+import com.server.framework.workflow.definition.WorkflowStep;
+import com.server.framework.workflow.model.WorkflowStatus;
+import com.server.zoho.service.BuildProductService;
+import com.server.zoho.workflow.model.BuildStates;
+import com.server.zoho.workflow.steps.BuildInitiationStep;
 
 @Service
 @Scope("prototype")
@@ -23,6 +29,11 @@ public class SDStatusPollTask implements Task
 {
 	@Autowired
 	private JobService jobService;
+
+	@Autowired
+	private BuildProductService buildProductService;
+
+	@Autowired private WorkflowService workflowService;
 
 	private static final Logger LOGGER = Logger.getLogger(SDStatusPollTask.class.getName());
 
@@ -46,6 +57,7 @@ public class SDStatusPollTask implements Task
 		String gitlabIssueID = jsonObject.getString("gitlab_issue_id");
 		String serverRepoName = jsonObject.getString("server_repo_name");
 		String buildID = jsonObject.getString("build_id");
+		String productID = jsonObject.optString("product_id");
 
 		JSONObject response = ZohoService.getSDBuildStatus(buildID);
 
@@ -55,10 +67,12 @@ public class SDStatusPollTask implements Task
 
 		canAddJobAgain = false;
 
+		boolean isKilled = false;
+
 		if(StringUtils.equalsIgnoreCase(overallStatus, "killed"))
 		{
+			isKilled = true;
 			LOGGER.log(Level.INFO, "Build process was killed for build ID: {0}", buildID);
-			return;
 		}
 		String message;
 		String url = response.getString("url");
@@ -69,15 +83,36 @@ public class SDStatusPollTask implements Task
 		boolean isSuccess = false;
 		String mentionAllMessage = "\n\nPlease start the testing {@participants}";
 		String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
-		if(overallStatus.equalsIgnoreCase("Failed"))
+		if(overallStatus.equalsIgnoreCase("Failed") || isKilled)
 		{
-			message = "Build update failed in " + regionName + buildUrlMessage;
+			message = "Build update failed in " + regionName + buildUrlMessage + (isKilled ? "\n\nReason: Build was aborted" : "");
+
 			mentionAllMessage = "\n\nPlease check {@participants}";
 			if(StringUtils.isNotEmpty(buildOwnerEmail))
 			{
 				mentionAllMessage = "\n\nPlease check {@" + buildOwnerEmail + "}";
 			}
-		}
+			try
+			{
+
+				if(regionName.equals("LOCAL"))
+				{
+					buildProductService.getById(Long.parseLong(productID)).ifPresent(buildProductEntity -> buildProductService.markSDLocalBuildUpdateFailed(buildProductEntity, message));
+					workflowService.getInstance(jsonObject.getString("monitor_id")).ifPresent(instance -> {
+						instance.setCurrentState(BuildStates.SD_LOCAL_BUILD_UPDATE_FAILED.getValue());
+						instance.setStatus(WorkflowStatus.FAILED);
+						workflowService.saveInstance(instance);
+					});
+					ZohoService.sendRetryBuildWorkflowMessage(jsonObject.getString("monitor_id"), messageID, serverRepoName, gitlabIssueID, message + mentionAllMessage);
+					return;
+				}
+			}
+			catch(Exception e)
+			{
+				LOGGER.log(Level.SEVERE, "Error while marking SD Local Build Update Failed for product ID: " + productID, e);
+			}
+
+	}
 		else if(overallStatus.equalsIgnoreCase("Completed"))
 		{
 			message = "Build deployed successfully in " + regionName + buildUrlMessage;

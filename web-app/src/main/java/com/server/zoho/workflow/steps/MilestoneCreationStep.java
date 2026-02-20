@@ -85,7 +85,7 @@ public class MilestoneCreationStep extends WorkflowStep
 				}
 				else
 				{
-					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productOpt.get().getProductName() + " ]* Milestone Failed");
+					ZohoService.sendRetryBuildWorkflowMessage(context, "*[ " + productOpt.get().getProductName() + " ]* Milestone Failed");
 					return new WorkflowEvent(BuildEventType.MILESTONE_FAILED, Map.of("error", result.getMessage()));
 				}
 			}
@@ -105,7 +105,7 @@ public class MilestoneCreationStep extends WorkflowStep
 		catch(Exception e)
 		{
 			buildProductService.markMilestoneFailed(productOpt.orElse(null), e.getMessage());
-			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productOpt.get().getProductName() + " ]* Milestone Failed");
+			ZohoService.sendRetryBuildWorkflowMessage(context, "*[ " + productOpt.get().getProductName() + " ]* Milestone Failed");
 			return new WorkflowEvent(BuildEventType.MILESTONE_FAILED, Map.of("error", "Milestone creation failed: " + e.getMessage()));
 		}
 	}

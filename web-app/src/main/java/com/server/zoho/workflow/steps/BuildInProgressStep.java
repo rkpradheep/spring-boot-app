@@ -13,6 +13,7 @@ import com.server.framework.workflow.model.WorkflowEvent;
 import com.server.framework.workflow.model.WorkflowInstance;
 import com.server.framework.service.JobService;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -55,12 +56,13 @@ import java.util.logging.Logger;
 			return new WorkflowEvent(BuildEventType.BUILD_FAILED, Map.of("error", "Missing productId or buildId"));
 		}
 
+		String productName = null;
 		try
 		{
 			BuildResponse response = integService.checkBuildStatus(buildId);
 			String status = response.getMessage();
 
-			String productName = buildProductService.getById(productId).map(BuildProductEntity::getProductName).orElse(null);
+			productName = buildProductService.getById(productId).map(BuildProductEntity::getProductName).orElse(null);
 
 			if("BUILD_SUCCESS".equals(status))
 			{
@@ -73,7 +75,7 @@ import java.util.logging.Logger;
 			}
 			else if("BUILD_FAILED".equals(status))
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productName + " ]* Build Failed");
+				ZohoService.sendRetryBuildWorkflowMessage(context, "*[ " + productName + " ]* Build Failed");
 				return new WorkflowEvent(BuildEventType.BUILD_FAILED, Map.of("error", response.getErrorMessage() != null ? response.getErrorMessage() : "Build failed"));
 			}
 			else
@@ -86,6 +88,11 @@ import java.util.logging.Logger;
 		}
 		catch(Exception e)
 		{
+			if(StringUtils.isNotBlank(productName))
+			{
+				ZohoService.sendRetryBuildWorkflowMessage(context, "*[ " + productName + " ]* Build Failed");
+			}
+
 			return new WorkflowEvent(BuildEventType.BUILD_FAILED, Map.of("error", "Build status check failed: " + e.getMessage()));
 		}
 	}

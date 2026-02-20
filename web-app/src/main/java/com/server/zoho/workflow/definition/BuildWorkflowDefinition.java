@@ -191,7 +191,7 @@ public class BuildWorkflowDefinition extends WorkflowDefinition
 
 		addTransition(BuildStates.SD_LOCAL_BUILD_UPDATE_FAILED.getValue(),
 			new WorkflowTransition(BuildStates.SD_LOCAL_BUILD_UPDATE_FAILED.getValue(), BuildStates.SD_LOCAL_BUILD_UPDATE.getValue(),
-				BuildEventType.RETRY_REQUESTED.getValue(), true));
+				BuildEventType.RETRY_REQUESTED.getValue()));
 
 		addTransition(BuildStates.WORKFLOW_FAILED.getValue(), new WorkflowTransition(BuildStates.WORKFLOW_FAILED.getValue(), BuildStates.BUILD_INITIATION.getValue(),
 				BuildEventType.RETRY_REQUESTED.getValue()));

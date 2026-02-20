@@ -1,5 +1,6 @@
 package com.server.zoho.controller;
 
+import com.server.framework.common.CommonService;
 import com.server.framework.entity.WorkflowInstanceEntity;
 import com.server.framework.error.AppException;
 import com.server.framework.service.LockService;
@@ -20,6 +21,7 @@ import com.server.zoho.service.BuildProductService;
 import com.server.framework.builder.ApiResponseBuilder;
 import com.server.zoho.workflow.model.BuildProductStatus;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -434,9 +436,18 @@ public class BuildWorkflowController
 
 			workflowService.saveInstance(instance);
 
-			WorkflowEvent retryEvent = new WorkflowEvent(BuildEventType.RETRY_REQUESTED);
+			Map<String, Object> context = (Map<String, Object>) instance.getContext();
+			String messageID =  (String) context.get("messageID");
+			if(StringUtils.isNotEmpty(ZohoService.getCurrentUserEmail()) && StringUtils.isNotEmpty(messageID))
+			{
+				String message = "Retry initiated successfully!\n\n Initiated by : {@" + ZohoService.getCurrentUserEmail() + "}";
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", message);
+			}
 
+
+			WorkflowEvent retryEvent = new WorkflowEvent(BuildEventType.RETRY_REQUESTED);
 			workflowEngine.processEvent(workflowId, retryEvent);
+
 
 			Map<String, Object> data = new HashMap<>();
 			data.put("workflowId", workflowId);

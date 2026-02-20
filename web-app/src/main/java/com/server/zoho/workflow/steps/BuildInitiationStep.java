@@ -79,13 +79,14 @@ public class BuildInitiationStep extends WorkflowStep
 			}
 			else
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productName + " ]* Build Failed");
+				String message = "*[ " + productName + " ]* Build Failed";
+				ZohoService.sendRetryBuildWorkflowMessage(context, message);
 				return new WorkflowEvent(BuildEventType.BUILD_FAILED, Map.of("error", response.getMessage()));
 			}
 		}
 		catch(Exception e)
 		{
-			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productName + " ]* Build Failed");
+			ZohoService.sendRetryBuildWorkflowMessage(context, "*[ " + productName + " ]* Build Failed");
 			return new WorkflowEvent(BuildEventType.BUILD_FAILED, Map.of("error", "Failed to start build: " + e.getMessage()));
 		}
 	}

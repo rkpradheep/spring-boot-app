@@ -60,7 +60,7 @@ public class ChannelMappingStep extends WorkflowStep
 			}
 			else
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + product.getProductName() + " ]* Channel Mapping Failed");
+				ZohoService.sendRetryBuildWorkflowMessage(context, "*[ " + product.getProductName() + " ]* Channel Mapping Failed");
 				return new WorkflowEvent(BuildEventType.CHANNEL_MAPPING_FAILED, Map.of("error", result.getMessage()));
 			}
 
@@ -68,7 +68,7 @@ public class ChannelMappingStep extends WorkflowStep
 		catch(Exception e)
 		{
 			buildProductService.markChannelMappingFailed(productOpt.orElse(null), e.getMessage());
-			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "*[ " + productOpt.get().getProductName() + " ]* Channel Mapping Failed");
+			ZohoService.sendRetryBuildWorkflowMessage(context, "*[ " + productOpt.get().getProductName() + " ]* Channel Mapping Failed");
 			return new WorkflowEvent(BuildEventType.CHANNEL_MAPPING_FAILED, Map.of("error", "Channel mapping failed: " + e.getMessage()));
 		}
 	}
