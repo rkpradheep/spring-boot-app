@@ -75,6 +75,7 @@ public class DDDiffService
 		}
 		catch(Exception e)
 		{
+			LOGGER.log(Level.SEVERE, "Exception occurred ", e);
 			ConfigurationEntity configurationEntity = CONFIGURATION_SERVICE.get(Long.parseLong(referenceID)).get();
 			JSONObject statusObject = new JSONObject(configurationEntity.getCValue());
 			setValue(configurationEntity.getCKey(), statusObject.getString("status").concat("_FAILED"));

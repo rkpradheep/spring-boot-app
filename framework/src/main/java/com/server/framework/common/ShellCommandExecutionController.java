@@ -207,6 +207,9 @@ public class ShellCommandExecutionController
 		File[] dbusFiles = new File("/run/user/").listFiles();
 
 		ProcessBuilder pb = new ProcessBuilder(cmdArray);
+		//drain process output while it runs to avoid deadlocks caused by full stdout/stderr buffers.
+		//The old code called process.waitFor() first, which waits for the process to finish without draining the output streams at the same time. So you can get a deadlock-like situation: the script is blocked trying to write output, and the Java thread is blocked waiting for the script to exit.
+		pb.redirectErrorStream(true);
 		if(StringUtils.isNotEmpty(workingDir))
 		{
 			pb.directory(new File(workingDir));
@@ -220,16 +223,12 @@ public class ShellCommandExecutionController
 		}
 
 		Process process = pb.start();
-		int status = process.waitFor();
-
 		StringWriter stringWriter = new StringWriter();
+		// With redirectErrorStream(true), we only need to read from getInputStream().
+		IOUtils.copy(process.getInputStream(), stringWriter);
 
-		IOUtils.copy(process.getErrorStream(), stringWriter);
-		if(StringUtils.isEmpty(stringWriter.toString()))
-		{
-			IOUtils.copy(process.getInputStream(), stringWriter);
-		}
-		String output  = stringWriter.toString();
+		int status = process.waitFor();
+		String output = stringWriter.toString();
 
 		if(status != 0)
 		{
