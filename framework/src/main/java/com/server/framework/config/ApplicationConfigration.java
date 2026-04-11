@@ -51,9 +51,9 @@ public class ApplicationConfigration implements WebMvcConfigurer
 			.setCachePeriod(0);
 
 		registry
-			.addResourceHandler("/app.html")
+			.addResourceHandler("/app.html", "/zoho/zohologin.html")
 			.addResourceLocations("classpath:/static/")
-			.resourceChain(true)
+			.resourceChain(false)
 			.addTransformer(new PlaceholderResourceTransformer());
 	}
 

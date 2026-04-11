@@ -22,7 +22,7 @@ public class PageController
 
 	//    @GetMapping("/login")
 	//    public RedirectView login(HttpServletRequest request, HttpServletResponse response) throws IOException {
-	//        RedirectView redirectView = new RedirectView("/login.html");
+	//        RedirectView redirectView = new RedirectView("/zohologin.html");
 	//        redirectView.setPropagateQueryParams(true);
 	//        return redirectView;
 	//    }
@@ -47,7 +47,7 @@ public class PageController
 	@GetMapping("/admin/login")
 	public String adminLogin()
 	{
-		return "forward:/login.html";
+		return "forward:/zohologin.html";
 	}
 
 	@GetMapping("/csv")
@@ -162,5 +162,11 @@ public class PageController
 	public String tokenGenCustomInternalJspPage()
 	{
 		return "forward:/zoho/tokenGenCustomInternal.html";
+	}
+
+	@GetMapping("/zoho/login")
+	public String zohoLoginPage()
+	{
+		return "forward:/zoho/zohologin.html";
 	}
 }

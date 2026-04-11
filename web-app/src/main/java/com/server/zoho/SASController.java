@@ -353,7 +353,7 @@ public class SASController
 
 		Map<String, Object> map = getServicesCredentials(publicKey);
 
-		Map<String, String> iscMeta = new HashMap<>();
+		Map<String, String> iscMeta = new LinkedHashMap<>();
 
 		for(String service : AppProperties.getProperty("security.services").split(","))
 		{

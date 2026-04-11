@@ -207,7 +207,6 @@ public class SASService
 				isUpdateOrDelete = true;
 				String tableName = updateMatcher.matches() ? updateMatcher.group(2) : deleteMatcher.group(3);
 				tableName = getNormalisedName(connection, tableName);
-				ZohoService.doAuthentication();
 				ResultSet primaryKeys = connection.getMetaData().getPrimaryKeys(null, "jbossdb", tableName);
 				while(primaryKeys.next())
 				{

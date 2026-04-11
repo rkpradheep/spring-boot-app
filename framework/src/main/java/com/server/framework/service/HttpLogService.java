@@ -12,14 +12,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.net.HttpURLConnection;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-
-import java.io.InputStream;
-import java.net.HttpURLConnection;
 import java.util.zip.GZIPInputStream;
 
 @Service
@@ -71,7 +72,8 @@ public class HttpLogService
 		try
 		{
 			log.setStatusCode(connection.getResponseCode());
-			if(connection.getContentType().contains("json"))
+			String contentType = connection.getContentType();
+			if(contentType != null && contentType.contains("json"))
 			{
 				InputStream is = connection.getErrorStream();
 				if(is == null)
@@ -86,10 +88,14 @@ public class HttpLogService
 				log.setResponseData(getMasked(responseData));
 			}
 			log.setResponseHeaders(getMasked(buildResponseHeadersJson(connection)));
-			httpLogRepository.save(log);
 		}
-		catch(Exception ignore)
+		catch(Exception e)
 		{
+			log.setExceptionDetails(getExceptionDetails(e));
+		}
+		finally
+		{
+			httpLogRepository.save(log);
 		}
 	}
 
@@ -161,9 +167,16 @@ public class HttpLogService
 			return null;
 		}
 		return data.toString().replaceAll(
-			"(?i)([\"']?(access_token|refresh_token|token|authtoken|client_id|client_secret)[\"']?)\\s*([:=])\\s*([\"'])?([A-Za-z0-9\\-._~+/=]+)([\"'])?",
+			"(?i)([\"']?(access_token|refresh_token|token|authtoken|client_id|client_secret|secret|Authorization)[\"']?)\\s*([:=])\\s*([\"'])?([A-Za-z0-9\\-._~+/=]+)([\"'])?",
 			"$1$3\"********\""
 		);
+	}
+
+	private String getExceptionDetails(Exception e)
+	{
+		StringWriter sw = new StringWriter();
+		e.printStackTrace(new PrintWriter(sw));
+		return sw.toString();
 	}
 
 }

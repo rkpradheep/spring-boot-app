@@ -302,8 +302,6 @@ public class ZohoController
 			return ResponseEntity.ok(response);
 		}
 
-		ZohoService.doAuthentication();
-
 		if(StringUtils.equals("add", operation))
 		{
 			String result = !isRepetitive ?
@@ -354,7 +352,6 @@ public class ZohoController
 			return ResponseEntity.ok(ApiResponseBuilder.success("Details fetched successfully", TaskEngineService.getInstance(dc, serviceId, queueName).getRepetitionDetails(repetitionName, userId, customerId)));
 		}
 
-		ZohoService.doAuthentication();
 		if(StringUtils.equals("add_periodic", operation))
 		{
 			Integer periodicity = Integer.parseInt(StringUtils.defaultIfEmpty(requestBody.get("periodicity"), "-1"));
@@ -388,10 +385,10 @@ public class ZohoController
 		{
 			JSONObject tokenGeneratePayload = new JSONObject()
 				.put("code", authCode)
-				.put("client_id", AppProperties.getProperty("zoho.auth.client.id"))
-				.put("client_secret", AppProperties.getProperty("zoho.auth.client.secret"))
-				.put("redirect_uri", AppProperties.getProperty("zoho.auth.redirect.uri"))
-				.put("url", ZohoService.getDomainUrl("accounts", "/oauth/v2/token", "in"));
+				.put("client_id", AppProperties.getProperty("oauth.local.client.id"))
+				.put("client_secret", AppProperties.getProperty("oauth.local.client.secret"))
+				.put("redirect_uri", AppProperties.getProperty("oauth.local.client.redirecturi"))
+				.put("url", ZohoService.getDomainUrl("accounts", "/oauth/v2/token", "local"));
 
 			Map<String, Object> tokenResponse = oAuthService.generateTokens(tokenGeneratePayload.toMap());
 
@@ -406,9 +403,15 @@ public class ZohoController
 				String tokenHeader = "zoho_authenticated_token" + "="
 					+ CommonService.getAESEncryptedValue((String) tokenResponse.get("access_token"))
 					+ "; Path=/;"
-					+ "Max-Age=1800;";
+					+ "Max-Age=" + (DateUtil.ONE_DAY_IN_MILLISECOND/1000) + ";";
 				httpResponse.setHeader("Set-Cookie", tokenHeader);
 				message = "Authentication is success. Please try now.";
+				String origin = SecurityUtil.getCurrentRequest().getParameter("origin");
+				if(!StringUtils.startsWith( origin, "/api"))
+				{
+					httpResponse.sendRedirect(SecurityUtil.getCurrentRequest().getParameter("origin"));
+					return;
+				}
 
 			}
 		}
@@ -423,7 +426,6 @@ public class ZohoController
 	{
 		try
 		{
-			ZohoService.doAuthentication();
 			Set<String> productsQualifiedForBuild = buildAutomationService.startBuildAutomationForPayout();
 			if(productsQualifiedForBuild.isEmpty())
 			{
@@ -450,8 +452,6 @@ public class ZohoController
 	{
 		try
 		{
-			ZohoService.doAuthentication();
-
 			Map<String, Object> context = null;
 			Pair<String, String> milestoneAndComment = ZohoService.getLatestMilestoneAndCommentForBuildUpload(productName, stage);
 			if(Objects.isNull(milestoneAndComment))

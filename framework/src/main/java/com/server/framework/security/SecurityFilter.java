@@ -14,6 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,7 @@ import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -32,6 +34,7 @@ import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.AppProperties;
 import com.server.framework.common.SecurityRequestWrapper;
 import com.server.framework.entity.UserEntity;
+import com.server.framework.error.AppException;
 import com.server.framework.security.throttle.ThrottleNewHandler;
 import com.server.framework.service.HttpLogService;
 import com.server.framework.service.UserService;
@@ -51,6 +54,10 @@ public class SecurityFilter implements Filter
 	static final ThreadLocal<HttpServletRequest> CURRENT_REQUEST_TL = new InheritableThreadLocal<>();
 	static final ThreadLocal<ServletContext> SERVLET_CONTEXT_TL = new InheritableThreadLocal<>();
 	static final ThreadLocal<Boolean> DISABLE_HTTP_LOG = new InheritableThreadLocal<>();
+
+	@Autowired
+	@Qualifier("handlerExceptionResolver")
+	private HandlerExceptionResolver handlerExceptionResolver;
 
 	@Autowired
 	private ResourceLoader resourceLoader;
@@ -82,7 +89,7 @@ public class SecurityFilter implements Filter
 			//Instrumentation code start
 			HttpServletRequest httpServletRequest = (HttpServletRequest) request;
 			boolean isMultipart = AppContextHolder.getBean(MultipartResolver.class).isMultipart(httpServletRequest);
-			_doFilter(!isMultipart ? new SecurityRequestWrapper(httpServletRequest): request, response, chain);
+			_doFilter(!isMultipart ? new SecurityRequestWrapper(httpServletRequest) : request, response, chain);
 			//Instrumentation code end
 		}
 		finally
@@ -94,19 +101,46 @@ public class SecurityFilter implements Filter
 	// Extracted method to allow easier instrumentation
 	private void _doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException
 	{
+		HttpServletRequest httpRequest = (HttpServletRequest) request;
 		HttpServletResponse httpResponse = (HttpServletResponse) response;
 
 		setCookies(httpResponse);
 		initializeThreadLocals(request);
 		setResponseHeaders(httpResponse);
 
-		setThreadName();
-
 		if(SecurityUtil.isHealthCheckRequest())
 		{
 			chain.doFilter(request, response);
 			return;
 		}
+
+		String zohoUserEmail = null;
+
+		try
+		{
+			if((SecurityUtil.getCurrentRequestURI().equals("/zoho/oauth-tool") && StringUtils.isNotEmpty(SecurityUtil.getCurrentRequest().getParameter("state"))))
+			{
+				httpResponse.sendRedirect("/api/v1/zoho/auth?code=" + SecurityUtil.getCurrentRequest().getParameter("code") + "&origin=" + SecurityUtil.getCurrentRequest().getParameter("state"));
+				return;
+			}
+			zohoUserEmail = handleZohoAuth();
+		}
+		catch(AppException ae)
+		{
+			if(ae.getErrorCode().equals("reauth_required"))
+			{
+				if(SecurityUtil.getCurrentRequestURI().startsWith("/api"))
+				{
+					handlerExceptionResolver.resolveException(httpRequest, httpResponse, null, ae);
+					return;
+				}
+				httpResponse.sendRedirect((String) ((Map)ae.getData()).get("auth_uri"));
+				return;
+			}
+			handlerExceptionResolver.resolveException(httpRequest, httpResponse, null, ae);
+		}
+
+		setThreadName(zohoUserEmail);
 
 		logRequest();
 
@@ -130,6 +164,31 @@ public class SecurityFilter implements Filter
 		}
 
 		handleAuthentication(httpResponse, chain);
+	}
+
+	private static String handleZohoAuth()
+	{
+		try
+		{
+			if(!AppProperties.getProperty("environment", "development").equals("zoho") || (SecurityUtil.getCurrentRequestURI().startsWith("/api/v1/zoho/auth") || SecurityUtil.getCurrentRequestURI().startsWith("/zoho/login")))
+			{
+				return null;
+			}
+			return (String) Thread.currentThread().getContextClassLoader().loadClass("com.server.zoho.ZohoService").getDeclaredMethod("doAuthentication").invoke(null);
+		}
+		catch(InvocationTargetException e)
+		{
+			if(e.getTargetException() instanceof AppException)
+			{
+				throw (AppException) e.getTargetException();
+			}
+			LOGGER.log(Level.SEVERE, "Error during Zoho authentication", e);
+		}
+		catch(Exception e)
+		{
+			LOGGER.log(Level.SEVERE, "Error during Zoho authentication", e);
+		}
+		return null;
 	}
 
 	private void setCookies(HttpServletResponse httpResponse)
@@ -231,10 +290,14 @@ public class SecurityFilter implements Filter
 		}
 	}
 
-	private void setThreadName()
+	private void setThreadName(String zohoUserEmail)
 	{
 		String userDetails = "";
-		if(!SecurityUtil.isResourceFetchRequest() && SecurityUtil.isLoggedIn())
+		if(StringUtils.isNotEmpty(zohoUserEmail))
+		{
+			userDetails = "/" + zohoUserEmail;
+		}
+		else if(!SecurityUtil.isResourceFetchRequest() && SecurityUtil.isLoggedIn())
 		{
 			String currentUserName = SecurityUtil.getCurrentUser().getName();
 			String currentUserId = SecurityUtil.getCurrentUser().getId().toString();

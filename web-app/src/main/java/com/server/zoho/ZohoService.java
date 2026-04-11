@@ -78,7 +78,7 @@ public class ZohoService
 
 		@Override public String put(String tokenHash, String email)
 		{
-			TOKEN_HASH_EXPIRY_TIME.put(tokenHash, DateUtil.getCurrentTime().plusMinutes(30).toInstant().toEpochMilli());
+			TOKEN_HASH_EXPIRY_TIME.put(tokenHash, DateUtil.getCurrentTime().plusDays(1).toInstant().toEpochMilli());
 			return super.put(tokenHash, email);
 		}
 
@@ -88,7 +88,7 @@ public class ZohoService
 			{
 				return get(tokenHash);
 			}
-			TOKEN_HASH_EXPIRY_TIME.put(tokenHash, DateUtil.getCurrentTime().plusMinutes(30).toInstant().toEpochMilli());
+			TOKEN_HASH_EXPIRY_TIME.put(tokenHash, DateUtil.getCurrentTime().plusDays(1).toInstant().toEpochMilli());
 			return super.computeIfAbsent(tokenHash, mappingFunction);
 		}
 	};
@@ -304,42 +304,31 @@ public class ZohoService
 
 	}
 
-	public static void doAuthentication() throws Exception
+	public static String doAuthentication() throws Exception
 	{
 		boolean isZohoAuthDisabled = AppProperties.getBoolean("isZohoAuthDisabled");
 		if(isZohoAuthDisabled || Objects.isNull(SecurityUtil.getCurrentRequest()))
 		{
-			return;
+			return null;
 		}
 		if(SecurityUtil.getCurrentRequestURI().matches("/api/v1/zoho/(mark-as-paid-org|mark-as-test-org|org-count-increment|mark-as-non-test-org)"))
 		{
-			return;
+			return null;
 		}
 		String currentUserEmail = getCurrentUserEmail();
 		if(StringUtils.isNotEmpty(currentUserEmail))
 		{
-			String allowedUsers = AppContextHolder.getBean(ConfigurationService.class).getValue("zoho.critical.operation.allowed.users").orElse(AppProperties.getProperty("zoho.critical.operation.allowed.users"));
-			boolean isValidUser = Arrays.stream(allowedUsers.split(",")).map(String::trim).anyMatch(currentUserEmail::equals);
-			if(!isValidUser)
-			{
-				LOGGER.log(Level.SEVERE, "User " + currentUserEmail + " does not have access to perform this operation");
-				throw new AppException("access_denied", "User " + currentUserEmail + " does not have access to perform this operation");
-			}
-			return;
+			//			String allowedUsers = AppContextHolder.getBean(ConfigurationService.class).getValue("zoho.critical.operation.allowed.users").orElse(AppProperties.getProperty("zoho.critical.operation.allowed.users"));
+			//			boolean isValidUser = Arrays.stream(allowedUsers.split(",")).map(String::trim).anyMatch(currentUserEmail::equals);
+			//			if(!isValidUser)
+			//			{
+			//				LOGGER.log(Level.SEVERE, "User " + currentUserEmail + " does not have access to perform this operation");
+			//				throw new AppException("access_denied", "User " + currentUserEmail + " does not have access to perform this operation");
+			//			}
+			return currentUserEmail;
 		}
 
-		String clientId = AppProperties.getProperty("zoho.auth.client.id");
-		String redirectUri = AppProperties.getProperty("zoho.auth.redirect.uri");
-		String scopes = AppProperties.getProperty("zoho.auth.scopes");
-
-		URIBuilder builder = new URIBuilder(getDomainUrl("accounts", "/oauth/v2/auth", "in"));
-		builder.addParameter("scope", scopes);
-		builder.addParameter("client_id", clientId);
-		builder.addParameter("response_type", "code");
-		builder.addParameter("redirect_uri", redirectUri);
-		builder.addParameter("prompt", "consent");
-		builder.addParameter("access_type", "online");
-		throw new AppException("reauth_required", "Authentication required", Map.of("auth_uri", builder.toString()));
+		throw new AppException("reauth_required", "Authentication required", Map.of("auth_uri", "/zoho/login?origin=" + SecurityUtil.getCurrentRequestURI()));
 	}
 
 	public static Map<String, String> exchangeCodeForTokens(String authCode)
@@ -404,27 +393,52 @@ public class ZohoService
 
 		String zohoTokenDecrypted = CommonService.getAESDecryptedValue(zohoToken);
 		String tokenHash = DigestUtils.sha256Hex(zohoTokenDecrypted);
-		TOKEN_HASH_EMAIL_CACHE.computeIfAbsent(tokenHash, (k) -> {
-			String url = ZohoService.getDomainUrl("accounts", "/oauth/user/info", "in");
-			try
-			{
-				JSONObject response = HttpService.makeNetworkCallStatic(new HttpContext(url, HttpGet.METHOD_NAME).setHeadersMap(Map.of("Authorization", "Bearer ".concat(zohoTokenDecrypted)))).getJSONResponse();
-				return response.optString("Email");
-			}
-			catch(IOException e)
-			{
-				throw new RuntimeException(e);
-			}
-		});
+		ConfigurationService configurationService = AppContextHolder.getBean(ConfigurationService.class);
+		String email = configurationService.getValue(tokenHash).orElse(null);
+		if(StringUtils.isNotEmpty(email))
+		{
+			return email;
+		}
 
-		return TOKEN_HASH_EMAIL_CACHE.get(tokenHash);
+		String url = ZohoService.getDomainUrl("accounts", "/oauth/user/info", "local");
+		try
+		{
+			JSONObject response = HttpService.makeNetworkCallStatic(new HttpContext(url, HttpGet.METHOD_NAME).setHeadersMap(Map.of("Authorization", "Bearer ".concat(zohoTokenDecrypted)))).getJSONResponse();
+			if(!response.has("Email"))
+			{
+				return null;
+			}
+			email = response.getString("Email");
+			configurationService.setValue(tokenHash, email, DateUtil.getCurrentTimeInMillis() + (DateUtil.ONE_DAY_IN_MILLISECOND));
+			return email;
+		}
+		catch(IOException e)
+		{
+			LOGGER.log(Level.SEVERE, "Error fetching user info from Zoho", e);
+			return null;
+		}
+
+		//		TOKEN_HASH_EMAIL_CACHE.computeIfAbsent(tokenHash, (k) -> {
+		//			String url = ZohoService.getDomainUrl("accounts", "/oauth/user/info", "local");
+		//			try
+		//			{
+		//				JSONObject response = HttpService.makeNetworkCallStatic(new HttpContext(url, HttpGet.METHOD_NAME).setHeadersMap(Map.of("Authorization", "Bearer ".concat(zohoTokenDecrypted)))).getJSONResponse();
+		//				return response.optString("Email");
+		//			}
+		//			catch(IOException e)
+		//			{
+		//				LOGGER.log(Level.SEVERE, "Error fetching user info from Zoho", e);
+		//				return null;
+		//			}
+		//		});
+		//
+		//		return TOKEN_HASH_EMAIL_CACHE.get(tokenHash);
 	}
 
 	public static String getDomainUrl(String subDomain, String resourceUri, String dc)
 	{
 		return "https://" + subDomain + "." + DC_DOMAIN_MAPPING.get(dc) + resourceUri;
 	}
-
 
 	public static Set<String> getProductsForBuildInitiation(List<String> payoutProducts) throws Exception
 	{
@@ -639,7 +653,7 @@ public class ZohoService
 			JSONArray details = new JSONObject(httpResponse.getStringResponse()).getJSONArray("details");
 			JSONObject buildDetails = details.getJSONObject(0)
 				.getJSONObject("details").getJSONObject("build_details");
-			List<Integer> buildDetailsKeys = buildDetails.keySet().stream().map(Integer::parseInt).sorted(Comparator.comparingInt(i-> (int) i).reversed()).toList();
+			List<Integer> buildDetailsKeys = buildDetails.keySet().stream().map(Integer::parseInt).sorted(Comparator.comparingInt(i -> (int) i).reversed()).toList();
 
 			for(Integer buildDetailsKey : buildDetailsKeys)
 			{
@@ -911,7 +925,7 @@ public class ZohoService
 		httpContext.setHeader("Authorization", ZohoService.getSDAccessToken());
 
 		HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(httpContext);
-		JSONObject buildDetails =  new JSONObject(httpResponse.getStringResponse()).getJSONArray("details").getJSONObject(0).getJSONObject("details").getJSONArray("build_details").getJSONObject(0);
+		JSONObject buildDetails = new JSONObject(httpResponse.getStringResponse()).getJSONArray("details").getJSONObject(0).getJSONObject("details").getJSONArray("build_details").getJSONObject(0);
 
 		return new JSONObject()
 			.put("status", buildDetails.getJSONObject("status"))

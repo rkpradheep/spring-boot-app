@@ -63,7 +63,6 @@ public class BuildWorkflowController
 	{
 		try
 		{
-			ZohoService.doAuthentication();
 			lockService.acquireCommonLock();
 
 			List<WorkflowInstanceEntity> workflowInstances = workflowService.findRunningInstances();
@@ -94,7 +93,6 @@ public class BuildWorkflowController
 	@PostMapping("/patch-build/start")
 	public ResponseEntity<Map<String, Object>> startPatchBuildWorkflow(@RequestParam("product_name") String productName, @RequestParam("branch_name") String branchName) throws Exception
 	{
-		ZohoService.doAuthentication();
 		lockService.acquireCommonLock();
 
 		BuildMonitorEntity monitor = buildMonitorService.createBuildMonitor(Set.of(productName));
@@ -124,7 +122,6 @@ public class BuildWorkflowController
 	{
 		try
 		{
-			ZohoService.doAuthentication();
 			lockService.acquireCommonLock();
 
 			Optional<WorkflowInstance> instanceOpt = workflowEngine.getInstance(workflowId);

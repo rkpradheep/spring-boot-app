@@ -54,6 +54,9 @@ public class HttpLogEntity
     @Column(name = "IsOutgoing", nullable = false)
     private Boolean isOutgoing;
 
+    @Column(name = "ExceptionDetails", columnDefinition = "TEXT")
+    private String exceptionDetails;
+
     public HttpLogEntity() {}
 
     public Long getId() {
@@ -167,7 +170,15 @@ public class HttpLogEntity
     public void setIsOutgoing(Boolean isOutgoing) {
         this.isOutgoing = isOutgoing;
     }
-    
+
+    public String getExceptionDetails() {
+        return exceptionDetails;
+    }
+
+    public void setExceptionDetails(String exceptionDetails) {
+        this.exceptionDetails = exceptionDetails;
+    }
+
     @Override
     public String toString() {
         return "HttpLog{" +

@@ -58,13 +58,12 @@ podman=/opt/podman/bin/podman
     fi
 }
 
-
 os_name=$(uname)
 
 if [ "$os_name" = "Darwin" ]; then
     echo "Executing build script for MAC"
     source "$HOME/.sdkman/bin/sdkman-init.sh"
-    sdk use java 17.0.14-zulu
+    sdk use java 17.0.18-zulu
     setupMysql
 else
   export JAVA_HOME=/opt/java/zulu$JAVA_VERSION

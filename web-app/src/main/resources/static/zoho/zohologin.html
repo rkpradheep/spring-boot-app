@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upgrade TOOL</title>
+    <script type="text/javascript">
+    </script>
+    <link href="https://fonts.googleapis.com/css?family=Lato:100" rel="stylesheet" type="text/css">
+
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 100;
+            font-family: 'Lato', sans-serif;
+            background: #f9f9f9;
+            color: #000;
+        }
+
+        .content {
+            background: #EDEDED;
+            width: 420px;
+            padding: 24px 0 20px;
+            border-radius: 8px;
+            box-shadow: 0px 2px 4px 2px #e5e5e5;
+            text-align: center;
+        }
+
+        #loginwelcome {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+
+        hr {
+            display: block;
+            height: 1px;
+            border: 0;
+            border-bottom: 1px solid #ccc;
+            box-shadow: 1px 1px 2px 1px #e5e5e5;
+            margin: 0 0 16px;
+            padding: 0;
+        }
+
+        #loginbyzoho {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 49px;
+            width: 260px;
+            border-radius: 8px;
+            background: transparent;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+
+        #loginbyzoho a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #000;
+            text-decoration: none;
+            font-size: 0.9em;
+            font-weight: 900;
+        }
+
+        #loginbyzoho img {
+            height: 30px;
+            width: 86px;
+            vertical-align: middle;
+        }
+
+        #loadimg {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.9em;
+        }
+
+        #loadimg img {
+            width: 108px;
+            height: 54px;
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <div id="loginwelcome">LocalZoho Corp Account Sign In</div>
+        <hr>
+        <div id="loginbyzoho">
+            <a href="${REDIRECT_URL}">Sign In using &nbsp;<img src="https://www.zohowebstatic.com/sites/zweb/images/zoho_general_pages/zohologowhitebg.svg" alt="ZOHO" onload="hideDiv()"></a>
+        </div>
+        <div id="loadimg">&nbsp;&nbsp;Please wait...<img src="../images/loading.gif"></div>
+    </div>
+</body>
+</html>

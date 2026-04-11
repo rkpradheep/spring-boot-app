@@ -19,9 +19,9 @@ import java.util.logging.Logger;
 
 @Service
 public class OAuthService {
-    
+
     private static final Logger LOGGER = Logger.getLogger(OAuthService.class.getName());
-    
+
     @Autowired
     private AuthTokenService authTokenService;
 
@@ -48,7 +48,6 @@ public class OAuthService {
                 builder.addParameter("response_type", "code");
                 builder.addParameter("redirect_uri", redirectUri);
                 builder.addParameter("prompt", "consent");
-                builder.addParameter("state", currentDomain + "/zoho/oauth-tool");
                 builder.addParameter("access_type", "offline");
                 authUrl = builder.build().toString();
             } catch (URISyntaxException e) {
