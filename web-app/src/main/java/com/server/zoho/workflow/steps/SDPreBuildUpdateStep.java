@@ -10,6 +10,7 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.server.framework.common.AppProperties;
 import com.server.framework.common.CommonService;
 import com.server.framework.workflow.definition.WorkFlowCommonEventType;
 import com.server.framework.workflow.definition.WorkflowStep;
@@ -57,7 +58,7 @@ public class SDPreBuildUpdateStep extends WorkflowStep
 		{
 			LOGGER.info("Preparing SD Build Update for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion + ", productName: " + productName);
 
-			String response = ZohoService.uploadBuild(productName, milestoneVersion, "IN2", "IN", "pre", isPatchBuildUpdate, buildURL);
+			String response = ZohoService.uploadBuild(productName, milestoneVersion, AppProperties.getProperty("zoho.in.dc.main"), "IN", "pre", isPatchBuildUpdate, buildURL);
 			LOGGER.info("SD Build Update Response PRE : " + response);
 
 			boolean isPreBuildSuccessful = new JSONObject(response).optString("code", "").equals("SUCCESS");

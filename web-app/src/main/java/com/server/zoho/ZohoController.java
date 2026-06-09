@@ -496,7 +496,7 @@ public class ZohoController
 				initiatorDetails = " ( Initiated by " + ZohoService.getCurrentUserEmail() + " )";
 			}
 
-			String sdResponse = ZohoService.uploadBuild(productName, milestoneAndComment.getLeft(), "IN2", "IN", stage, comment + initiatorDetails, false, null);
+			String sdResponse = ZohoService.uploadBuild(productName, milestoneAndComment.getLeft(), AppProperties.getProperty("zoho.in.dc.main"), "IN", stage, comment + initiatorDetails, false, null);
 			JSONObject responseJSON = new JSONObject(sdResponse);
 			boolean isUploadSuccessful = responseJSON.optString("code", "").equals("SUCCESS");
 			String preBuildMessage = responseJSON.getString("message");

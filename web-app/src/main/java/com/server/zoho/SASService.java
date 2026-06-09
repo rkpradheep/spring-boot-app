@@ -282,7 +282,9 @@ public class SASService
 				preparedStatement.setObject(2, sasEndRange);
 			}
 
-			if(isUpdateOrDelete)
+			boolean isInsert = query.toLowerCase().startsWith("insert");
+
+			if(isUpdateOrDelete || isInsert)
 			{
 				int updatedRecords = preparedStatement.executeUpdate();
 				if(updatedRecords > 1)
@@ -292,7 +294,7 @@ public class SASService
 				}
 
 				connection.commit();
-				resultMap.put("query_output", (updateMatcher.matches() ? "Update" : "Delete") + " query executed successfully");
+				resultMap.put("query_output", (isInsert ? "Insert" : (updateMatcher.matches() ? "Update" : "Delete")) + " query executed successfully");
 				return;
 			}
 

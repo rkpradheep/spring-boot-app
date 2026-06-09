@@ -51,7 +51,7 @@ public class SASController
 
 	@Autowired
 	private DatabaseService databaseService;
-	
+
 	@Autowired
 	private DatabaseConnectionFactory connectionFactory;
 
@@ -224,7 +224,6 @@ public class SASController
 		}
 	}
 
-
 	public Map<String, Object> getServicesCredentials(PublicKey publicKey)
 	{
 		Map<String, Object> map = new HashMap<>();
@@ -276,6 +275,30 @@ public class SASController
 				Map<String, Object> result = new HashMap<>();
 				result.put("tables", tableSet);
 				result.put("is_multigrid", sasService.isMultiGrid(connection));
+
+				ResultSet dataspaceNamesResultSet;
+				if(server.equalsIgnoreCase("postgresql"))
+				{
+					dataspaceNamesResultSet = connection.prepareStatement("SELECT LoginName FROM SASAccounts WHERE LoginName !~ '^[0-9]+$'").executeQuery();
+				}
+				else
+				{
+					dataspaceNamesResultSet = connection.prepareStatement("SELECT LoginName FROM SASAccounts WHERE LoginName NOT REGEXP '^-?[0-9]+$'").executeQuery();
+				}
+
+				Set<String> dataspaceNamesSet = new HashSet<>();
+				while(dataspaceNamesResultSet.next())
+				{
+					try
+					{
+						dataspaceNamesSet.add(dataspaceNamesResultSet.getString("LoginName"));
+					}
+					catch(Exception e)
+					{
+					}
+				}
+				result.put("dataspace_names", dataspaceNamesSet);
+
 				return result;
 			}
 

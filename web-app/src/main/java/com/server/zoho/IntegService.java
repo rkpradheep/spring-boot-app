@@ -411,7 +411,7 @@ public class IntegService
 
 			JSONObject request = new JSONObject()
 				.put("stage", "pre")
-				.put("grid_value", "IN2")
+				.put("grid_value", AppProperties.getProperty("zoho.in.dc.main"))
 				.put("product_id", IntegService.getProductConfig(product).getId())
 				.put("checkout_label", branchName)
 				.put("product_name", "ZOHOPAYOUT")

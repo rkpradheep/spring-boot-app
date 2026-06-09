@@ -74,6 +74,26 @@
             border-radius: 3px;
             font-size: 14px;
         }
+        .cell-content {
+            max-height: 80px;
+            overflow: hidden;
+            white-space: pre-wrap;
+        }
+        .cell-content.expanded {
+            max-height: none;
+        }
+        .read-more-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: #529432;
+            font-size: 11px;
+            cursor: pointer;
+            padding: 2px 0;
+            margin: 0;
+            font-weight: bold;
+            text-decoration: underline;
+        }
     </style>
     <body style="padding:30px">
         <div class="loading" id="loading" style="display:none">Loading&#8230;</div>
@@ -106,7 +126,7 @@
         <br />
       <!--  Enter either ZSID or PK Value : <br />
         <br /> -->
-        DataSpace Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="text" id="zsid" style="width: 100px; height: 25px;" /><br /><br />
+        DataSpace Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="text" id="zsid" list="zsidOptions" style="width: 150px; height: 25px;" autocomplete="off" onchange="handleZsidChange()" /><datalist id="zsidOptions"></datalist><br /><br />
         <!-- PK Value &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
         <input type="text" id="pk" style="width: 200px; height: 19px;display: none" placeholder="PK"/><br />
         <input type="checkbox" id="skip_scoping"> SKIP SAS SCOPE &nbsp;&nbsp</br>
@@ -1468,6 +1488,9 @@
                                     unHideElement("pk");
                                 }
                                 TABLE_LIST = responseData.tables;
+                                if (responseData.dataspace_names) {
+                                    populateDataspaceNames(responseData.dataspace_names);
+                                }
                                 hideElement("quickExe")
                                 hideElement("loading");
                                 unHideElement("response");
@@ -1578,6 +1601,16 @@
                             });
                     }
 
+                    function populateDataspaceNames(dataspaceNames) {
+                        var datalist = document.getElementById("zsidOptions");
+                        datalist.innerHTML = "";
+                        for (var i = 0; i < dataspaceNames.length; i++) {
+                            var option = document.createElement("option");
+                            option.value = dataspaceNames[i];
+                            datalist.appendChild(option);
+                        }
+                    }
+
                     function populateTables() {
                         var tableListOptions = "";
                         var datalist = document.getElementById("tableListOptions");
@@ -1602,6 +1635,12 @@
                         }
                     }
 
+                    function handleZsidChange() {
+                        if (TABLE_LIST.length > 0 && getElementValue("tableList").length > 0) {
+                            refreshTable();
+                        }
+                    }
+
                     function handleTableListChange() {
                         // Sync the hidden select with the search input value
                         var searchValue = document.getElementById("tableListSearch").value;
@@ -1617,7 +1656,7 @@
                             COLUMN_LIST.push(columnListRes[column]);
                         }
                         var columnListOptions = "<option>Select Column</option>";
-                        for (var i in COLUMN_LIST) {
+                        for (var i in  COLUMN_LIST) {
                             columnListOptions += "<option >" + COLUMN_LIST[i] + "</option>";
                         }
                         document.getElementById("columnListForWhere").innerHTML = columnListOptions;
@@ -1625,7 +1664,9 @@
                     }
 
                     function getLimitAndOrderBy() {
-                        const orderBy = CURRENT_TABLE_PK.length == 0 ? "" : " Order By " + CURRENT_TABLE_PK + " DESC"
+                        const createdTimeColForOrder = COLUMN_LIST.find(col => col.toUpperCase() === 'CREATEDTIME');
+                        const orderByCol = createdTimeColForOrder !== undefined ? createdTimeColForOrder : CURRENT_TABLE_PK;
+                        const orderBy = orderByCol && orderByCol.length > 0 ? " Order By " + orderByCol + " DESC" : "";
                         const limit = getElementValue("recordLimit");
                         return orderBy + " LIMIT " + limit;
                     }
@@ -1643,6 +1684,14 @@
 
                         var tableOutput = "";
                         var tableHeader = "<thead><tr><th>S.No</th>";
+                        const createdTimeCol = COLUMN_LIST.find(col => col.toUpperCase() === 'CREATEDTIME');
+                        const lastModifiedTimeCol = COLUMN_LIST.find(col => col.toUpperCase() === 'LASTMODIFIEDTIME');
+                        if (createdTimeCol) {
+                            tableHeader += "<th>FORMATTED_CREATED_TIME</th>";
+                        }
+                        if (lastModifiedTimeCol) {
+                            tableHeader += "<th>FORMATTED_LAST_MODIFIED_TIME</th>";
+                        }
                         for (var i in outputJson.query_output[0]) {
                             var criteriaTag = "";
                             if (criteria != i) criteriaTag = '<br><input type="text" autocomplete="off" id="' + i + '" oninput="getFiltered(' + "'" + i + "'" + ')" placeholder="Search" title="eg.(abc or >5 or <10 or>5<10)"/><br><button style="width:80px;background-color:grey;font-size: 10px;" title="Search for the criteria without applying limit" onclick="getFilteredFromDB(' + "'" + i + "'" + ')">Hit DB</button>';
@@ -1667,8 +1716,16 @@
                         for (var i in outputJson.query_output) {
                             if (!isEmpty) tableRows += "<tr><td>" + (Number(i) + 1) + "</td>";
                             else tableRows += "<tr><td></td>";
+                            if (createdTimeCol) {
+                                const rawVal = outputJson.query_output[i][createdTimeCol];
+                                tableRows += '<td><div class="cell-content">' + escapeHtml(formatEpochMs(rawVal)) + '</div></td>';
+                            }
+                            if (lastModifiedTimeCol) {
+                                const rawVal = outputJson.query_output[i][lastModifiedTimeCol];
+                                tableRows += '<td><div class="cell-content">' + escapeHtml(formatEpochMs(rawVal)) + '</div></td>';
+                            }
                             for (var j in outputJson.query_output[i]) {
-                                tableRows += "<td>" + escapeHtml(outputJson.query_output[i][j]) + "</td>";
+                                tableRows += '<td><div class="cell-content">' + escapeHtml(outputJson.query_output[i][j]) + '</div><button class="read-more-btn" onclick="toggleReadMore(this)">Read more</button></td>';
                             }
                             tableRows += "</tr>";
                         }
@@ -1676,6 +1733,12 @@
                         tableOutput += tableRows;
                         unHideElement("queryOutputContainer");
                         document.getElementById("queryOutput").innerHTML = tableOutput;
+
+                        document.querySelectorAll('.cell-content').forEach(function(el) {
+                            if (el.scrollHeight > el.clientHeight) {
+                                el.nextElementSibling.style.display = 'inline';
+                            }
+                        });
 
                         if (document.getElementById(criteria) != null) {
                             var end = getElementValue(criteria).length;
@@ -1820,6 +1883,32 @@
                             document.getElementById("suggestionHint").style.display = "none";
                         }
                     });
+
+                    function formatEpochMs(ms) {
+                        if (ms == null || ms === '' || isNaN(Number(ms))) return ms;
+                        var d = new Date(Number(ms));
+                        if (isNaN(d.getTime())) return ms;
+                        var month = String(d.getMonth() + 1).padStart(2, '0');
+                        var day = String(d.getDate()).padStart(2, '0');
+                        var year = d.getFullYear();
+                        var hours = d.getHours();
+                        var minutes = String(d.getMinutes()).padStart(2, '0');
+                        var seconds = String(d.getSeconds()).padStart(2, '0');
+                        var ampm = hours >= 12 ? 'PM' : 'AM';
+                        hours = hours % 12 || 12;
+                        return day + '/' + month + '/' +  year + ' ' + String(hours).padStart(2, '0') + ':' + minutes + ':' + seconds + ' ' + ampm;
+                    }
+
+                    function toggleReadMore(btn) {
+                        var cellContent = btn.previousElementSibling;
+                        if (cellContent.classList.contains('expanded')) {
+                            cellContent.classList.remove('expanded');
+                            btn.textContent = 'Read more';
+                        } else {
+                            cellContent.classList.add('expanded');
+                            btn.textContent = 'Read less';
+                        }
+                    }
 
                     function escapeHtml(text) {
                         if (text == "<EMPTY>" || text == null)
