@@ -7,7 +7,6 @@ import java.io.PrintWriter;
 import java.util.concurrent.CompletableFuture;
 
 import jakarta.servlet.AsyncContext;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.http.HttpStatus;

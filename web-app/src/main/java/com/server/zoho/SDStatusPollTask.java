@@ -59,7 +59,7 @@ public class SDStatusPollTask implements Task
 		String buildID = jsonObject.getString("build_id");
 		String productID = jsonObject.optString("product_id");
 
-		JSONObject response = ZohoService.getSDBuildStatus(buildID);
+		JSONObject response = ZohoService.getSDBuildStatus(serverRepoName, buildID);
 
 		LOGGER.info("Response from SD : " + response);
 
@@ -123,7 +123,7 @@ public class SDStatusPollTask implements Task
 			LOGGER.log(Level.INFO, "Build is not completed yet. Status received: {0}", overallStatus);
 			if(overallStatus.equalsIgnoreCase("Scheduled"))
 			{
-				ZohoService.markScheduledBuildAsReady(buildID);
+				ZohoService.markScheduledBuildAsReady(serverRepoName, buildID);
 				LOGGER.info("Build marked as Ready in SD for build ID: " + buildID);
 			}
 			canAddJobAgain = true;
@@ -137,6 +137,11 @@ public class SDStatusPollTask implements Task
 //		}
 
 		if(!(isSuccess && List.of("LOCAL", "PRE").contains(regionName)))
+		{
+			return;
+		}
+
+		if(StringUtils.equals(serverRepoName, "tpap_server"))
 		{
 			return;
 		}

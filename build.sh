@@ -105,7 +105,8 @@ sedi() {
 if [ -f "$CUSTOM_DIR/application-custom.properties" ]; then
   echo "Found application-custom.properties, reading JAVA_OPTS from it."
   JAVA_OPTS_CUSTOM_VALUE=$(grep "^java.opts=" $CUSTOM_DIR/application-custom.properties | sed 's/^java.opts=//')
-  sedi 's|JAVA_OPTS_CUSTOM_VALUE=|JAVA_OPTS_CUSTOM_VALUE="'"$JAVA_OPTS_CUSTOM_VALUE"'"|' build/run.sh
+  JAVA_OPTS_ESCAPED=$(printf '%s' "$JAVA_OPTS_CUSTOM_VALUE" | sed 's/[|&\\]/\\&/g')
+  sedi 's|JAVA_OPTS_CUSTOM_VALUE=|JAVA_OPTS_CUSTOM_VALUE="'"$JAVA_OPTS_ESCAPED"'"|' build/run.sh
 fi
 
 

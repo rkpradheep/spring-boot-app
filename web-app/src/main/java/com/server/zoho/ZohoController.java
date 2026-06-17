@@ -403,11 +403,11 @@ public class ZohoController
 				String tokenHeader = "zoho_authenticated_token" + "="
 					+ CommonService.getAESEncryptedValue((String) tokenResponse.get("access_token"))
 					+ "; Path=/;"
-					+ "Max-Age=" + (DateUtil.ONE_DAY_IN_MILLISECOND/1000) + ";";
+					+ "Max-Age=" + (DateUtil.ONE_DAY_IN_MILLISECOND / 1000) + ";";
 				httpResponse.setHeader("Set-Cookie", tokenHeader);
 				message = "Authentication is success. Please try now.";
 				String origin = SecurityUtil.getCurrentRequest().getParameter("origin");
-				if(!StringUtils.startsWith( origin, "/api"))
+				if(!StringUtils.startsWith(origin, "/api"))
 				{
 					httpResponse.sendRedirect(SecurityUtil.getCurrentRequest().getParameter("origin"));
 					return;
@@ -427,6 +427,32 @@ public class ZohoController
 		try
 		{
 			Set<String> productsQualifiedForBuild = buildAutomationService.startBuildAutomationForPayout();
+			if(productsQualifiedForBuild.isEmpty())
+			{
+				Map<String, Object> response = ApiResponseBuilder.error("No products qualified for automatic build", HttpStatus.BAD_REQUEST.value());
+				return ResponseEntity.ok(response);
+			}
+
+			Map<String, Object> response = ApiResponseBuilder.success("Build triggered successfully", Map.of("products", productsQualifiedForBuild));
+			return ResponseEntity.ok(response);
+		}
+		catch(AppException ae)
+		{
+			throw ae;
+		}
+		catch(Exception e)
+		{
+			Map<String, Object> response = ApiResponseBuilder.error("API call failed : " + e.getMessage(), 400);
+			return ResponseEntity.badRequest().body(response);
+		}
+	}
+
+	@PostMapping("/zoho/zpaytpap/trigger-build")
+	public ResponseEntity<Map<String, Object>> triggerZPayTPAPBuild()
+	{
+		try
+		{
+			Set<String> productsQualifiedForBuild = buildAutomationService.startBuildAutomationForZPayTPAP();
 			if(productsQualifiedForBuild.isEmpty())
 			{
 				Map<String, Object> response = ApiResponseBuilder.error("No products qualified for automatic build", HttpStatus.BAD_REQUEST.value());

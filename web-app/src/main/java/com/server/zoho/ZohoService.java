@@ -135,7 +135,20 @@ public class ZohoService
 			.put("is_patch_update", isPatchBuild)
 			.put("provision_type", "build_update");
 
+		if(StringUtils.equals("tpap_server", productName))
+		{
+			JSONObject parallelProduct = new JSONObject();
+			parallelProduct.put("product", "ZPAYTPAP_MIGRATION");
+			parallelProduct.put("build_stage", buildStage);
+			parallelProduct.put("service_name", "ZPayTPAP");
+
+			sdBuildUpdatePayload.put("parallel_products", new JSONArray().put(parallelProduct));
+
+			buildOptions.put("skip_continue_for_parallel_products", false);
+		}
+
 		String sdBuildUpdateUrl = AppProperties.getProperty("zoho.sd.build.update.api.url");
+		sdBuildUpdateUrl = StringUtils.equals("tpap_server", productName) ? AppProperties.getProperty("zoho.zpaytpap.sd.build.update.api.url") : sdBuildUpdateUrl;
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Authorization", getSDAccessToken());
 		headers.setContentType(MediaType.APPLICATION_JSON);
@@ -202,6 +215,7 @@ public class ZohoService
 				ZOHO_META_MAP.put("BUILD_OWNERS", data.get("build_owners"));
 
 				ZOHO_META_MAP.put("PAYOUT_PRODUCTS", data.get("payout_products"));
+				ZOHO_META_MAP.put("ZPAYTPAP_PRODUCTS", data.get("zpaytpap_products"));
 			}
 		}
 		catch(Exception e)
@@ -242,6 +256,7 @@ public class ZohoService
 			{
 				return null;
 			}
+
 			URL url = new URL(urlString);
 
 			HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
@@ -477,6 +492,12 @@ public class ZohoService
 		return generatePayoutChangSetsForURL(inURL);
 	}
 
+	public static JSONObject generateZPayTPAPChangSetsFromIDC() throws Exception
+	{
+		String inURL = getSDLocalBuildURLFromSDAPI("tpap_server", "production");
+		return generateZPayTPAPChangSetsForURL(inURL);
+	}
+
 	public static JSONObject generatePayoutChangSetsForURL(String buildURL) throws Exception
 	{
 		if(!buildURL.contains("/master"))
@@ -607,6 +628,115 @@ public class ZohoService
 
 	}
 
+	public static JSONObject generateZPayTPAPChangSetsForURL(String buildURL) throws Exception
+	{
+		if(!buildURL.contains("/master"))
+		{
+			LOGGER.info("Build URL points to non-master branch. Skipping change set generation.");
+			return new JSONObject();
+		}
+		List<String> zpayTPAPProducts = (List<String>) ZohoService.getMetaConfig(("ZPAYTPAP_PRODUCTS"));
+
+		HttpService httpService = AppContextHolder.getBean(HttpService.class);
+
+		JSONObject changeSets = new JSONObject();
+
+		BuildResponse inBuildResponse = getBuildResponse(buildURL);
+		String buildlogID = inBuildResponse.getBuildLogId() + "";
+
+		JSONArray dependencies = getDependencies(buildlogID);
+
+		JSONObject idcCommitDetails = new JSONObject();
+
+		for(int i = 0; i < dependencies.length(); i++)
+		{
+			JSONObject dependency = dependencies.getJSONObject(i);
+			String productid = dependency.get("dependency_product_id") + "";
+			String url = dependency.getString("url");
+
+			ProductConfig product = IntegService.getProductConfigForID(productid);
+			if(Objects.isNull(product))
+			{
+				continue;
+			}
+
+			idcCommitDetails.put(product.getProductName(), getBuildResponse(url).getCommitSHA());
+
+		}
+
+		idcCommitDetails.put("tpap_server", getBuildResponse(buildURL).getCommitSHA());
+
+		for(String product : zpayTPAPProducts)
+		{
+			ProductConfig productConfig = IntegService.getProductConfig(product);
+
+			HttpContext context = new HttpContext(productConfig.getGitlabUrl(), HttpMethod.GET.name());
+			context.setHeader("PRIVATE-TOKEN", productConfig.getGitlabToken());
+
+			HttpResponse httpResponse = httpService.makeNetworkCall(context);
+			JSONArray commits = new JSONArray(httpResponse.getStringResponse());
+			if(!commits.isEmpty())
+			{
+				String commitSHAFromGitlab = commits.getJSONObject(0).getString("id");
+				String commitSHAFromIDC = idcCommitDetails.optString(product);
+				if(!StringUtils.equals(commitSHAFromGitlab, commitSHAFromIDC))
+				{
+					JSONArray productChangeSet = new JSONArray();
+					for(int i = 0; i < commits.length(); i++)
+					{
+						JSONObject commit = commits.getJSONObject(i);
+
+						if(commit.getString("id").equals(commitSHAFromIDC))
+						{
+							break;
+						}
+						if(!commit.getString("title").startsWith("Merge branch "))
+						{
+							continue;
+						}
+						context = new HttpContext(productConfig.getGitlabUrl().replace("/commits", "/commits/" + commit.getString("short_id") + "/merge_requests"), HttpMethod.GET.name());
+						context.setHeader("PRIVATE-TOKEN", productConfig.getGitlabToken());
+
+						httpResponse = httpService.makeNetworkCall(context);
+						JSONArray mrs = new JSONArray(httpResponse.getStringResponse());
+						if(!mrs.isEmpty())
+						{
+							JSONObject mr = mrs.getJSONObject(0);
+
+							JSONObject commitInfo = new JSONObject();
+							commitInfo.put("commitSHA", commit.getString("short_id"));
+							commitInfo.put("commitMessage", commit.getString("message"));
+							commitInfo.put("webURL", mr.getString("web_url"));
+							String authorName = mr.getJSONObject("author").getString("username");
+							String authorDisplayName = mr.getJSONObject("author").getString("name").toLowerCase().trim();
+							String authorEmail = (!authorName.contains(".") && authorDisplayName.split(StringUtils.SPACE).length > 1 ? (authorDisplayName.split(StringUtils.SPACE)[0] + "." + authorDisplayName.split(StringUtils.SPACE)[1]) : authorName) + "@zohocorp.com";
+							commitInfo.put("author", authorEmail);
+							commitInfo.put("mrTitle", mr.getString("title"));
+							commitInfo.put("mergedDate", DateUtil.getFormattedTime(DateUtil.convertDateToMilliseconds(mr.getString("merged_at"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")));
+
+							productChangeSet.put(commitInfo);
+						}
+
+					}
+					if(!productChangeSet.isEmpty())
+					{
+						changeSets.put(product, productChangeSet);
+					}
+				}
+			}
+		}
+
+		if(changeSets.isEmpty())
+		{
+			return new JSONObject();
+		}
+
+		return new JSONObject()
+			.put("base_milestone", StringUtils.defaultIfEmpty(inBuildResponse.getReleaseVersion(), inBuildResponse.getCheckoutLabel()))
+			.put("products_changesets", changeSets);
+
+	}
+
 	public static BuildResponse getBuildResponse(String url) throws Exception
 	{
 		HttpContext context = new HttpContext(AppProperties.getProperty("zoho.build.api.url").concat("/api/v1/buildlogs"), "GET");
@@ -638,8 +768,53 @@ public class ZohoService
 
 			context.setParam("start_date", DateUtil.getFormattedTime(DateUtil.getCurrentTime().minusDays(10).toInstant().toEpochMilli(), "yyyy-MM-dd"));
 			context.setParam("overall_status", "Completed");
-			context.setParam("datacenter", AppProperties.getProperty("zoho.in.dc.main"));
+			//Facing error while fetching build details from SD API for IN DC, so commenting the datacenter param
+			//context.setParam("datacenter", AppProperties.getProperty("zoho.in.dc.main"));
 			context.setParam("region", "IN");
+			context.setParam("build_stage", "production");
+			context.setParam("limit", 5);
+			context.setParam("sort_order", "desc");
+			context.setParam("sort_by", "zac_completed_at");
+			context.setParam("process_type", "build_update");
+
+			context.setHeader("AUTHORIZATION", ZohoService.getSDAccessToken());
+
+			HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(context);
+
+			JSONArray details = new JSONObject(httpResponse.getStringResponse()).getJSONArray("details");
+			JSONObject buildDetails = details.getJSONObject(0)
+				.getJSONObject("details").getJSONObject("build_details");
+			List<Integer> buildDetailsKeys = buildDetails.keySet().stream().map(Integer::parseInt).sorted(Comparator.comparingInt(i -> (int) i).reversed()).toList();
+
+			for(Integer buildDetailsKey : buildDetailsKeys)
+			{
+				String url = buildDetails.getJSONObject(String.valueOf(buildDetailsKey)).getString("url");
+				if(url.contains("/master"))
+				{
+					return url;
+				}
+			}
+			LOGGER.info("No master build found in the recent builds, fetching the latest build URL");
+
+			return buildDetails.getJSONObject(String.valueOf(buildDetailsKeys.get(0))).getString("url");
+		}
+		catch(Exception e)
+		{
+			LOGGER.log(Level.SEVERE, "Error fetching SD IN build URL from SD API for product: " + product + " and stage: " + stage, e);
+			return getPatchBuildURL(product, stage);
+		}
+	}
+
+	public static String getSDLocalBuildURLFromSDAPI(String product, String stage) throws Exception
+	{
+		try
+		{
+			HttpContext context = new HttpContext(AppProperties.getProperty("zoho.zpaytpap.sd.build.status.api.url").replace("/{BUILD_ID}", ""), "GET");
+
+			context.setParam("start_date", DateUtil.getFormattedTime(DateUtil.getCurrentTime().minusDays(10).toInstant().toEpochMilli(), "yyyy-MM-dd"));
+			context.setParam("overall_status", "Completed");
+			//context.setParam("datacenter", "CT1");
+			context.setParam("region", "CT");
 			context.setParam("build_stage", "production");
 			context.setParam("limit", 5);
 			context.setParam("sort_order", "desc");
@@ -917,9 +1092,12 @@ public class ZohoService
 		return accessToken;
 	}
 
-	public static JSONObject getSDBuildStatus(String buildID) throws Exception
+	public static JSONObject getSDBuildStatus(String serverRepoName, String buildID) throws Exception
 	{
-		String sdBuildStatusFetchUrl = AppProperties.getProperty("zoho.sd.build.status.api.url").replace("{BUILD_ID}", buildID);
+		String sdBuildStatusFetchUrl = AppProperties.getProperty("zoho.sd.build.status.api.url");
+		sdBuildStatusFetchUrl = StringUtils.equals(serverRepoName, "tpap_server") ? AppProperties.getProperty("zoho.zpaytpap.sd.build.status.api.url") : sdBuildStatusFetchUrl;
+
+		sdBuildStatusFetchUrl = sdBuildStatusFetchUrl.replace("{BUILD_ID}", buildID);
 
 		HttpContext httpContext = new HttpContext(sdBuildStatusFetchUrl, "GET");
 		httpContext.setHeader("Authorization", ZohoService.getSDAccessToken());
@@ -935,9 +1113,10 @@ public class ZohoService
 			.put("build_stage", buildDetails.getString("build_stage"));
 	}
 
-	public static JSONObject markScheduledBuildAsReady(String buildID) throws Exception
+	public static JSONObject markScheduledBuildAsReady(String serverRepoName, String buildID) throws Exception
 	{
 		String sdScheduleUrl = AppProperties.getProperty("zoho.sd.build.scheduler.api.url");
+		sdScheduleUrl = StringUtils.equals(serverRepoName, "tpap_server") ? AppProperties.getProperty("zoho.zpaytpap.sd.build.scheduler.api.url") : sdScheduleUrl;
 
 		JSONObject payload = new JSONObject();
 		JSONArray buildIDsObject = new JSONArray();

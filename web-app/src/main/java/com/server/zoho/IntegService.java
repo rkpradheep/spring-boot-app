@@ -228,7 +228,8 @@ public class IntegService
 				}
 				else
 				{
-					messageID = ZohoService.postMessageToChannel(CommonService.getDefaultChannelUrl(), message + initiatorMessage + buildOwnerMessage + "\n\n{@participants}");
+					String appName = "\n\nApp Name : " + (serverRepoOptional.get().equals("payout_server") ? "PAYOUT" : "TPAP");
+					messageID = ZohoService.postMessageToChannel(CommonService.getDefaultChannelUrl(), message  + appName +  initiatorMessage + buildOwnerMessage + "\n\n{@participants}");
 					context.put("messageID", messageID);
 
 					gitlabIssueID = ZohoService.createIssue(serverRepoOptional.get(), message);
@@ -244,11 +245,14 @@ public class IntegService
 
 				if(StringUtils.isNotEmpty(previousBuildMilestone))
 				{
-					ZohoService.postChangeSet(ZohoService.generatePayoutChangSetsForURL(ZohoService.getBuildURLForMilestone(serverRepoName, previousBuildMilestone)), CommonService.getDefaultChannelUrl(), context, false);
+					String buildRUL = ZohoService.getBuildURLForMilestone(serverRepoName, previousBuildMilestone);
+					JSONObject changesets = serverRepoOptional.get().equals("payout_server") ? ZohoService.generatePayoutChangSetsForURL(buildRUL) : ZohoService.generateZPayTPAPChangSetsForURL(buildRUL);
+					ZohoService.postChangeSet(changesets, CommonService.getDefaultChannelUrl(), context, false);
 				}
 				else
 				{
-					ZohoService.postChangeSet(ZohoService.generatePayoutChangSetsFromIDC(), CommonService.getDefaultChannelUrl(), context, true);
+					JSONObject changesets = serverRepoOptional.get().equals("payout_server") ? ZohoService.generatePayoutChangSetsFromIDC() : ZohoService.generateZPayTPAPChangSetsFromIDC();
+					ZohoService.postChangeSet(changesets, CommonService.getDefaultChannelUrl(), context, true);
 				}
 			}
 

@@ -1,11 +1,10 @@
 package com.server.zoho.workflow.steps;
 
-import io.micrometer.common.util.StringUtils;
-
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.lang.StringUtils;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -64,6 +63,10 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 
 		try
 		{
+			if(StringUtils.equals("tpap_server", productName))
+			{
+				return new WorkflowEvent(BuildEventType.SD_LOCAL_BUILD_UPDATE, Map.of("message", "SD csez build upload completed"));
+			}
 			LOGGER.info("Preparing SD Build Update for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion + ", productName: " + productName);
 
 			String commentMessageFormat = Boolean.TRUE.equals(isBugFixBuild) ? "'Master Bugfix Build' dd MMMM yyyy" : "'Master Build' dd MMMM yyyy";
