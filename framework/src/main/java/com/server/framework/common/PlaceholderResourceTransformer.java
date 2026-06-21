@@ -38,12 +38,12 @@ public class PlaceholderResourceTransformer implements ResourceTransformer
 		else if(filename.equals("zohologin.html"))
 		{
 			placeHolderName = "${REDIRECT_URL}";
-			String clientId = AppProperties.getProperty("oauth.local.client.id");
-			String redirectUri = AppProperties.getProperty("oauth.local.client.redirecturi");
+			String clientId = AppProperties.getProperty("oauth.in.client.id");
+			String redirectUri = AppProperties.getProperty("oauth.in.client.redirecturi");
 			String scopes = AppProperties.getProperty("zoho.auth.scopes");
 			try
 			{
-				URIBuilder builder = new URIBuilder("https://accounts.localzoho.com/oauth/v2/auth");
+				URIBuilder builder = new URIBuilder("https://accounts.zoho.in/oauth/v2/auth");
 				builder.addParameter("scope", scopes);
 				builder.addParameter("client_id", clientId);
 				builder.addParameter("response_type", "code");

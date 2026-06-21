@@ -385,10 +385,10 @@ public class ZohoController
 		{
 			JSONObject tokenGeneratePayload = new JSONObject()
 				.put("code", authCode)
-				.put("client_id", AppProperties.getProperty("oauth.local.client.id"))
-				.put("client_secret", AppProperties.getProperty("oauth.local.client.secret"))
-				.put("redirect_uri", AppProperties.getProperty("oauth.local.client.redirecturi"))
-				.put("url", ZohoService.getDomainUrl("accounts", "/oauth/v2/token", "local"));
+				.put("client_id", AppProperties.getProperty("oauth.in.client.id"))
+				.put("client_secret", AppProperties.getProperty("oauth.in.client.secret"))
+				.put("redirect_uri", AppProperties.getProperty("oauth.in.client.redirecturi"))
+				.put("url", ZohoService.getDomainUrl("accounts", "/oauth/v2/token", "in"));
 
 			Map<String, Object> tokenResponse = oAuthService.generateTokens(tokenGeneratePayload.toMap());
 

@@ -144,7 +144,7 @@ public class ZohoService
 
 			sdBuildUpdatePayload.put("parallel_products", new JSONArray().put(parallelProduct));
 
-			buildOptions.put("skip_continue_for_parallel_products", false);
+			buildOptions.put("skip_continue_for_parallel_products", true);
 		}
 
 		String sdBuildUpdateUrl = AppProperties.getProperty("zoho.sd.build.update.api.url");
@@ -415,7 +415,7 @@ public class ZohoService
 			return email;
 		}
 
-		String url = ZohoService.getDomainUrl("accounts", "/oauth/user/info", "local");
+		String url = ZohoService.getDomainUrl("accounts", "/oauth/user/info", "in");
 		try
 		{
 			JSONObject response = HttpService.makeNetworkCallStatic(new HttpContext(url, HttpGet.METHOD_NAME).setHeadersMap(Map.of("Authorization", "Bearer ".concat(zohoTokenDecrypted)))).getJSONResponse();

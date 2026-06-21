@@ -252,7 +252,7 @@ public class IntegService
 				else
 				{
 					JSONObject changesets = serverRepoOptional.get().equals("payout_server") ? ZohoService.generatePayoutChangSetsFromIDC() : ZohoService.generateZPayTPAPChangSetsFromIDC();
-					ZohoService.postChangeSet(changesets, CommonService.getDefaultChannelUrl(), context, true);
+					ZohoService.postChangeSet(changesets, CommonService.getDefaultChannelUrl(), context,  !serverRepoOptional.get().equals("tpap_server"));
 				}
 			}
 
