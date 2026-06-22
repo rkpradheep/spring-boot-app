@@ -81,8 +81,12 @@ public class IntegService
 		return ((Map<String, ProductConfig>) ZohoService.getMetaConfig("PRODUCT_CONFIGS")).get(productName);
 	}
 
-	public static String getTodayBuildOwnerEmail()
+	public static String getTodayBuildOwnerEmail(String serverRepoName)
 	{
+		if(StringUtils.equals(serverRepoName, "tpap_server"))
+		{
+			return null;
+		}
 		return ((Map<String, String>) ZohoService.getMetaConfig("BUILD_OWNERS")).get(DateUtil.getFormattedCurrentTime("EEEE").toUpperCase());
 	}
 
@@ -201,7 +205,7 @@ public class IntegService
 				String initiatorMessage = StringUtils.equals(initiatorEmail, "SCHEDULER") ? initiatorEmail : "{@" + initiatorEmail + "}";
 				initiatorMessage = "\n\nInitiated By : " + initiatorMessage;
 
-				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
+				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail(serverRepoName);
 				String buildOwnerMessage = StringUtils.isNotEmpty(buildOwnerEmail) ? "\n\nBuild Owner : {@" + buildOwnerEmail + "}" : StringUtils.EMPTY;
 
 				Optional<String> masterBuildOptional = configurationService.getValue(masterBuildKey);

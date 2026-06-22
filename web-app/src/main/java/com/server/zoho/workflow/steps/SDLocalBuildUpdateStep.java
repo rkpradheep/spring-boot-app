@@ -1,13 +1,11 @@
 package com.server.zoho.workflow.steps;
 
-import io.micrometer.common.util.StringUtils;
-
 import java.util.Map;
-import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -38,7 +36,8 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 
 	private static final Logger LOGGER = Logger.getLogger(SDLocalBuildUpdateStep.class.getName());
 
-	public SDLocalBuildUpdateStep() {
+	public SDLocalBuildUpdateStep()
+	{
 		super();
 		setName("SD LOCAL Build Upload");
 		setDescription("Uploads the build to LOCAL");
@@ -57,12 +56,19 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 		Boolean isBugFixBuild = (Boolean) context.get("isBugFixBuild");
 		String milestoneVersion = instance.getVariable("milestoneVersion");
 		String productName = instance.getVariable("productName");
+		String serverRepoName = (String) context.get("serverProductName");
 
 		try
 		{
-			try {
-				TimeUnit.MINUTES.sleep(1);
-			} catch (InterruptedException e) {
+			try
+			{
+				if(!StringUtils.equals(serverRepoName, "tpap_server"))
+				{
+					TimeUnit.MINUTES.sleep(1);
+				}
+			}
+			catch(InterruptedException e)
+			{
 				LOGGER.log(Level.SEVERE, "Exception occurred", e);
 			}
 
@@ -88,7 +94,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 				JSONObject data = new JSONObject()
 					.put("message_id", context.get("messageID"))
 					.put("gitlab_issue_id", context.get("gitlabIssueID"))
-					.put("server_repo_name", context.get("serverProductName"))
+					.put("server_repo_name", serverRepoName)
 					.put("monitor_id", monitorId + "")
 					.put("product_id", productId + "")
 					.put("build_id", buildId);
@@ -108,7 +114,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 			{
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to LOCAL Failed ( " + milestoneVersion + " )" + " : " + localBuildMessage);
 
-				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
+				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail(serverRepoName);
 				if(StringUtils.isNotEmpty(buildOwnerEmail))
 				{
 					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.", false);
@@ -125,7 +131,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 		{
 			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to LOCAL Failed ( " + milestoneVersion + " )");
 
-			String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
+			String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail(serverRepoName);
 			if(StringUtils.isNotEmpty(buildOwnerEmail))
 			{
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.", false);

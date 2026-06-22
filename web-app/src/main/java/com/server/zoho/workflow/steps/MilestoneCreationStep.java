@@ -65,7 +65,7 @@ public class MilestoneCreationStep extends WorkflowStep
 
 			if(StringUtils.isEmpty(releaseVersion))
 			{
-				if(isServerRepo)
+				if(isServerRepo && !StringUtils.equals(product.getProductName(), "tpap_server"))
 				{
 					try
 					{

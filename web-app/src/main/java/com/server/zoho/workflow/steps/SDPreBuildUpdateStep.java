@@ -68,7 +68,7 @@ public class SDPreBuildUpdateStep extends WorkflowStep
 			{
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update initiated for PRE ( " + milestoneVersion + " )" + " : " + preBuildMessage);
 
-				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
+				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail((String) context.get("serverProductName"));
 				if(StringUtils.isNotEmpty(buildOwnerEmail))
 				{
 					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build Owner {@" + buildOwnerEmail + "} , Please take it from here.", false);

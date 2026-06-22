@@ -82,7 +82,7 @@ public class SDStatusPollTask implements Task
 		String buildUrlMessage = "\n\nBuild URL : " + url;
 		boolean isSuccess = false;
 		String mentionAllMessage = "\n\nPlease start the testing {@participants}";
-		String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail();
+		String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail(serverRepoName);
 		if(overallStatus.equalsIgnoreCase("Failed") || isKilled)
 		{
 			message = "Build update failed in " + regionName + buildUrlMessage + (isKilled ? "\n\nReason: Build was aborted" : "");
