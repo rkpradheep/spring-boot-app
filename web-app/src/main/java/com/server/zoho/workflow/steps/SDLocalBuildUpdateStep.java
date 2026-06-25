@@ -19,6 +19,7 @@ import com.server.framework.workflow.definition.WorkFlowCommonEventType;
 import com.server.framework.workflow.definition.WorkflowStep;
 import com.server.framework.workflow.model.WorkflowEvent;
 import com.server.framework.workflow.model.WorkflowInstance;
+import com.server.framework.workflow.model.WorkflowStatus;
 import com.server.zoho.IntegService;
 import com.server.zoho.ZohoService;
 import com.server.zoho.entity.BuildMonitorEntity;
@@ -57,9 +58,41 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 		String milestoneVersion = instance.getVariable("milestoneVersion");
 		String productName = instance.getVariable("productName");
 		String serverRepoName = (String) context.get("serverProductName");
+		Boolean isMigrationRequired = (Boolean) context.get("isMigrationRequired");
+		Boolean isInvokedFromResumeFlow = (Boolean) context.get("isInvokedFromResumeFlow");
 
 		try
 		{
+
+			context.put("isInvokedFromResumeFlow", false);
+			if(Boolean.TRUE.equals(isMigrationRequired) && !Boolean.TRUE.equals(isInvokedFromResumeFlow))
+			{
+				LOGGER.info("Migration required. Suspending workflow at SD Local Build Update for monitorId: " + monitorId);
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Workflow suspended for migration before SD LOCAL build update. Resume the workflow after migration is completed.");
+
+				String resumeWorkflow = "[Resume Workflow]($1)";
+
+				JSONObject reference = new JSONObject()
+					.put("type", "button")
+					.put("object", new JSONObject()
+						.put("label", "Resume Workflow")
+						.put("action", new JSONObject()
+							.put("type", "invoke.function")
+							.put("data", new JSONObject().put("name", "resumebuildworkflow")))
+						.put("arguments", new JSONObject()
+							.put("key", "resumeworkflow")
+							.put("value", monitorId + "")
+							.put("type", "+")
+						));
+
+				JSONObject references = new JSONObject().put("1", reference);
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), (String) context.get("messageID"), null, null,  "MASTER BUILD", resumeWorkflow, references);
+
+				instance.setStatus(WorkflowStatus.SUSPENDED);
+				instance.setLastUpdateTime(System.currentTimeMillis());
+				return null;
+			}
+
 			try
 			{
 				if(!StringUtils.equals(serverRepoName, "tpap_server"))

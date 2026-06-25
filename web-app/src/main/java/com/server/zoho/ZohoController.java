@@ -422,11 +422,11 @@ public class ZohoController
 	}
 
 	@PostMapping("/zoho/payout/trigger-build")
-	public ResponseEntity<Map<String, Object>> triggerPayoutBuild()
+	public ResponseEntity<Map<String, Object>> triggerPayoutBuild(@RequestParam("is_migration_required") boolean isMigrationRequired)
 	{
 		try
 		{
-			Set<String> productsQualifiedForBuild = buildAutomationService.startBuildAutomationForPayout();
+			Set<String> productsQualifiedForBuild = buildAutomationService.startBuildAutomationForPayout(isMigrationRequired);
 			if(productsQualifiedForBuild.isEmpty())
 			{
 				Map<String, Object> response = ApiResponseBuilder.error("No products qualified for automatic build", HttpStatus.BAD_REQUEST.value());
@@ -448,11 +448,11 @@ public class ZohoController
 	}
 
 	@PostMapping("/zoho/zpaytpap/trigger-build")
-	public ResponseEntity<Map<String, Object>> triggerZPayTPAPBuild()
+	public ResponseEntity<Map<String, Object>> triggerZPayTPAPBuild( @RequestParam("is_migration_required") boolean isMigrationRequired)
 	{
 		try
 		{
-			Set<String> productsQualifiedForBuild = buildAutomationService.startBuildAutomationForZPayTPAP();
+			Set<String> productsQualifiedForBuild = buildAutomationService.startBuildAutomationForZPayTPAP(isMigrationRequired);
 			if(productsQualifiedForBuild.isEmpty())
 			{
 				Map<String, Object> response = ApiResponseBuilder.error("No products qualified for automatic build", HttpStatus.BAD_REQUEST.value());

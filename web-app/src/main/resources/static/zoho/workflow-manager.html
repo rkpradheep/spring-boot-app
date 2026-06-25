@@ -900,6 +900,13 @@
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="isMigrationRequired" />
+                        Migration Required (suspend before CSEZ build update)
+                    </label>
+                </div>
+
                 <button class="btn" id="startWorkflowBtn" onclick="startWorkflow()">
                     Start Build
                 </button>
@@ -1046,8 +1053,10 @@
         try {
 
             unHideElement("loading");
+            const isMigrationRequired = document.getElementById('isMigrationRequired')?.checked || false;
             const requestData = {
-                productNames: selectedProducts
+                productNames: selectedProducts,
+                migrationRequired: isMigrationRequired
             };
 
             const response = await fetch(`${apiBase}/build/start`, {
@@ -1285,6 +1294,7 @@
             </div>
             <div class="instance-actions">
                 ${instance.status.toLowerCase() === 'running' ? `<button class="btn btn-danger" onclick="stopWorkflow('${instance.instanceId}')">Stop</button>` : ''}
+                ${instance.status.toLowerCase() === 'suspended' ? `<button class="btn btn-success" onclick="resumeWorkflow('${instance.instanceId}')">Resume</button>` : ''}
                 ${canRetry ? `<button class="btn btn-danger" onclick="retryWorkflow('${instance.instanceId}')">Retry</button>` : ''}
             </div>
         `;
@@ -1301,7 +1311,40 @@
             case 'completed': return 'status-completed';
             case 'failed': return 'status-failed';
             case 'cancelled': return 'status-cancelled';
+            case 'suspended': return 'status-suspended';
             default: return 'status-running';
+        }
+    }
+
+    async function resumeWorkflow(instanceId) {
+        if (!confirm('Are you sure you want to resume this workflow? Make sure the migration is complete before resuming.')) {
+            return;
+        }
+
+        try {
+            unHideElement("loading");
+            const response = await fetch(`${apiBase}/instances/${instanceId}/resume`, {
+                method: 'POST'
+            });
+
+            const responseJSON = await response.json();
+            hideElement("loading");
+
+            if (responseJSON.success) {
+                showAlert('Workflow resume initiated successfully', 'success');
+                loadWorkflowInstances();
+            } else {
+                if(responseJSON.error_code == "reauth_required")
+                {
+                  handleZohoAuth(responseJSON.data.auth_uri)
+                  return;
+                }
+                showAlert(`Failed to resume workflow: ${responseJSON.message}`, 'error');
+            }
+        } catch (error) {
+            hideElement("loading");
+            console.error('Error resuming workflow:', error);
+            showAlert('Error resuming workflow', 'error');
         }
     }
 
@@ -1728,6 +1771,8 @@
             item.classList.remove('selected');
 <!--            item.querySelector('.order-badge')?.remove();-->
         });
+        const migrationCheckbox = document.getElementById('isMigrationRequired');
+        if (migrationCheckbox) migrationCheckbox.checked = false;
 <!--       updateSelectedProductsDisplay(); -->
     }
 

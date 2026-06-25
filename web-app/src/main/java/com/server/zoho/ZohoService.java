@@ -146,6 +146,17 @@ public class ZohoService
 
 			buildOptions.put("skip_continue_for_parallel_products", true);
 		}
+		else if(StringUtils.equals("payout_server", productName))
+		{
+			JSONObject parallelProduct = new JSONObject();
+			parallelProduct.put("product", "PAYOUTMIGRATION_IN");
+			parallelProduct.put("build_stage", buildStage);
+			parallelProduct.put("service_name", "Payout");
+
+			sdBuildUpdatePayload.put("parallel_products", new JSONArray().put(parallelProduct));
+
+			buildOptions.put("skip_continue_for_parallel_products", true);
+		}
 
 		String sdBuildUpdateUrl = AppProperties.getProperty("zoho.sd.build.update.api.url");
 		sdBuildUpdateUrl = StringUtils.equals("tpap_server", productName) ? AppProperties.getProperty("zoho.zpaytpap.sd.build.update.api.url") : sdBuildUpdateUrl;
@@ -233,9 +244,14 @@ public class ZohoService
 
 	public static String createOrSendMessageToThread(String urlString, Map<String, Object> context, String threadTitle, String message)
 	{
+		return createOrSendMessageToThread(urlString, context, threadTitle, message, null);
+	}
+
+	public static String createOrSendMessageToThread(String urlString, Map<String, Object> context, String threadTitle, String message, JSONObject reference)
+	{
 		String messageID = (String) context.get("messageID");
 		String gitlabIssueID = (String) context.get("gitlabIssueID");
-		return createOrSendMessageToThread(urlString, messageID, (String) context.get("serverProductName"), gitlabIssueID, threadTitle, message);
+		return createOrSendMessageToThread(urlString, messageID, (String) context.get("serverProductName"), gitlabIssueID, threadTitle, message, reference);
 	}
 
 	public static String createOrSendMessageToThread(String urlString, String messageID, String serverRepoName, String gitlabIssueID, String threadTitle, String message)

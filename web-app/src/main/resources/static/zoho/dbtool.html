@@ -406,11 +406,14 @@
             {
             document.getElementById("idc_jobs_container").style.display="none"
             document.getElementById("local_jobs_container").style.display="inline"
+            setElementValue("user_id", "");
+            setElementValue("customer_id", "");
             }
             else
             {
             document.getElementById("local_jobs_container").style.display="none"
             document.getElementById("idc_jobs_container").style.display="inline"
+            setElementValue("dataspace_id", "");
             }
             }
 

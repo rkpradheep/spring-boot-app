@@ -92,6 +92,11 @@ public class IntegService
 
 	public BuildResponse scheduleBuilds(Set<String> productNames)
 	{
+		return scheduleBuilds(productNames, false);
+	}
+
+	public BuildResponse scheduleBuilds(Set<String> productNames, boolean isMigrationRequired)
+	{
 
 		if(productNames == null || productNames.isEmpty())
 		{
@@ -113,7 +118,7 @@ public class IntegService
 			return new BuildResponse("Invalid repo names provided: " + String.join(", ", invalidProducts) + " Supported repo names : " + supportedRepos);
 		}
 
-		scheduleBuildWorkFlow(productNames);
+		scheduleBuildWorkFlow(productNames, isMigrationRequired);
 
 		return new BuildResponse("Build workflow scheduled successfully for " + productNames.size() + " products");
 
@@ -172,6 +177,11 @@ public class IntegService
 
 	private void scheduleBuildWorkFlow(Set<String> productNames)
 	{
+		scheduleBuildWorkFlow(productNames, false);
+	}
+
+	private void scheduleBuildWorkFlow(Set<String> productNames, boolean isMigrationRequired)
+	{
 		try
 		{
 			BuildMonitorEntity monitor = buildMonitorService.createBuildMonitor(productNames);
@@ -189,6 +199,7 @@ public class IntegService
 				{
 					put("monitorId", monitor.getId());
 					put("productId", firstProduct.getId());
+					put("isMigrationRequired", isMigrationRequired);
 				}
 			};
 

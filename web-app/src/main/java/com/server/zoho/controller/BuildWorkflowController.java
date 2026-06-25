@@ -8,6 +8,7 @@ import com.server.framework.workflow.WorkflowEngine;
 import com.server.framework.workflow.definition.WorkFlowCommonEventType;
 import com.server.zoho.BuildResponse;
 import com.server.zoho.ZohoService;
+import com.server.zoho.repository.BuildProductRepository;
 import com.server.zoho.workflow.model.BuildEventType;
 import com.server.framework.workflow.model.WorkflowInstance;
 import com.server.framework.workflow.model.WorkflowStatus;
@@ -30,8 +31,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/zoho/workflow")
@@ -43,6 +46,9 @@ public class BuildWorkflowController
 
 	@Autowired
 	private WorkflowService persistenceService;
+
+	@Autowired
+	private BuildProductRepository buildProductRepository;
 
 	@Autowired
 	private IntegService integService;
@@ -68,13 +74,21 @@ public class BuildWorkflowController
 			List<WorkflowInstanceEntity> workflowInstances = workflowService.findRunningInstances();
 			if(!workflowInstances.isEmpty())
 			{
-				throw new AppException("A build workflow is already running. Please wait for it to complete before starting a new one.");
+				Set<String> runningProductNames = workflowInstances.stream().map(WorkflowInstanceEntity::getReferenceID).filter(StringUtils::isNotEmpty).map(referenceId -> {
+					Optional<BuildProductEntity> buildMonitorEntity = buildProductRepository.findByBuildId(Long.parseLong(referenceId));
+					return buildMonitorEntity.map(BuildProductEntity::getProductName).orElse(null);
+				}).filter(Objects::nonNull).collect(Collectors.toSet());
+
+				runningProductNames.stream().filter(productName -> request.getProductNames().contains(productName)).findAny().ifPresent(productName -> {
+					throw new AppException("A build workflow for product " + productName + " is already running. Please wait for it to complete before starting a new one.");
+				});
 			}
-			BuildResponse response = integService.scheduleBuilds(request.getProductNames());
+			BuildResponse response = integService.scheduleBuilds(request.getProductNames(), request.isMigrationRequired());
 
 			Map<String, Object> data = new HashMap<>();
 			data.put("response", response.getText());
 			data.put("productNames", request.getProductNames());
+			data.put("isMigrationRequired", request.isMigrationRequired());
 			data.put("workflowEngine", "Workflow");
 
 			return ResponseEntity.ok(ApiResponseBuilder.success(response.getText(), data));
@@ -402,6 +416,74 @@ public class BuildWorkflowController
 		}
 	}
 
+	@Transactional
+	@PostMapping("/instances/{workflowId}/resume")
+	public ResponseEntity<Map<String, Object>> resumeWorkflow(@PathVariable("workflowId") String workflowId)
+	{
+		try
+		{
+			lockService.acquireCommonLock();
+
+			Optional<WorkflowInstance> instanceOpt = workflowEngine.getInstance(workflowId);
+
+			if(instanceOpt.isEmpty())
+			{
+				return ResponseEntity.badRequest().body(ApiResponseBuilder.error(
+					"Workflow instance not found",
+					404
+				));
+			}
+
+			WorkflowInstance instance = instanceOpt.get();
+
+			if(instance.getStatus() != WorkflowStatus.SUSPENDED)
+			{
+				return ResponseEntity.badRequest().body(ApiResponseBuilder.error(
+					"Cannot resume a workflow that is not suspended. Current status: " + instance.getStatus(),
+					400
+				));
+			}
+
+			Map<String, Object> context = (Map<String, Object>) instance.getContext();
+
+
+
+			String messageID =  (String) context.get("messageID");
+			if(StringUtils.isNotEmpty(ZohoService.getCurrentUserEmail()) && StringUtils.isNotEmpty(messageID))
+			{
+				String message = "Workflow resumed successfully!\n\n Initiated by : {@" + ZohoService.getCurrentUserEmail() + "}";
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", message);
+			}
+
+
+			context.put("isInvokedFromResumeFlow", true);
+			instance.setContext(context);
+			instance.setStatus(WorkflowStatus.RUNNING);
+			instance.setLastModifiedBy(ZohoService.getCurrentUserEmail());
+			instance.setLastUpdateTime(System.currentTimeMillis());
+			workflowService.saveInstance(instance);
+
+			workflowEngine.executeCurrentStep(instance);
+
+			Map<String, Object> data = new HashMap<>();
+			data.put("workflowId", workflowId);
+			data.put("newStatus", "RUNNING");
+
+			return ResponseEntity.ok(ApiResponseBuilder.success(
+				"Workflow resume initiated successfully",
+				data
+			));
+		}
+		catch(AppException ae)
+		{
+			throw ae;
+		}
+		catch(Exception e)
+		{
+			throw new AppException("Error resuming workflow: " + e.getMessage());
+		}
+	}
+
 	@PostMapping("/instances/{workflowId}/retry")
 	public ResponseEntity<Map<String, Object>> retryWorkflow(@PathVariable("workflowId") String workflowId)
 	{
@@ -489,6 +571,7 @@ public class BuildWorkflowController
 	public static class BuildWorkflowRequest
 	{
 		private Set<String> productNames;
+		private boolean isMigrationRequired;
 
 		public Set<String> getProductNames()
 		{
@@ -498,6 +581,16 @@ public class BuildWorkflowController
 		public void setProductNames(Set<String> productNames)
 		{
 			this.productNames = productNames;
+		}
+
+		public boolean isMigrationRequired()
+		{
+			return isMigrationRequired;
+		}
+
+		public void setMigrationRequired(boolean migrationRequired)
+		{
+			this.isMigrationRequired = migrationRequired;
 		}
 	}
 }

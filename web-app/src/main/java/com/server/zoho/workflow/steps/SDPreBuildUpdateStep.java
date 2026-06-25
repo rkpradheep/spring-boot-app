@@ -16,6 +16,7 @@ import com.server.framework.workflow.definition.WorkFlowCommonEventType;
 import com.server.framework.workflow.definition.WorkflowStep;
 import com.server.framework.workflow.model.WorkflowEvent;
 import com.server.framework.workflow.model.WorkflowInstance;
+import com.server.framework.workflow.model.WorkflowStatus;
 import com.server.zoho.IntegService;
 import com.server.zoho.ZohoService;
 import com.server.zoho.entity.BuildMonitorEntity;
@@ -53,10 +54,41 @@ public class SDPreBuildUpdateStep extends WorkflowStep
 		String buildURL = isPatchBuildUpdate ? instance.getVariable("buildUrl") : null;
 		String milestoneVersion = instance.getVariable("milestoneVersion");
 		String productName = isPatchBuildUpdate ? (String) context.get("productName") : instance.getVariable("productName");
+		Boolean isMigrationRequired = (Boolean) context.get("isMigrationRequired");
+		Boolean isInvokedFromResumeFlow = (Boolean) context.get("isInvokedFromResumeFlow");
 
 		try
 		{
 			LOGGER.info("Preparing SD Build Update for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion + ", productName: " + productName);
+
+			context.put("isInvokedFromResumeFlow", false);
+			if(Boolean.TRUE.equals(isMigrationRequired) && !Boolean.TRUE.equals(isInvokedFromResumeFlow))
+			{
+				LOGGER.info("Migration required. Suspending workflow at SD CSEZ Build Update for monitorId: " + monitorId);
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Workflow suspended for migration before SD PRE build update. Resume the workflow after migration is completed.");
+
+				String resumeWorkflow = "[Resume Workflow]($1)";
+
+				JSONObject reference = new JSONObject()
+					.put("type", "button")
+					.put("object", new JSONObject()
+						.put("label", "Resume Workflow")
+						.put("action", new JSONObject()
+							.put("type", "invoke.function")
+							.put("data", new JSONObject().put("name", "resumebuildworkflow")))
+						.put("arguments", new JSONObject()
+							.put("key", "resumeworkflow")
+							.put("value", monitorId + "")
+							.put("type", "+")
+						));
+
+				JSONObject references = new JSONObject().put("1", reference);
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), (String) context.get("messageID"), null, null,  "MASTER BUILD", resumeWorkflow, references);
+
+				instance.setStatus(WorkflowStatus.SUSPENDED);
+				instance.setLastUpdateTime(System.currentTimeMillis());
+				return null;
+			}
 
 			String response = ZohoService.uploadBuild(productName, milestoneVersion, AppProperties.getProperty("zoho.in.dc.main"), "IN", "pre", isPatchBuildUpdate, buildURL);
 			LOGGER.info("SD Build Update Response PRE : " + response);

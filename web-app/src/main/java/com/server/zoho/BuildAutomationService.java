@@ -27,7 +27,7 @@ public class BuildAutomationService
 	@Autowired
 	BuildWorkflowController buildWorkflowController;
 
-	public Set<String> startBuildAutomationForPayout() throws Exception
+	public Set<String> startBuildAutomationForPayout(boolean isMigrationRequired) throws Exception
 	{
 		List<String> payoutProducts = new ArrayList<>((List<String>) ZohoService.getMetaConfig("PAYOUT_PRODUCTS"));
 		payoutProducts.remove("payout_server");
@@ -52,13 +52,14 @@ public class BuildAutomationService
 
 		BuildWorkflowController.BuildWorkflowRequest buildWorkflowRequest = new BuildWorkflowController.BuildWorkflowRequest();
 		buildWorkflowRequest.setProductNames(productsForBuild);
+		buildWorkflowRequest.setMigrationRequired(isMigrationRequired);
 
 		buildWorkflowController.startBuildWorkflow(buildWorkflowRequest);
 
 		return productsForBuild;
 	}
 
-	public Set<String> startBuildAutomationForZPayTPAP() throws Exception
+	public Set<String> startBuildAutomationForZPayTPAP(boolean isMigrationRequired) throws Exception
 	{
 		List<String> zpayTPAPProducts = new ArrayList<>((List<String>) ZohoService.getMetaConfig("ZPAYTPAP_PRODUCTS"));
 		zpayTPAPProducts.remove("tpap_server");
@@ -83,6 +84,7 @@ public class BuildAutomationService
 
 		BuildWorkflowController.BuildWorkflowRequest buildWorkflowRequest = new BuildWorkflowController.BuildWorkflowRequest();
 		buildWorkflowRequest.setProductNames(productsForBuild);
+		buildWorkflowRequest.setMigrationRequired(isMigrationRequired);
 
 		buildWorkflowController.startBuildWorkflow(buildWorkflowRequest);
 
