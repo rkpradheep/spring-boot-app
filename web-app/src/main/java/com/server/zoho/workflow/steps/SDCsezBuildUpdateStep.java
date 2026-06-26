@@ -63,19 +63,44 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 		String milestoneVersion = instance.getVariable("milestoneVersion");
 		String productName = instance.getVariable("productName");
 
-
 		try
 		{
+			if(StringUtils.equals("tpap_server", productName))
+			{
+				return new WorkflowEvent(BuildEventType.SD_LOCAL_BUILD_UPDATE, Map.of("message", "SD csez build upload completed"));
+			}
+
 			context.put("isInvokedFromResumeFlow", false);
 
 			if(Boolean.TRUE.equals(isMigrationRequired) && !Boolean.TRUE.equals(isInvokedFromResumeFlow))
 			{
+				context.put("buildStage", "SEZ");
+
 				LOGGER.info("Migration required. Suspending workflow at SD CSEZ Build Update for monitorId: " + monitorId);
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Workflow suspended for migration before SD CSEZ build update. Resume the workflow after migration is completed.");
 
-				String resumeWorkflow = "[Resume Workflow]($1)";
+
+				String initiateMigration = "[Initiate Meta Migration]($1)";
 
 				JSONObject reference = new JSONObject()
+					.put("type", "button")
+					.put("object", new JSONObject()
+						.put("label", "Initiate Meta Migration")
+						.put("action", new JSONObject()
+							.put("type", "invoke.function")
+							.put("data", new JSONObject().put("name", "initiatemetamigration")))
+						.put("arguments", new JSONObject()
+							.put("key", "initiateamigration")
+							.put("value", monitorId + "")
+							.put("type", "+")
+						));
+
+				JSONObject references = new JSONObject().put("1", reference);
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), (String) context.get("messageID"), null, null,  "MASTER BUILD", initiateMigration, references);
+
+				String resumeWorkflow = "[Resume Workflow]($1)";
+
+				reference = new JSONObject()
 					.put("type", "button")
 					.put("object", new JSONObject()
 						.put("label", "Resume Workflow")
@@ -88,7 +113,7 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 							.put("type", "+")
 						));
 
-				JSONObject references = new JSONObject().put("1", reference);
+				references = new JSONObject().put("1", reference);
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), (String) context.get("messageID"), null, null,  "MASTER BUILD", resumeWorkflow, references);
 
 				instance.setStatus(WorkflowStatus.SUSPENDED);
@@ -96,10 +121,6 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 				return null;
 			}
 
-			if(StringUtils.equals("tpap_server", productName))
-			{
-				return new WorkflowEvent(BuildEventType.SD_LOCAL_BUILD_UPDATE, Map.of("message", "SD csez build upload completed"));
-			}
 			LOGGER.info("Preparing SD Build Update for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion + ", productName: " + productName);
 
 			String commentMessageFormat = Boolean.TRUE.equals(isBugFixBuild) ? "'Master Bugfix Build' dd MMMM yyyy" : "'Master Build' dd MMMM yyyy";

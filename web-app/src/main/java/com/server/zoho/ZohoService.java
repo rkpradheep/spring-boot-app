@@ -135,27 +135,31 @@ public class ZohoService
 			.put("is_patch_update", isPatchBuild)
 			.put("provision_type", "build_update");
 
-		if(StringUtils.equals("tpap_server", productName))
+		if(!StringUtils.equals(buildStage, "pre"))
 		{
-			JSONObject parallelProduct = new JSONObject();
-			parallelProduct.put("product", "ZPAYTPAP_MIGRATION");
-			parallelProduct.put("build_stage", buildStage);
-			parallelProduct.put("service_name", "ZPayTPAP");
 
-			sdBuildUpdatePayload.put("parallel_products", new JSONArray().put(parallelProduct));
+			if(StringUtils.equals("tpap_server", productName))
+			{
+				JSONObject parallelProduct = new JSONObject();
+				parallelProduct.put("product", "ZPAYTPAP_MIGRATION");
+				parallelProduct.put("build_stage", buildStage);
+				parallelProduct.put("service_name", "ZPayTPAP");
 
-			buildOptions.put("skip_continue_for_parallel_products", true);
-		}
-		else if(StringUtils.equals("payout_server", productName))
-		{
-			JSONObject parallelProduct = new JSONObject();
-			parallelProduct.put("product", "PAYOUTMIGRATION_IN");
-			parallelProduct.put("build_stage", buildStage);
-			parallelProduct.put("service_name", "Payout");
+				sdBuildUpdatePayload.put("parallel_products", new JSONArray().put(parallelProduct));
 
-			sdBuildUpdatePayload.put("parallel_products", new JSONArray().put(parallelProduct));
+				buildOptions.put("skip_continue_for_parallel_products", true);
+			}
+			else if(StringUtils.equals("payout_server", productName))
+			{
+				JSONObject parallelProduct = new JSONObject();
+				parallelProduct.put("product", "PAYOUTMIGRATION_IN");
+				parallelProduct.put("build_stage", buildStage);
+				parallelProduct.put("service_name", "Payout");
 
-			buildOptions.put("skip_continue_for_parallel_products", true);
+				sdBuildUpdatePayload.put("parallel_products", new JSONArray().put(parallelProduct));
+
+				buildOptions.put("skip_continue_for_parallel_products", true);
+			}
 		}
 
 		String sdBuildUpdateUrl = AppProperties.getProperty("zoho.sd.build.update.api.url");
@@ -1112,6 +1116,27 @@ public class ZohoService
 	{
 		String sdBuildStatusFetchUrl = AppProperties.getProperty("zoho.sd.build.status.api.url");
 		sdBuildStatusFetchUrl = StringUtils.equals(serverRepoName, "tpap_server") ? AppProperties.getProperty("zoho.zpaytpap.sd.build.status.api.url") : sdBuildStatusFetchUrl;
+
+		sdBuildStatusFetchUrl = sdBuildStatusFetchUrl.replace("{BUILD_ID}", buildID);
+
+		HttpContext httpContext = new HttpContext(sdBuildStatusFetchUrl, "GET");
+		httpContext.setHeader("Authorization", ZohoService.getSDAccessToken());
+
+		HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(httpContext);
+		JSONObject buildDetails = new JSONObject(httpResponse.getStringResponse()).getJSONArray("details").getJSONObject(0).getJSONObject("details").getJSONArray("build_details").getJSONObject(0);
+
+		return new JSONObject()
+			.put("status", buildDetails.getJSONObject("status"))
+			.put("overall_status", buildDetails.getString("overall_status"))
+			.put("region", buildDetails.getString("region"))
+			.put("url", buildDetails.getString("url"))
+			.put("build_stage", buildDetails.getString("build_stage"));
+	}
+
+	public static JSONObject getSDMigrationBuildStatus(String serverRepoName, String buildID) throws Exception
+	{
+		String sdBuildStatusFetchUrl = AppProperties.getProperty("zoho.sd.migration.status.api.url");
+		sdBuildStatusFetchUrl = StringUtils.equals(serverRepoName, "tpap_server") ? AppProperties.getProperty("zoho.zpaytpap.sd.migration.status.api.url") : sdBuildStatusFetchUrl;
 
 		sdBuildStatusFetchUrl = sdBuildStatusFetchUrl.replace("{BUILD_ID}", buildID);
 

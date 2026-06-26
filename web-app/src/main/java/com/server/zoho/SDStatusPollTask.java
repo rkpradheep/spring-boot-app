@@ -1,6 +1,7 @@
 package com.server.zoho;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -17,11 +18,11 @@ import com.server.framework.entity.JobEntity;
 import com.server.framework.job.Task;
 import com.server.framework.service.JobService;
 import com.server.framework.service.WorkflowService;
-import com.server.framework.workflow.definition.WorkflowStep;
+import com.server.framework.workflow.WorkflowEngine;
+import com.server.framework.workflow.model.WorkflowInstance;
 import com.server.framework.workflow.model.WorkflowStatus;
 import com.server.zoho.service.BuildProductService;
 import com.server.zoho.workflow.model.BuildStates;
-import com.server.zoho.workflow.steps.BuildInitiationStep;
 
 @Service
 @Scope("prototype")
@@ -34,6 +35,9 @@ public class SDStatusPollTask implements Task
 	private BuildProductService buildProductService;
 
 	@Autowired private WorkflowService workflowService;
+
+	@Autowired
+	private WorkflowEngine workflowEngine;
 
 	private static final Logger LOGGER = Logger.getLogger(SDStatusPollTask.class.getName());
 
@@ -112,7 +116,7 @@ public class SDStatusPollTask implements Task
 				LOGGER.log(Level.SEVERE, "Error while marking SD Local Build Update Failed for product ID: " + productID, e);
 			}
 
-	}
+		}
 		else if(overallStatus.equalsIgnoreCase("Completed"))
 		{
 			message = "Build deployed successfully in " + regionName + buildUrlMessage;
@@ -131,10 +135,10 @@ public class SDStatusPollTask implements Task
 		}
 
 		ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, gitlabIssueID, "MASTER BUILD", message + mentionAllMessage);
-//		if(regionName.equals("PRODUCTION") && isSuccess)
-//		{
-//			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, null, "MASTER BUILD", "Build Automation Bot signing off for now \uD83D\uDC4B");
-//		}
+		//		if(regionName.equals("PRODUCTION") && isSuccess)
+		//		{
+		//			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, serverRepoName, null, "MASTER BUILD", "Build Automation Bot signing off for now \uD83D\uDC4B");
+		//		}
 
 		if(!(isSuccess && List.of("LOCAL", "PRE").contains(regionName)))
 		{
@@ -151,6 +155,38 @@ public class SDStatusPollTask implements Task
 
 		if(regionName.equals("LOCAL"))
 		{
+			Optional<WorkflowInstance> instanceOpt = workflowEngine.getInstance(jsonObject.getString("monitor_id"));
+			Map context = (Map) instanceOpt.get().getContext();
+
+			context.put("buildStage", "IN");
+			workflowService.saveInstance(instanceOpt.get());
+
+			Boolean isMigrationRequired = (Boolean) context.get("isMigrationRequired");
+
+			if(Boolean.TRUE.equals(isMigrationRequired))
+			{
+				instanceOpt.get().setStatus(WorkflowStatus.SUSPENDED);
+				workflowService.saveInstance(instanceOpt.get());
+
+				String initiateMigration = "[Initiate Meta Migration]($1)";
+				reference = new JSONObject()
+					.put("type", "button")
+					.put("object", new JSONObject()
+						.put("label", "Initiate Meta Migration")
+						.put("action", new JSONObject()
+							.put("type", "invoke.function")
+							.put("data", new JSONObject().put("name", "initiatemetamigration")))
+						.put("arguments", new JSONObject()
+							.put("key", "initiateamigration")
+							.put("value", jsonObject.getString("monitor_id"))
+							.put("type", "+")
+						));
+
+				JSONObject references = new JSONObject().put("1", reference);
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), (String) context.get("messageID"), null, null,  "MASTER BUILD", initiateMigration, references);
+			}
+
+
 			buildMovementMessage = "[Move To Pre]($1)";
 
 			reference = new JSONObject()
@@ -165,10 +201,15 @@ public class SDStatusPollTask implements Task
 						.put("value", jsonObject.optString("monitor_id")))
 					.put("type", "+")
 				);
+
 		}
 		else
 		{
-			buildMovementMessage ="[Move To Production]($1)";
+			Optional<WorkflowInstance> instanceOpt = workflowEngine.getInstance(jsonObject.getString("monitor_id"));
+			instanceOpt.get().setStatus(WorkflowStatus.COMPLETED);
+			workflowService.saveInstance(instanceOpt.get());
+
+			buildMovementMessage = "[Move To Production]($1)";
 
 			reference = new JSONObject()
 				.put("type", "button")
@@ -186,7 +227,7 @@ public class SDStatusPollTask implements Task
 
 		if(StringUtils.isNotEmpty(buildOwnerEmail))
 		{
-			buildMovementMessage+= "\n\nBuild Owner {@" + buildOwnerEmail + "}";
+			buildMovementMessage += "\n\nBuild Owner {@" + buildOwnerEmail + "}";
 		}
 
 		JSONObject references = new JSONObject().put("1", reference);

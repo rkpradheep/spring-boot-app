@@ -67,12 +67,36 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 			context.put("isInvokedFromResumeFlow", false);
 			if(Boolean.TRUE.equals(isMigrationRequired) && !Boolean.TRUE.equals(isInvokedFromResumeFlow))
 			{
+				context.put("buildStage", "CT");
+
 				LOGGER.info("Migration required. Suspending workflow at SD Local Build Update for monitorId: " + monitorId);
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Workflow suspended for migration before SD LOCAL build update. Resume the workflow after migration is completed.");
 
-				String resumeWorkflow = "[Resume Workflow]($1)";
+
+
+				String initiateMigration = "[Initiate Migration]($1)";
 
 				JSONObject reference = new JSONObject()
+					.put("type", "button")
+					.put("object", new JSONObject()
+						.put("label", "Initiate Meta Migration")
+						.put("action", new JSONObject()
+							.put("type", "invoke.function")
+							.put("data", new JSONObject().put("name", "initiatemetamigration")))
+						.put("arguments", new JSONObject()
+							.put("key", "initiateamigration")
+							.put("value", monitorId + "")
+							.put("type", "+")
+						));
+
+				JSONObject references = new JSONObject().put("1", reference);
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), (String) context.get("messageID"), null, null,  "MASTER BUILD", initiateMigration, references);
+
+
+
+				String resumeWorkflow = "[Resume Workflow]($1)";
+
+				 reference = new JSONObject()
 					.put("type", "button")
 					.put("object", new JSONObject()
 						.put("label", "Resume Workflow")
@@ -85,7 +109,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 							.put("type", "+")
 						));
 
-				JSONObject references = new JSONObject().put("1", reference);
+				 references = new JSONObject().put("1", reference);
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), (String) context.get("messageID"), null, null,  "MASTER BUILD", resumeWorkflow, references);
 
 				instance.setStatus(WorkflowStatus.SUSPENDED);

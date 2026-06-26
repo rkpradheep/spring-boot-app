@@ -11,18 +11,21 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.client.methods.HttpPost;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jose4j.jwt.JwtClaims;
 import org.jose4j.jwt.NumericDate;
 import org.jose4j.base64url.Base64Url;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
@@ -45,6 +48,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -62,7 +66,6 @@ import com.server.framework.error.AppException;
 import com.server.framework.http.HttpService;
 import com.server.framework.http.HttpContext;
 import com.server.framework.http.HttpResponse;
-import com.server.framework.job.CustomRunnable;
 import com.server.framework.job.TaskEnum;
 import com.server.framework.security.SecurityUtil;
 import com.server.framework.service.ConfigurationService;
@@ -71,6 +74,7 @@ import com.server.framework.service.OAuthService;
 import com.server.framework.builder.ApiResponseBuilder;
 import com.server.framework.workflow.WorkflowEngine;
 import com.server.framework.workflow.model.WorkflowInstance;
+import com.server.framework.workflow.model.WorkflowStatus;
 import com.server.zoho.entity.BuildProductEntity;
 import com.server.zoho.service.BuildProductService;
 
@@ -85,6 +89,245 @@ public class ZohoController
 
 	@Autowired
 	private BuildAutomationService buildAutomationService;
+
+	@Autowired
+	private WorkflowEngine workflowEngine;
+
+	private static final Logger LOGGER = Logger.getLogger(ZohoController.class.getName());
+
+	@PostMapping("/zoho/migration/confirm")
+	public ResponseEntity<Map<String, Object>> confirmMetaDataMigration(@RequestParam(name = "workflow_id") String workflowId, @RequestParam(name = "build_id") String buildId, @RequestParam(name = "is_abort") boolean isAbort)
+		throws Exception
+	{
+		Optional<WorkflowInstance> instanceOpt = workflowEngine.getInstance(workflowId);
+
+		if(!instanceOpt.isPresent())
+		{
+			return ResponseEntity.badRequest().body(ApiResponseBuilder.error(
+				"Workflow not found with ID: " + workflowId,
+				400
+			));
+		}
+
+		WorkflowInstance instance = instanceOpt.get();
+
+		if(instance.getStatus() != WorkflowStatus.SUSPENDED)
+		{
+			return ResponseEntity.badRequest().body(ApiResponseBuilder.error(
+				"Cannot do confirmation for a migration for workflow that is not suspended. Current status: " + instance.getStatus(),
+				400
+			));
+		}
+
+		Map<String, Object> context = (Map<String, Object>) instance.getContext();
+
+		String sdMigrationUrl = AppProperties.getProperty(isAbort ? "zoho.sd.isu.quit.migration.api.url" : "zoho.sd.isu.continue.migration.api.url");
+
+		HttpContext httpContext = new HttpContext(sdMigrationUrl, "GET");
+		httpContext.setHeader("Authorization", ZohoService.getSDAccessToken());
+		httpContext.setParam("build_id", buildId);
+
+		HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(httpContext);
+		String sdResponse = httpResponse.getStringResponse();
+
+		LOGGER.info("SD Migration confirmation Response : " + sdResponse);
+
+		JSONObject responseJSON = new JSONObject(sdResponse);
+		boolean isSuccessful = !responseJSON.getJSONObject("meta").getString("response").equals("failure");
+		JSONArray dataArray = responseJSON.optJSONArray("data");
+		String migrationUpdateMessage = dataArray != null ? dataArray.getString(0) : null;
+
+		String message = isAbort ? (isSuccessful ? "Migration aborted successfully" : "Migration abortion failed: " + migrationUpdateMessage) :
+			isSuccessful ? "Migration confirmed successfully" : "Migration confirmation failed: " + migrationUpdateMessage;
+
+		String initiatorMessage = "\n\nInitiated By : " + ZohoService.getCurrentUserEmail();
+		ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", message + initiatorMessage);
+		if(isSuccessful)
+		{
+			JSONObject data = new JSONObject()
+				.put("message_id", context.get("messageID"))
+				.put("gitlab_issue_id", context.get("gitlabIssueID"))
+				.put("server_repo_name", context.get("serverProductName"))
+				.put("monitor_id", workflowId)
+				.put("product_id", context.get("productId"))
+				.put("build_id", buildId);
+
+			AppContextHolder.getBean(JobService.class).scheduleJob(TaskEnum.SD_MIGRATION_STATUS_POLL_TASK.getTaskName(), data.toString(), DateUtil.ONE_MINUTE_IN_MILLISECOND);
+		}
+
+		Map<String, Object> response = isSuccessful ? ApiResponseBuilder.success(message, null) : ApiResponseBuilder.error(message, HttpStatus.BAD_REQUEST.value());
+		return ResponseEntity.ok(response);
+	}
+
+	@PostMapping("/zoho/migration/initiate")
+	public ResponseEntity<Map<String, Object>> initiateMetaMigration(@RequestParam(name = "workflow_id") String workflowId)
+		throws Exception
+	{
+		Optional<WorkflowInstance> instanceOpt = workflowEngine.getInstance(workflowId);
+
+		if(!instanceOpt.isPresent())
+		{
+			return ResponseEntity.badRequest().body(ApiResponseBuilder.error(
+				"Workflow not found with ID: " + workflowId,
+				400
+			));
+		}
+
+		WorkflowInstance instance = instanceOpt.get();
+
+		if(instance.getStatus() != WorkflowStatus.SUSPENDED)
+		{
+			return ResponseEntity.badRequest().body(ApiResponseBuilder.error(
+				"Cannot initiate a migration for workflow that is not suspended. Current status: " + instance.getStatus(),
+				400
+			));
+		}
+
+		Map<String, Object> context = (Map<String, Object>) instance.getContext();
+		String milestoneVersion = instance.getVariable("milestoneVersion");
+		String serverRepoName = (String) context.get("serverProductName");
+		Boolean isDestructiveChange = Boolean.TRUE.equals(context.get("isDestructiveChange"));
+		String migrationLabel = (String) context.get("migrationLabel");
+		String buildStage = (String) context.get("buildStage");
+
+		JSONObject buildOptions = new JSONObject()
+			.put("destructive_change", isDestructiveChange)
+			.put("add_migration", false)
+			.put("kill_query", false)
+			.put("is_threads_configurable", false)
+			.put("skip_migration_webhooks", false)
+			.put("migration_list", false)
+			.put("migration_class", "com.adventnet.sas.upgrade.isu.ISMDefaultUpgradeHandler")
+			.put("number_of_threads", 0)
+			.put("script_update_alone", false);
+
+		JSONArray notifyTo = new JSONArray().put("pradheep.rkd@zohocorp.com");
+
+		String serviceName = "ZPayTPAP";
+		String productName = "ZPAYTPAP_MIGRATION";
+
+		if(StringUtils.equals("payout_server", serverRepoName))
+		{
+			serviceName = "Payout";
+			productName = "PAYOUTMIGRATION_IN";
+		}
+
+		String dc = buildStage.equals("CT") ? "CT1" : buildStage.equals("SEZ") ? "CSEZ" : AppProperties.getProperty("zoho.in.dc.main");
+
+		String buildUrl = ZohoService.getBuildURLForMilestone(serverRepoName, milestoneVersion);
+		JSONObject sdBuildUpdatePayload = new JSONObject()
+			.put("service_name", serviceName)
+			.put("product_name", productName)
+			.put("data_center", dc)
+			.put("region", buildStage)
+			.put("deployment_mode", "live")
+			.put("build_stage", "production")
+			.put("build_url", buildUrl)
+			.put("build_options", buildOptions)
+			.put("notify_to", notifyTo)
+			.put("comment", migrationLabel)
+			.put("is_grid_edited", false)
+			.put("alternate_url", false)
+			.put("ro_sync_disabled", 0)
+			.put("mig_type", "0")
+			.put("run_as", "")
+			.put("migration_label", migrationLabel)
+			.put("url_upload", false)
+			.put("provision_type", "migration");
+
+		String sdBuildUpdateUrl = AppProperties.getProperty("zoho.sd.migration.api.url");
+		sdBuildUpdateUrl = StringUtils.equals("tpap_server", serverRepoName) ? AppProperties.getProperty("zoho.zpaytpap.sd.migration.api.url") : sdBuildUpdateUrl;
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Authorization", ZohoService.getSDAccessToken());
+		headers.setContentType(MediaType.APPLICATION_JSON);
+
+		HttpEntity<String> requestEntity = new HttpEntity<>(sdBuildUpdatePayload.toString(), headers);
+		String sdResponse = AppContextHolder.getBean(RestTemplate.class).postForObject(sdBuildUpdateUrl, requestEntity, String.class);
+
+		LOGGER.info("SD Migration Update Response : " + sdResponse);
+
+		JSONObject responseJSON = new JSONObject(sdResponse);
+		boolean isSuccessful = responseJSON.optString("code", "").equals("SUCCESS");
+		String migrationUpdateMessage = responseJSON.getString("message");
+
+		String message = isSuccessful ? "Migration initiated successfully" : "Migration initiation failed: " + migrationUpdateMessage;
+		Map<String, Object> response = isSuccessful ? ApiResponseBuilder.success(message, null) : ApiResponseBuilder.error(message, HttpStatus.BAD_REQUEST.value());
+
+		String initiatorMessage = "\n\nInitiated By : " + ZohoService.getCurrentUserEmail();
+		ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", message + initiatorMessage);
+
+		if(isSuccessful)
+		{
+			int maxAttempts = 6;
+			int currentAttempt = 0;
+
+			String buildId = responseJSON.getJSONArray("details").getJSONObject(0).get("build_id") + "";
+
+			while(currentAttempt < maxAttempts)
+			{
+				currentAttempt++;
+
+				try
+				{
+					Thread.sleep(DateUtil.ONE_SECOND_IN_MILLISECOND * 10);
+				}
+				catch(InterruptedException e)
+				{
+					LOGGER.warning("Sleep interrupted, attempt " + currentAttempt + " of " + maxAttempts);
+				}
+
+				String sdISUFileContentFetch = AppProperties.getProperty("zoho.sd.isu.filecontent.api.url");
+				HttpContext httpContext = new HttpContext(sdISUFileContentFetch, "GET");
+				httpContext.setHeader("Authorization", ZohoService.getSDAccessToken());
+				httpContext.setParam("build_id", buildId);
+
+				HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(httpContext);
+				JSONArray fileData = new JSONObject(httpResponse.getStringResponse()).optJSONArray("fileData");
+				if(fileData != null)
+				{
+					String diffData = fileData.getString(0);
+					LOGGER.info("Fetched ISU file content for build ID " + buildId + ": " + diffData);
+					response.put("isu_file_content", diffData);
+					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "ISU File Content for build ID " + buildId + ": \n\n\n" + diffData);
+
+					String confirmation = "Meta Data Migration [Continue]($1) [Quit]($2)";
+
+					JSONObject continueReference = new JSONObject()
+						.put("type", "button")
+						.put("object", new JSONObject()
+							.put("label", "Continue")
+							.put("action", new JSONObject()
+								.put("type", "invoke.function")
+								.put("data", new JSONObject().put("name", "confirmmetamigration")))
+							.put("arguments", new JSONObject()
+								.put("key", "continuemigration")
+								.put("value", workflowId + "|" + buildId + "|" + "continue")
+								.put("type", "+")
+							));
+
+					JSONObject abortReference = new JSONObject()
+						.put("type", "button")
+						.put("object", new JSONObject()
+							.put("label", "Abort")
+							.put("action", new JSONObject()
+								.put("type", "invoke.function")
+								.put("data", new JSONObject().put("name", "confirmmetamigration")))
+							.put("arguments", new JSONObject()
+								.put("key", "quitmigration")
+								.put("value", workflowId + "|" + buildId + "|" + "abort")
+								.put("type", "+")
+							));
+
+					JSONObject references = new JSONObject();
+					references.put("1", continueReference);
+					references.put("2", abortReference);
+					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), (String) context.get("messageID"), null, null, "MASTER BUILD", confirmation, references);
+					break;
+				}
+			}
+		}
+		return ResponseEntity.ok(response);
+	}
 
 	@PostMapping("/zoho/isc")
 	public ResponseEntity<Map<String, Object>> getISC(@RequestParam(name = "service") String service,
@@ -422,11 +665,11 @@ public class ZohoController
 	}
 
 	@PostMapping("/zoho/payout/trigger-build")
-	public ResponseEntity<Map<String, Object>> triggerPayoutBuild(@RequestParam("is_migration_required") boolean isMigrationRequired)
+	public ResponseEntity<Map<String, Object>> triggerPayoutBuild(@RequestParam("is_migration_required") boolean isMigrationRequired, @RequestParam("is_destructive_change") boolean isDestructiveChange, @RequestParam("migration_label") String migrationLabel)
 	{
 		try
 		{
-			Set<String> productsQualifiedForBuild = buildAutomationService.startBuildAutomationForPayout(isMigrationRequired);
+			Set<String> productsQualifiedForBuild = buildAutomationService.startBuildAutomationForPayout(isMigrationRequired, isDestructiveChange, migrationLabel);
 			if(productsQualifiedForBuild.isEmpty())
 			{
 				Map<String, Object> response = ApiResponseBuilder.error("No products qualified for automatic build", HttpStatus.BAD_REQUEST.value());
@@ -448,11 +691,11 @@ public class ZohoController
 	}
 
 	@PostMapping("/zoho/zpaytpap/trigger-build")
-	public ResponseEntity<Map<String, Object>> triggerZPayTPAPBuild( @RequestParam("is_migration_required") boolean isMigrationRequired)
+	public ResponseEntity<Map<String, Object>> triggerZPayTPAPBuild(@RequestParam("is_migration_required") boolean isMigrationRequired, @RequestParam("is_destructive_change") boolean isDestructiveChange, @RequestParam("migration_label") String migrationLabel)
 	{
 		try
 		{
-			Set<String> productsQualifiedForBuild = buildAutomationService.startBuildAutomationForZPayTPAP(isMigrationRequired);
+			Set<String> productsQualifiedForBuild = buildAutomationService.startBuildAutomationForZPayTPAP(isMigrationRequired, isDestructiveChange, migrationLabel);
 			if(productsQualifiedForBuild.isEmpty())
 			{
 				Map<String, Object> response = ApiResponseBuilder.error("No products qualified for automatic build", HttpStatus.BAD_REQUEST.value());

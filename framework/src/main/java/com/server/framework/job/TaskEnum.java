@@ -12,7 +12,8 @@ public enum TaskEnum
 	WORKFLOW_TASK("workflow_task", "Workflow Task", WorkFlowTask.class.getName()),
 	ZOHO_COMMON_TASK("zoho_common_task", "Zoho Common Task", "com.server.zoho.ZohoCommonTask"),
 	PAYOUT_BUILD_AUTOMATION_TASK("payout_build_automation_task", "Payout Build Automation Task", "com.server.zoho.PayoutBuildAutomationTask"),
-	SD_STATUS_POLL_TASK("sd_status_poll_task", "SD Staus Poll Task", "com.server.zoho.SDStatusPollTask");
+	SD_STATUS_POLL_TASK("sd_status_poll_task", "SD Status Poll Task", "com.server.zoho.SDStatusPollTask"),
+	SD_MIGRATION_STATUS_POLL_TASK("sd_migration_status_poll_task", "SD Migration Status Poll Task", "com.server.zoho.SDMigrationStatusPollTask");
 
 	private final String taskName;
 	private final String taskDisplayName;

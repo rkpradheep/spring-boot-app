@@ -64,6 +64,8 @@ public class SDPreBuildUpdateStep extends WorkflowStep
 			context.put("isInvokedFromResumeFlow", false);
 			if(Boolean.TRUE.equals(isMigrationRequired) && !Boolean.TRUE.equals(isInvokedFromResumeFlow))
 			{
+				context.put("buildStage", "IN");
+
 				LOGGER.info("Migration required. Suspending workflow at SD CSEZ Build Update for monitorId: " + monitorId);
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Workflow suspended for migration before SD PRE build update. Resume the workflow after migration is completed.");
 
@@ -116,7 +118,7 @@ public class SDPreBuildUpdateStep extends WorkflowStep
 			}
 			else
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload to CSEZ Failed ( " + milestoneVersion + " )");
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload to Pre Failed ( " + milestoneVersion + " )");
 				LOGGER.severe("SD Build Update Failed: " + "PRE Message : " + preBuildMessage);
 				buildProductService.getById(productId).ifPresent(buildProductEntity -> buildProductService.markSDPreBuildUploadFailed(buildProductEntity, preBuildMessage));
 				return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED, Map.of("error", "SD Build Update Failed: " + "Pre Message : " + preBuildMessage));

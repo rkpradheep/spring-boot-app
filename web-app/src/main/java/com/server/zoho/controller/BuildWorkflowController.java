@@ -83,7 +83,7 @@ public class BuildWorkflowController
 					throw new AppException("A build workflow for product " + productName + " is already running. Please wait for it to complete before starting a new one.");
 				});
 			}
-			BuildResponse response = integService.scheduleBuilds(request.getProductNames(), request.isMigrationRequired());
+			BuildResponse response = integService.scheduleBuilds(request);
 
 			Map<String, Object> data = new HashMap<>();
 			data.put("response", response.getText());
@@ -572,6 +572,8 @@ public class BuildWorkflowController
 	{
 		private Set<String> productNames;
 		private boolean isMigrationRequired;
+		private boolean isDestructiveChange;
+		private String migrationLabel;
 
 		public Set<String> getProductNames()
 		{
@@ -588,9 +590,29 @@ public class BuildWorkflowController
 			return isMigrationRequired;
 		}
 
+		public boolean isDestructiveChange()
+		{
+			return isDestructiveChange;
+		}
+
+		public String getMigrationLabel()
+		{
+			return migrationLabel;
+		}
+
 		public void setMigrationRequired(boolean migrationRequired)
 		{
 			this.isMigrationRequired = migrationRequired;
+		}
+
+		public void setDestructiveChange(boolean isDestructiveChange)
+		{
+			this.isDestructiveChange = isDestructiveChange;
+		}
+
+		public void setMigrationLabel(String migrationLabel)
+		{
+			this.migrationLabel = migrationLabel;
 		}
 	}
 }

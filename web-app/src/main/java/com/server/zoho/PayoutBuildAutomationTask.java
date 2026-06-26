@@ -12,6 +12,6 @@ public class PayoutBuildAutomationTask implements Task
 	BuildAutomationService buildAutomationService;
 	@Override public void run(long jobID) throws Exception
 	{
-		buildAutomationService.startBuildAutomationForPayout(false);
+		buildAutomationService.startBuildAutomationForPayout(false, false, null);
 	}
 }

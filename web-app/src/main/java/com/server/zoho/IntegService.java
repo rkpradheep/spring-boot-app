@@ -19,6 +19,7 @@ import com.server.framework.common.DateUtil;
 import com.server.framework.error.AppException;
 import com.server.framework.service.ConfigurationService;
 import com.server.framework.workflow.model.WorkflowInstance;
+import com.server.zoho.controller.BuildWorkflowController;
 import com.server.zoho.entity.BuildMonitorEntity;
 import com.server.zoho.service.BuildMonitorService;
 import com.server.zoho.service.BuildProductService;
@@ -90,13 +91,9 @@ public class IntegService
 		return ((Map<String, String>) ZohoService.getMetaConfig("BUILD_OWNERS")).get(DateUtil.getFormattedCurrentTime("EEEE").toUpperCase());
 	}
 
-	public BuildResponse scheduleBuilds(Set<String> productNames)
+	public BuildResponse scheduleBuilds(BuildWorkflowController.BuildWorkflowRequest request)
 	{
-		return scheduleBuilds(productNames, false);
-	}
-
-	public BuildResponse scheduleBuilds(Set<String> productNames, boolean isMigrationRequired)
-	{
+		Set<String> productNames = request.getProductNames();
 
 		if(productNames == null || productNames.isEmpty())
 		{
@@ -118,7 +115,7 @@ public class IntegService
 			return new BuildResponse("Invalid repo names provided: " + String.join(", ", invalidProducts) + " Supported repo names : " + supportedRepos);
 		}
 
-		scheduleBuildWorkFlow(productNames, isMigrationRequired);
+		scheduleBuildWorkFlow(request);
 
 		return new BuildResponse("Build workflow scheduled successfully for " + productNames.size() + " products");
 
@@ -175,15 +172,12 @@ public class IntegService
 		}
 	}
 
-	private void scheduleBuildWorkFlow(Set<String> productNames)
-	{
-		scheduleBuildWorkFlow(productNames, false);
-	}
-
-	private void scheduleBuildWorkFlow(Set<String> productNames, boolean isMigrationRequired)
+	private void scheduleBuildWorkFlow(BuildWorkflowController.BuildWorkflowRequest request)
 	{
 		try
 		{
+			Set<String> productNames= request.getProductNames();
+			boolean isMigrationRequired = request.isMigrationRequired();
 			BuildMonitorEntity monitor = buildMonitorService.createBuildMonitor(productNames);
 
 			BuildProductEntity firstProduct = buildProductService.getNextPendingProduct(monitor.getId()).orElse(null);
@@ -200,6 +194,8 @@ public class IntegService
 					put("monitorId", monitor.getId());
 					put("productId", firstProduct.getId());
 					put("isMigrationRequired", isMigrationRequired);
+					put("isDestructiveChange", request.isDestructiveChange());
+					put("migrationLabel", request.getMigrationLabel());
 				}
 			};
 
