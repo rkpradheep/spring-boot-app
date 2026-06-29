@@ -15,6 +15,7 @@ public class SecurityRequestWrapper extends HttpServletRequestWrapper
 	public SecurityRequestWrapper(HttpServletRequest request) throws IOException
 	{
 		super(request);
+		request.getParameterMap(); //Workaround for reading parameters before reading the input stream, as it can consume the stream and make it unavailable for later use.
 		try(InputStream requestInputStream = request.getInputStream())
 		{
 			this.cachedBody = requestInputStream.readAllBytes();

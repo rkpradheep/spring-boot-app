@@ -176,7 +176,7 @@ public class IntegService
 	{
 		try
 		{
-			Set<String> productNames= request.getProductNames();
+			Set<String> productNames = request.getProductNames();
 			boolean isMigrationRequired = request.isMigrationRequired();
 			BuildMonitorEntity monitor = buildMonitorService.createBuildMonitor(productNames);
 
@@ -210,6 +210,12 @@ public class IntegService
 				String masterBuildKey = serverRepoName.concat("_").concat(dateString);
 				String initiatorEmail = ZohoService.getCurrentUserEmail();
 				String initiatorMessage = StringUtils.equals(initiatorEmail, "SCHEDULER") ? initiatorEmail : "{@" + initiatorEmail + "}";
+
+				String metaMigrationMessage = "\n\nMeta Migration Required : " + (isMigrationRequired ? "Yes" : "No");
+				if(isMigrationRequired)
+				{
+					metaMigrationMessage = metaMigrationMessage + "\nDestructive Changes Involved : " + (request.isDestructiveChange() ? "Yes" : "No") + "\nMigration Label : " + request.getMigrationLabel();
+				}
 				initiatorMessage = "\n\nInitiated By : " + initiatorMessage;
 
 				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail(serverRepoName);
@@ -229,7 +235,7 @@ public class IntegService
 					context.put("messageID", messageID);
 					context.put("gitlabIssueID", gitlabIssueID);
 
-					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "BUGFIX BUILD" + initiatorMessage + "\n\n{@participants}");
+					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "BUGFIX BUILD" + metaMigrationMessage +  initiatorMessage + "\n\n{@participants}");
 
 					Optional<BuildProductEntity> buildProductEntityOptional = buildProductService.getProductsForMonitor(Long.valueOf(masterBuildOptional.get())).stream().filter(buildProductEntity -> StringUtils.equals(buildProductEntity.getProductName(), serverRepoName)).findFirst();
 					if(buildProductEntityOptional.isPresent())
@@ -240,7 +246,7 @@ public class IntegService
 				else
 				{
 					String appName = "\n\nApp Name : " + (serverRepoOptional.get().equals("payout_server") ? "PAYOUT" : "TPAP");
-					messageID = ZohoService.postMessageToChannel(CommonService.getDefaultChannelUrl(), message  + appName +  initiatorMessage + buildOwnerMessage + "\n\n{@participants}");
+					messageID = ZohoService.postMessageToChannel(CommonService.getDefaultChannelUrl(), message + appName + metaMigrationMessage + initiatorMessage + buildOwnerMessage + "\n\n{@participants}");
 					context.put("messageID", messageID);
 
 					gitlabIssueID = ZohoService.createIssue(serverRepoOptional.get(), message);
@@ -263,7 +269,7 @@ public class IntegService
 				else
 				{
 					JSONObject changesets = serverRepoOptional.get().equals("payout_server") ? ZohoService.generatePayoutChangSetsFromIDC() : ZohoService.generateZPayTPAPChangSetsFromIDC();
-					ZohoService.postChangeSet(changesets, CommonService.getDefaultChannelUrl(), context,  !serverRepoOptional.get().equals("tpap_server"));
+					ZohoService.postChangeSet(changesets, CommonService.getDefaultChannelUrl(), context, !serverRepoOptional.get().equals("tpap_server"));
 				}
 			}
 
@@ -430,6 +436,7 @@ public class IntegService
 				.put("product_id", IntegService.getProductConfig(product).getId())
 				.put("checkout_label", branchName)
 				.put("product_name", "ZOHOPAYOUT")
+				.put("security_report_needed", "true")
 				.put("patch_build_url", ZohoService.getPatchBuildURL(product, "pre"));
 
 			HttpEntity<String> entity = new HttpEntity<>(request.toString(), headers);

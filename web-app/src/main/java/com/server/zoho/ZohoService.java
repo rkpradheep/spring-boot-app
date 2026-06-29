@@ -34,6 +34,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.sql.Time;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -44,7 +45,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -111,6 +114,10 @@ public class ZohoService
 	public static String uploadBuild(String productName, String milestoneVersion, String dc, String region, String buildStage, String comments, boolean isPatchBuild, String patchBuildURL)
 		throws Exception
 	{
+		if(isPatchBuild)
+		{
+			uploadBuildToLocalForPatch(productName, milestoneVersion, dc, region, buildStage, comments, isPatchBuild, patchBuildURL);
+		}
 		JSONObject buildOptions = new JSONObject()
 			.put("skip_continue", true)
 			.put("iast_jar_needed", !region.equals("IN"))
@@ -171,6 +178,64 @@ public class ZohoService
 		HttpEntity<String> requestEntity = new HttpEntity<>(sdBuildUpdatePayload.toString(), headers);
 
 		return AppContextHolder.getBean(RestTemplate.class).postForObject(sdBuildUpdateUrl, requestEntity, String.class);
+	}
+
+	public static void uploadBuildToLocalForPatch(String productName, String milestoneVersion, String dc, String region, String buildStage, String comments, boolean isPatchBuild, String patchBuildURL)
+		throws Exception
+	{
+		JSONObject buildOptions = new JSONObject()
+			.put("skip_continue", true)
+			.put("iast_jar_needed", true)
+			.put("milestone_tag_needed", false);
+
+		JSONArray notifyTo = new JSONArray().put("pradheep.rkd@zohocorp.com");
+
+		ProductConfig productConfig = IntegService.getProductConfig(productName);
+		String buildURL = patchBuildURL.concat("/").concat(productConfig.getPatchBuildZipName());
+
+		JSONObject sdBuildUpdatePayload = new JSONObject()
+			.put("data_center", "CT1")
+			.put("region", "CT")
+			.put("deployment_mode", "live")
+			.put("build_stage", "production")
+			.put("build_url", buildURL)
+			.put("is_grid_edited", false)
+			.put("build_options", buildOptions)
+			.put("notify_to", notifyTo)
+			.put("comment", "PATCH BUILD")
+			.put("is_patch_update", true)
+			.put("provision_type", "build_update");
+
+
+		String sdBuildUpdateUrl = AppProperties.getProperty("zoho.sd.build.update.api.url");
+		sdBuildUpdateUrl = StringUtils.equals("tpap_server", productName) ? AppProperties.getProperty("zoho.zpaytpap.sd.build.update.api.url") : sdBuildUpdateUrl;
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Authorization", getSDAccessToken());
+		headers.setContentType(MediaType.APPLICATION_JSON);
+
+		HttpEntity<String> requestEntity = new HttpEntity<>(sdBuildUpdatePayload.toString(), headers);
+
+		String response = AppContextHolder.getBean(RestTemplate.class).postForObject(sdBuildUpdateUrl, requestEntity, String.class);
+		LOGGER.info("Response : " + response);
+
+
+		JSONObject responseJSON = new JSONObject(response);
+		boolean isLocalBuildSuccessful = responseJSON.optString("code", "").equals("SUCCESS");
+		if(!isLocalBuildSuccessful)
+		{
+			LOGGER.severe("LOCAL Build failed");
+			return;
+		}
+
+		try
+		{
+			TimeUnit.MINUTES.sleep(10);
+		}
+		catch(InterruptedException e)
+		{
+			LOGGER.log(Level.SEVERE, "Exception occurred", e);
+		}
+
 	}
 
 	public static String getBuildURLForMilestone(String productName, String milestoneVersion)
