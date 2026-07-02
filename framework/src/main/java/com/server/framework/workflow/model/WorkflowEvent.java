@@ -8,13 +8,12 @@ import com.server.framework.workflow.definition.WorkFlowEventType;
 public class WorkflowEvent {
     
     private String eventType;
-    private Map<String, Object> payload;
+    private Map<String, Object> payload = new HashMap<>();
     private Long timestamp;
     private String source;
     private String correlationId;
 
     public WorkflowEvent() {
-        this.payload = new HashMap<>();
         this.timestamp = System.currentTimeMillis();
     }
 

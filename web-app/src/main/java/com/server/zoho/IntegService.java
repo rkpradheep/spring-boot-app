@@ -166,6 +166,10 @@ public class IntegService
 			return callBuildApi(buildRequest);
 
 		}
+		catch(AppException e)
+		{
+			throw e;
+		}
 		catch(Exception e)
 		{
 			return new BuildResponse("Request failed. Please try again later. Error: " + e.getMessage());
@@ -235,7 +239,7 @@ public class IntegService
 					context.put("messageID", messageID);
 					context.put("gitlabIssueID", gitlabIssueID);
 
-					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "BUGFIX BUILD" + metaMigrationMessage +  initiatorMessage + "\n\n{@participants}");
+					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "BUGFIX BUILD" + metaMigrationMessage + initiatorMessage + "\n\n{@participants}");
 
 					Optional<BuildProductEntity> buildProductEntityOptional = buildProductService.getProductsForMonitor(Long.valueOf(masterBuildOptional.get())).stream().filter(buildProductEntity -> StringUtils.equals(buildProductEntity.getProductName(), serverRepoName)).findFirst();
 					if(buildProductEntityOptional.isPresent())
@@ -430,14 +434,23 @@ public class IntegService
 			headers.setContentType(MediaType.APPLICATION_JSON);
 			headers.set("PRIVATE-TOKEN", apiToken);
 
+			String patchBuildInURL = ZohoService.getPayoutPatchBuildINURL(product, "pre");
+			String patchBuildLocalURL = ZohoService.getPatchBuildURL(product, "production", "CT1", "ZOHOPAYOUT");
+
+			if(!patchBuildInURL.equals(patchBuildLocalURL))
+			{
+				throw new AppException("Contradiction in patch build URLs. Please sync the SAC grid builds in both CT1 and IN. Local URL: " + patchBuildLocalURL + ", IN URL: " + patchBuildInURL);
+			}
+
 			JSONObject request = new JSONObject()
 				.put("stage", "pre")
+				.put("subgrid", "SAC")
 				.put("grid_value", AppProperties.getProperty("zoho.in.dc.main"))
 				.put("product_id", IntegService.getProductConfig(product).getId())
 				.put("checkout_label", branchName)
 				.put("product_name", "ZOHOPAYOUT")
 				.put("security_report_needed", "true")
-				.put("patch_build_url", ZohoService.getPatchBuildURL(product, "pre"));
+				.put("patch_build_url", patchBuildInURL);
 
 			HttpEntity<String> entity = new HttpEntity<>(request.toString(), headers);
 
@@ -451,6 +464,10 @@ public class IntegService
 			}
 			return new BuildResponse(false, "Request failed. Please try again later.");
 
+		}
+		catch(AppException e)
+		{
+			throw e;
 		}
 		catch(Exception e)
 		{

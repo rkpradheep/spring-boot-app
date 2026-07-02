@@ -3,6 +3,8 @@ package com.server.zoho.workflow.steps;
 import io.micrometer.common.util.StringUtils;
 
 import java.util.Map;
+import java.util.Timer;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -34,7 +36,8 @@ public class SDPreBuildUpdateStep extends WorkflowStep
 
 	private static final Logger LOGGER = Logger.getLogger(SDPreBuildUpdateStep.class.getName());
 
-	public SDPreBuildUpdateStep() {
+	public SDPreBuildUpdateStep()
+	{
 		super();
 		setName("SD PRE Build Upload");
 		setDescription("Uploads the build to PRE");
@@ -85,15 +88,34 @@ public class SDPreBuildUpdateStep extends WorkflowStep
 						));
 
 				JSONObject references = new JSONObject().put("1", reference);
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), (String) context.get("messageID"), null, null,  "MASTER BUILD", resumeWorkflow, references);
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), (String) context.get("messageID"), null, null, "MASTER BUILD", resumeWorkflow, references);
 
 				instance.setStatus(WorkflowStatus.SUSPENDED);
 				instance.setLastUpdateTime(System.currentTimeMillis());
 				return null;
 			}
 
-			String response = ZohoService.uploadBuild(productName, milestoneVersion, AppProperties.getProperty("zoho.in.dc.main"), "IN", "pre", isPatchBuildUpdate, buildURL);
-			LOGGER.info("SD Build Update Response PRE : " + response);
+			String response = null;
+			for(int i = 0; i < 5; i++)
+			{
+				try
+				{
+					response = ZohoService.uploadBuild(productName, milestoneVersion, AppProperties.getProperty("zoho.in.dc.main"), "IN", "pre", isPatchBuildUpdate, buildURL);
+					LOGGER.info("SD Build Update Response PRE : " + response);
+					if(response.toLowerCase().contains("blocking scans have not yet run Runtime code violations".toLowerCase()))
+					{
+						TimeUnit.MINUTES.sleep(1);
+					}
+					else
+					{
+						break;
+					}
+				}
+				catch(Exception e)
+				{
+					LOGGER.log(Level.SEVERE, "Error in SD Build Update PRE attempt " + (i + 1) + " for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion, e);
+				}
+			}
 
 			boolean isPreBuildSuccessful = new JSONObject(response).optString("code", "").equals("SUCCESS");
 			String preBuildMessage = new JSONObject(response).getString("message");

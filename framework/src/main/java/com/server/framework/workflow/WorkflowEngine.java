@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
 
@@ -142,10 +143,10 @@ import java.util.logging.Logger;
 			LOGGER.info("Executing step: " + currentStep.getName() + " for instance: " + instance.getReferenceID());
 
 			WorkflowEvent result = workflowExecutor.executeStep(currentStep, instance);
-			workflowService.saveInstance(instance);
-
 			if(result != null)
 			{
+				((Map)instance.getContext()).put("error", result.getPayload().get("error"));
+				workflowService.saveInstance(instance);
 				processEvent(instance.getReferenceID(), result);
 			}
 

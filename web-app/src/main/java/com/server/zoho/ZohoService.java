@@ -10,15 +10,14 @@ import com.server.framework.http.HttpService;
 import com.server.framework.http.HttpContext;
 import com.server.framework.security.SecurityUtil;
 import com.server.framework.service.ConfigurationService;
-import com.server.framework.service.WorkflowService;
 import com.server.framework.workflow.model.WorkflowStatus;
+import com.server.zoho.workflow.model.BuildStates;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.utils.URIBuilder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.http.HttpEntity;
@@ -34,8 +33,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.sql.Time;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -45,7 +42,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -116,7 +112,7 @@ public class ZohoService
 	{
 		if(isPatchBuild)
 		{
-			uploadBuildToLocalForPatch(productName, milestoneVersion, dc, region, buildStage, comments, isPatchBuild, patchBuildURL);
+			uploadBuildToLocalForPatch(productName, patchBuildURL);
 		}
 		JSONObject buildOptions = new JSONObject()
 			.put("skip_continue", true)
@@ -135,14 +131,19 @@ public class ZohoService
 			.put("deployment_mode", "live")
 			.put("build_stage", buildStage)
 			.put("build_url", buildURL)
-			.put("is_grid_edited", false)
+			.put("is_grid_edited", isPatchBuild)
 			.put("build_options", buildOptions)
 			.put("notify_to", notifyTo)
 			.put("comment", isPatchBuild ? "PATCH BUILD" : comment)
 			.put("is_patch_update", isPatchBuild)
 			.put("provision_type", "build_update");
 
-		if(!StringUtils.equals(buildStage, "pre"))
+		if(isPatchBuild)
+		{
+			sdBuildUpdatePayload.put("sub_grids", new JSONArray().put("SAC"));
+		}
+
+		if(!isPatchBuild && !StringUtils.equals(buildStage, "pre"))
 		{
 
 			if(StringUtils.equals("tpap_server", productName))
@@ -180,8 +181,7 @@ public class ZohoService
 		return AppContextHolder.getBean(RestTemplate.class).postForObject(sdBuildUpdateUrl, requestEntity, String.class);
 	}
 
-	public static void uploadBuildToLocalForPatch(String productName, String milestoneVersion, String dc, String region, String buildStage, String comments, boolean isPatchBuild, String patchBuildURL)
-		throws Exception
+	public static void uploadBuildToLocalForPatch(String productName, String patchBuildURL) throws Exception
 	{
 		JSONObject buildOptions = new JSONObject()
 			.put("skip_continue", true)
@@ -199,13 +199,13 @@ public class ZohoService
 			.put("deployment_mode", "live")
 			.put("build_stage", "production")
 			.put("build_url", buildURL)
-			.put("is_grid_edited", false)
+			.put("is_grid_edited", true)
 			.put("build_options", buildOptions)
 			.put("notify_to", notifyTo)
 			.put("comment", "PATCH BUILD")
 			.put("is_patch_update", true)
-			.put("provision_type", "build_update");
-
+			.put("provision_type", "build_update")
+			.put("sub_grids", new JSONArray().put("SAC"));
 
 		String sdBuildUpdateUrl = AppProperties.getProperty("zoho.sd.build.update.api.url");
 		sdBuildUpdateUrl = StringUtils.equals("tpap_server", productName) ? AppProperties.getProperty("zoho.zpaytpap.sd.build.update.api.url") : sdBuildUpdateUrl;
@@ -218,24 +218,48 @@ public class ZohoService
 		String response = AppContextHolder.getBean(RestTemplate.class).postForObject(sdBuildUpdateUrl, requestEntity, String.class);
 		LOGGER.info("Response : " + response);
 
-
 		JSONObject responseJSON = new JSONObject(response);
 		boolean isLocalBuildSuccessful = responseJSON.optString("code", "").equals("SUCCESS");
 		if(!isLocalBuildSuccessful)
 		{
 			LOGGER.severe("LOCAL Build failed");
-			return;
+			throw new AppException("LOCAL Build failed for product: " + productName + ", build URL: " + buildURL + ", response: " + response);
 		}
 
-		try
+		String buildId = responseJSON.getJSONArray("details").getJSONObject(0).get("build_id") + "";
+
+		for(int i = 0; i < 30; i++)
 		{
-			TimeUnit.MINUTES.sleep(10);
-		}
-		catch(InterruptedException e)
-		{
-			LOGGER.log(Level.SEVERE, "Exception occurred", e);
+			try
+			{
+				JSONObject statusResponse = ZohoService.getSDBuildStatus(productName, buildId);
+				String overallStatus = statusResponse.getString("overall_status");
+				LOGGER.info("Build status for build ID: " + buildId + " is: " + overallStatus);
+
+				if(overallStatus.equalsIgnoreCase("Failed") || StringUtils.equalsIgnoreCase(overallStatus, "killed"))
+				{
+					LOGGER.info("Build failed in LOCAL for build ID: " + buildId);
+					throw new AppException("Build failed in LOCAL for build ID: " + buildId + ", status: " + overallStatus);
+				}
+				else if(overallStatus.equalsIgnoreCase("Completed"))
+				{
+					LOGGER.info("Build completed successfully in LOCAL for build ID: " + buildId);
+					return;
+				}
+				else if(overallStatus.equalsIgnoreCase("Scheduled"))
+				{
+					LOGGER.log(Level.INFO, "Build is not completed yet. Status received: {0}", overallStatus);
+					ZohoService.markScheduledBuildAsReady(patchBuildURL, buildId);
+				}
+				TimeUnit.SECONDS.sleep(30);
+			}
+			catch(Exception e)
+			{
+				LOGGER.log(Level.SEVERE, "Exception occurred", e);
+			}
 		}
 
+		throw new AppException("Build did not complete within the expected time frame for build ID: " + buildId);
 	}
 
 	public static String getBuildURLForMilestone(String productName, String milestoneVersion)
@@ -832,17 +856,39 @@ public class ZohoService
 		return AppContextHolder.getBean(IntegService.class).getBuildResponse(httpResponse.getStringResponse());
 	}
 
-	public static String getPatchBuildURL(String product, String stage) throws Exception
+	public static String getPatchBuildURL(String cmProduct, String stage, String gridValue, String product) throws Exception
 	{
 		HttpContext context = new HttpContext(AppProperties.getProperty("zoho.build.api.url").concat("/api/v1/patch_build_details"), "GET");
-		context.setParam("product_id", IntegService.getProductConfig(product).getId());
+		context.setParam("product_id", IntegService.getProductConfig(cmProduct).getId());
 		context.setParam("stage", stage);
-		context.setParam("grid_value", AppProperties.getProperty("zoho.in.dc.main"));
-		context.setParam("product_name", "ZOHOPAYOUT");
+		context.setParam("grid_value", gridValue);
+		context.setParam("product_name", product);
 		context.setHeader("PRIVATE-TOKEN", AppProperties.getProperty("zoho.build.api.token"));
 
 		HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(context);
-		return AppContextHolder.getBean(IntegService.class).getBuildResponse(httpResponse.getStringResponse()).getPatchBuildUrl();
+		String response = httpResponse.getStringResponse();
+		JSONArray patchBuildDetails = new JSONObject(response).optJSONArray("patch_build_details");
+
+		String patchBuildURL = null;
+		if(patchBuildDetails != null)
+		{
+			for(Object patchBuildDetail : patchBuildDetails)
+			{
+				JSONObject patchBuildDetailJSON = (JSONObject) patchBuildDetail;
+				if(patchBuildDetailJSON.getString("subgrid").equals("SAC"))
+				{
+					patchBuildURL = patchBuildDetailJSON.getString("patch_build_url");
+					break;
+				}
+			}
+		}
+
+		return patchBuildURL;
+	}
+
+	public static String getPayoutPatchBuildINURL(String product, String stage) throws Exception
+	{
+		return getPatchBuildURL(product, stage, AppProperties.getProperty("zoho.in.dc.main"), "ZOHOPAYOUT");
 	}
 
 	public static String getSDINBuildURLFromSDAPI(String product, String stage) throws Exception
@@ -886,7 +932,7 @@ public class ZohoService
 		catch(Exception e)
 		{
 			LOGGER.log(Level.SEVERE, "Error fetching SD IN build URL from SD API for product: " + product + " and stage: " + stage, e);
-			return getPatchBuildURL(product, stage);
+			return getPayoutPatchBuildINURL(product, stage);
 		}
 	}
 
@@ -930,7 +976,7 @@ public class ZohoService
 		catch(Exception e)
 		{
 			LOGGER.log(Level.SEVERE, "Error fetching SD IN build URL from SD API for product: " + product + " and stage: " + stage, e);
-			return getPatchBuildURL(product, stage);
+			return getPayoutPatchBuildINURL(product, stage);
 		}
 	}
 
