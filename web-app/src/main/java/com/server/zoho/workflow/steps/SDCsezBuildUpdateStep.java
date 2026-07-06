@@ -79,13 +79,12 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 				LOGGER.info("Migration required. Suspending workflow at SD CSEZ Build Update for monitorId: " + monitorId);
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Workflow suspended for migration before SD CSEZ build update. Resume the workflow after migration is completed.");
 
-
 				String initiateMigration = "[Initiate Meta Migration]($1)";
 
 				JSONObject reference = new JSONObject()
 					.put("type", "button")
 					.put("object", new JSONObject()
-						.put("label", "Initiate Meta Migration")
+						.put("label", "Initiate Migration")
 						.put("action", new JSONObject()
 							.put("type", "invoke.function")
 							.put("data", new JSONObject().put("name", "initiatemetamigration")))

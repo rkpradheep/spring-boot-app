@@ -149,6 +149,10 @@ import java.util.logging.Logger;
 				workflowService.saveInstance(instance);
 				processEvent(instance.getReferenceID(), result);
 			}
+			else
+			{
+				workflowService.saveInstance(instance);
+			}
 
 		}
 		catch(Exception e)

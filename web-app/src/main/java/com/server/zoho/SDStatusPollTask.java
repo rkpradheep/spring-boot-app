@@ -172,7 +172,7 @@ public class SDStatusPollTask implements Task
 				reference = new JSONObject()
 					.put("type", "button")
 					.put("object", new JSONObject()
-						.put("label", "Initiate Meta Migration")
+						.put("label", "Initiate Migration")
 						.put("action", new JSONObject()
 							.put("type", "invoke.function")
 							.put("data", new JSONObject().put("name", "initiatemetamigration")))

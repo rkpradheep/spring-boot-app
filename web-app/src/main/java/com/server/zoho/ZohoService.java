@@ -903,7 +903,7 @@ public class ZohoService
 			//context.setParam("datacenter", AppProperties.getProperty("zoho.in.dc.main"));
 			context.setParam("region", "IN");
 			context.setParam("build_stage", "production");
-			context.setParam("limit", 5);
+			context.setParam("limit", 15);
 			context.setParam("sort_order", "desc");
 			context.setParam("sort_by", "zac_completed_at");
 			context.setParam("process_type", "build_update");
@@ -947,7 +947,7 @@ public class ZohoService
 			//context.setParam("datacenter", "CT1");
 			context.setParam("region", "CT");
 			context.setParam("build_stage", "production");
-			context.setParam("limit", 5);
+			context.setParam("limit", 15);
 			context.setParam("sort_order", "desc");
 			context.setParam("sort_by", "zac_completed_at");
 			context.setParam("process_type", "build_update");
