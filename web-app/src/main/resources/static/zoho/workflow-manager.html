@@ -900,13 +900,6 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="isMigrationRequired" />
-                        Migration Required (suspend before CSEZ build update)
-                    </label>
-                </div>
-
                 <button class="btn" id="startWorkflowBtn" onclick="startWorkflow()">
                     Start Build
                 </button>
@@ -947,7 +940,7 @@
 
 <script>
     const availableProducts = [
-        'payout_mock_configuration', 'pay_banks', 'payout_common', 'payouts', 'payout_in', 'bbps', 'payout_qa', 'payout_server'
+        'payout_mock_configuration', 'pay_banks', 'payout_common', 'payouts', 'payout_in', 'bbps', 'payout_qa', 'payout_server', 'tpap_processor', 'tpap_bbps', 'tpap_server'
     ];
 
     const apiBase = '/api/v1/zoho/workflow';
@@ -1053,10 +1046,8 @@
         try {
 
             unHideElement("loading");
-            const isMigrationRequired = document.getElementById('isMigrationRequired')?.checked || false;
             const requestData = {
-                productNames: selectedProducts,
-                migrationRequired: isMigrationRequired
+                productNames: selectedProducts
             };
 
             const response = await fetch(`${apiBase}/build/start`, {
@@ -1771,8 +1762,6 @@
             item.classList.remove('selected');
 <!--            item.querySelector('.order-badge')?.remove();-->
         });
-        const migrationCheckbox = document.getElementById('isMigrationRequired');
-        if (migrationCheckbox) migrationCheckbox.checked = false;
 <!--       updateSelectedProductsDisplay(); -->
     }
 

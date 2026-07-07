@@ -28,6 +28,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +84,18 @@ public class BuildWorkflowController
 					throw new AppException("A build workflow for product " + productName + " is already running. Please wait for it to complete before starting a new one.");
 				});
 			}
+
+
+			List<String> payoutProducts = new ArrayList<>((List<String>) ZohoService.getMetaConfig("PAYOUT_PRODUCTS"));
+			List<String> tpapProducts = new ArrayList<>((List<String>) ZohoService.getMetaConfig("ZPAYTPAP_PRODUCTS"));
+
+			boolean isPayoutProductsExist = request.getProductNames().stream().anyMatch(payoutProducts::contains);
+			boolean isTPAPProductsExist = request.getProductNames().stream().anyMatch(tpapProducts::contains);
+			if(isPayoutProductsExist && isTPAPProductsExist)
+			{
+				throw new AppException("Cannot initiate build workflow for both Payout and ZPayTPAP products together. Please initiate separate workflows for each.");
+			}
+
 			BuildResponse response = integService.scheduleBuilds(request);
 
 			Map<String, Object> data = new HashMap<>();

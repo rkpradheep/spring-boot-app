@@ -16,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -58,7 +59,30 @@ public class MilestoneService
 			String newMilestone = calculateNewMilestoneVersion(previousMilestone);
 			LOGGER.info("New milestone: " + newMilestone);
 
-			String finalMilestone = moveMilestoneToNewerBuild(buildId, newMilestone);
+			String finalMilestone = null;
+			for(int i = 0; i < 10; i++)
+			{
+				try
+				{
+					finalMilestone = moveMilestoneToNewerBuild(buildId, newMilestone);
+					break;
+				}
+				catch(AppException e)
+				{
+					if(!StringUtils.contains(e.getMessage().toLowerCase(), "Hacksaw Report Not Found".toLowerCase()) && !StringUtils.contains(e.getMessage().toLowerCase(), "Hacksaw Report has blocking issues".toLowerCase()))
+					{
+						LOGGER.log(Level.SEVERE, "Attempt " + (i + 1) + " failed to move milestone: ", e);
+						throw e;
+					}
+					try
+					{
+						TimeUnit.MINUTES.sleep(1);
+					}
+					catch(InterruptedException ie)
+					{}
+				}
+			}
+
 
 			return new MilestoneResult(true, "Milestone created successfully: " + finalMilestone, finalMilestone);
 
@@ -232,11 +256,13 @@ public class MilestoneService
 
 		LOGGER.info("Move Milestone Response : " + response.getBody());
 
+		String message = null;
+
 		if(response.getStatusCode() == HttpStatus.CREATED)
 		{
 			JsonNode responseJson = objectMapper.readTree(response.getBody());
 
-			if(responseJson.has("meta") && responseJson.get("meta").get("message").asText().contains("move Successfully"))
+			if(responseJson.has("meta") && ((message = responseJson.get("meta").get("message").asText().toLowerCase()).contains("move Successfully".toLowerCase()) || message.toLowerCase().contains("is already exists in buildlog table".toLowerCase())))
 			{
 				LOGGER.info("Milestone moved successfully");
 				return newMilestone;
@@ -244,7 +270,7 @@ public class MilestoneService
 		}
 
 		LOGGER.warning("Failed to move milestone");
-		throw new AppException("Failed to move milestone");
+		throw new AppException("Failed to move milestone : " + message);
 
 	}
 
