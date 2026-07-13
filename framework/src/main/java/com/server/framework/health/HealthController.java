@@ -126,7 +126,7 @@ public class HealthController
 	}
 
 	@GetMapping("/health")
-	public ResponseEntity<String> health()
+	public ResponseEntity<String> health() throws Exception
 	{
 		return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.TEXT_PLAIN).body(AppStarted.APP_STARTED.toString());
 	}

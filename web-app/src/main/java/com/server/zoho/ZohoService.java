@@ -566,19 +566,13 @@ public class ZohoService
 
 	public static Set<String> getProductsForBuildInitiation(List<String> payoutProducts) throws Exception
 	{
-		HttpService httpService = AppContextHolder.getBean(HttpService.class);
-
 		Set<String> productsForBuildInitiation = new HashSet<>();
 
 		for(String product : payoutProducts)
 		{
 			ProductConfig productConfig = IntegService.getProductConfig(product);
 
-			HttpContext context = new HttpContext(productConfig.getGitlabUrl(), HttpMethod.GET.name());
-			context.setHeader("PRIVATE-TOKEN", productConfig.getGitlabToken());
-
-			HttpResponse httpResponse = httpService.makeNetworkCall(context);
-			JSONArray commits = new JSONArray(httpResponse.getStringResponse());
+			JSONArray commits = fetchCommits(productConfig);
 			if(!commits.isEmpty())
 			{
 				String url = "https://build.zohocorp.com/zoho/" + product + "/milestones/" + productConfig.getChannel();
@@ -615,8 +609,6 @@ public class ZohoService
 			return new JSONObject();
 		}
 		List<String> payoutProducts = (List<String>) ZohoService.getMetaConfig(("PAYOUT_PRODUCTS"));
-
-		HttpService httpService = AppContextHolder.getBean(HttpService.class);
 
 		JSONObject changeSets = new JSONObject();
 
@@ -670,58 +662,14 @@ public class ZohoService
 		{
 			ProductConfig productConfig = IntegService.getProductConfig(product);
 
-			HttpContext context = new HttpContext(productConfig.getGitlabUrl(), HttpMethod.GET.name());
-			context.setHeader("PRIVATE-TOKEN", productConfig.getGitlabToken());
-
-			HttpResponse httpResponse = httpService.makeNetworkCall(context);
-			JSONArray commits = new JSONArray(httpResponse.getStringResponse());
+			JSONArray commits = fetchCommits(productConfig);
 			if(!commits.isEmpty())
 			{
-				String commitSHAFromGitlab = commits.getJSONObject(0).getString("id");
 				String commitSHAFromIDC = idcCommitDetails.optString(product);
-				if(!StringUtils.equals(commitSHAFromGitlab, commitSHAFromIDC))
+				JSONArray productChangeSet = buildProductChangeSet(productConfig, commits, commitSHAFromIDC);
+				if(!productChangeSet.isEmpty())
 				{
-					JSONArray productChangeSet = new JSONArray();
-					for(int i = 0; i < commits.length(); i++)
-					{
-						JSONObject commit = commits.getJSONObject(i);
-
-						if(commit.getString("id").equals(commitSHAFromIDC))
-						{
-							break;
-						}
-						if(!commit.getString("title").startsWith("Merge branch "))
-						{
-							continue;
-						}
-						context = new HttpContext(productConfig.getGitlabUrl().replace("/commits", "/commits/" + commit.getString("short_id") + "/merge_requests"), HttpMethod.GET.name());
-						context.setHeader("PRIVATE-TOKEN", productConfig.getGitlabToken());
-
-						httpResponse = httpService.makeNetworkCall(context);
-						JSONArray mrs = new JSONArray(httpResponse.getStringResponse());
-						if(!mrs.isEmpty())
-						{
-							JSONObject mr = mrs.getJSONObject(0);
-
-							JSONObject commitInfo = new JSONObject();
-							commitInfo.put("commitSHA", commit.getString("short_id"));
-							commitInfo.put("commitMessage", commit.getString("message"));
-							commitInfo.put("webURL", mr.getString("web_url"));
-							String authorName = mr.getJSONObject("author").getString("username");
-							String authorDisplayName = mr.getJSONObject("author").getString("name").toLowerCase().trim();
-							String authorEmail = (!authorName.contains(".") && authorDisplayName.split(StringUtils.SPACE).length > 1 ? (authorDisplayName.split(StringUtils.SPACE)[0] + "." + authorDisplayName.split(StringUtils.SPACE)[1]) : authorName) + "@zohocorp.com";
-							commitInfo.put("author", authorEmail);
-							commitInfo.put("mrTitle", mr.getString("title"));
-							commitInfo.put("mergedDate", DateUtil.getFormattedTime(DateUtil.convertDateToMilliseconds(mr.getString("merged_at"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")));
-
-							productChangeSet.put(commitInfo);
-						}
-
-					}
-					if(!productChangeSet.isEmpty())
-					{
-						changeSets.put(product, productChangeSet);
-					}
+					changeSets.put(product, productChangeSet);
 				}
 			}
 		}
@@ -745,8 +693,6 @@ public class ZohoService
 			return new JSONObject();
 		}
 		List<String> zpayTPAPProducts = (List<String>) ZohoService.getMetaConfig(("ZPAYTPAP_PRODUCTS"));
-
-		HttpService httpService = AppContextHolder.getBean(HttpService.class);
 
 		JSONObject changeSets = new JSONObject();
 
@@ -779,58 +725,14 @@ public class ZohoService
 		{
 			ProductConfig productConfig = IntegService.getProductConfig(product);
 
-			HttpContext context = new HttpContext(productConfig.getGitlabUrl(), HttpMethod.GET.name());
-			context.setHeader("PRIVATE-TOKEN", productConfig.getGitlabToken());
-
-			HttpResponse httpResponse = httpService.makeNetworkCall(context);
-			JSONArray commits = new JSONArray(httpResponse.getStringResponse());
+			JSONArray commits = fetchCommits(productConfig);
 			if(!commits.isEmpty())
 			{
-				String commitSHAFromGitlab = commits.getJSONObject(0).getString("id");
 				String commitSHAFromIDC = idcCommitDetails.optString(product);
-				if(!StringUtils.equals(commitSHAFromGitlab, commitSHAFromIDC))
+				JSONArray productChangeSet = buildProductChangeSet(productConfig, commits, commitSHAFromIDC);
+				if(!productChangeSet.isEmpty())
 				{
-					JSONArray productChangeSet = new JSONArray();
-					for(int i = 0; i < commits.length(); i++)
-					{
-						JSONObject commit = commits.getJSONObject(i);
-
-						if(commit.getString("id").equals(commitSHAFromIDC))
-						{
-							break;
-						}
-						if(!commit.getString("title").startsWith("Merge branch "))
-						{
-							continue;
-						}
-						context = new HttpContext(productConfig.getGitlabUrl().replace("/commits", "/commits/" + commit.getString("short_id") + "/merge_requests"), HttpMethod.GET.name());
-						context.setHeader("PRIVATE-TOKEN", productConfig.getGitlabToken());
-
-						httpResponse = httpService.makeNetworkCall(context);
-						JSONArray mrs = new JSONArray(httpResponse.getStringResponse());
-						if(!mrs.isEmpty())
-						{
-							JSONObject mr = mrs.getJSONObject(0);
-
-							JSONObject commitInfo = new JSONObject();
-							commitInfo.put("commitSHA", commit.getString("short_id"));
-							commitInfo.put("commitMessage", commit.getString("message"));
-							commitInfo.put("webURL", mr.getString("web_url"));
-							String authorName = mr.getJSONObject("author").getString("username");
-							String authorDisplayName = mr.getJSONObject("author").getString("name").toLowerCase().trim();
-							String authorEmail = (!authorName.contains(".") && authorDisplayName.split(StringUtils.SPACE).length > 1 ? (authorDisplayName.split(StringUtils.SPACE)[0] + "." + authorDisplayName.split(StringUtils.SPACE)[1]) : authorName) + "@zohocorp.com";
-							commitInfo.put("author", authorEmail);
-							commitInfo.put("mrTitle", mr.getString("title"));
-							commitInfo.put("mergedDate", DateUtil.getFormattedTime(DateUtil.convertDateToMilliseconds(mr.getString("merged_at"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")));
-
-							productChangeSet.put(commitInfo);
-						}
-
-					}
-					if(!productChangeSet.isEmpty())
-					{
-						changeSets.put(product, productChangeSet);
-					}
+					changeSets.put(product, productChangeSet);
 				}
 			}
 		}
@@ -844,6 +746,203 @@ public class ZohoService
 			.put("base_milestone", StringUtils.defaultIfEmpty(inBuildResponse.getReleaseVersion(), inBuildResponse.getCheckoutLabel()))
 			.put("products_changesets", changeSets);
 
+	}
+
+	private static boolean isZohoRepoUrl(String url)
+	{
+		return url != null && url.contains("repository.zohocorpcloud.in");
+	}
+
+	private static void setCommitApiAuthHeader(HttpContext context, ProductConfig productConfig)
+	{
+		if(isZohoRepoUrl(productConfig.getGitlabUrl()))
+		{
+			context.setHeader("Authorization", "Zoho-zapikey " + productConfig.getGitlabToken());
+		}
+		else
+		{
+			context.setHeader("PRIVATE-TOKEN", productConfig.getGitlabToken());
+		}
+	}
+
+	private static JSONArray fetchCommits(ProductConfig productConfig) throws Exception
+	{
+		HttpService httpService = AppContextHolder.getBean(HttpService.class);
+		HttpContext context = new HttpContext(productConfig.getGitlabUrl(), HttpMethod.GET.name());
+		setCommitApiAuthHeader(context, productConfig);
+
+		HttpResponse httpResponse = httpService.makeNetworkCall(context);
+		String body = httpResponse.getStringResponse();
+
+		if(isZohoRepoUrl(productConfig.getGitlabUrl()))
+		{
+			return normalizeZohoRepoCommits(new JSONObject(body));
+		}
+
+		JSONArray commits = new JSONArray(body);
+		for(int i = 0; i < commits.length(); i++)
+		{
+			commits.getJSONObject(i).put("_isZohoRepo", false);
+		}
+		return commits;
+	}
+
+	private static JSONArray normalizeZohoRepoCommits(JSONObject response)
+	{
+		JSONArray normalized = new JSONArray();
+		JSONArray commits = response.optJSONArray("commits");
+		if(commits == null)
+		{
+			return normalized;
+		}
+		for(int i = 0; i < commits.length(); i++)
+		{
+			JSONObject c = commits.getJSONObject(i);
+			String changeset = c.optString("changeset");
+			String message = c.optString("message", "");
+			JSONObject n = new JSONObject();
+			n.put("id", changeset);
+			n.put("short_id", changeset.length() > 8 ? changeset.substring(0, 8) : changeset);
+
+			String[] messageSplit = message.split("\n\n");
+			if(messageSplit.length == 3)
+			{
+				for(String m : messageSplit)
+				{
+					if(m.toLowerCase().startsWith("Merge branch".toLowerCase()) || m.toLowerCase().startsWith("Merged branch".toLowerCase()))
+					{
+						continue;
+					}
+					if(m.toLowerCase().startsWith("See Merge Request".toLowerCase()))
+					{
+						if(m.contains("#"))
+						{
+							String mrId = m.substring(m.indexOf("#") + 1).trim();
+							String repoIdentifier = m.substring(0, m.indexOf("#")).replaceAll("(?i)See Merge Request", StringUtils.EMPTY).trim();
+							n.put("web_url", "https://repository.zohocorpcloud.in/zohocorp/" + repoIdentifier +  "#/mergerequest/" + mrId + "?view=overview");
+						}
+						else if(m.contains("!"))
+						{
+							String mrId = m.substring(m.indexOf("!") + 1).trim();
+							String repoIdentifier = m.substring(0, m.indexOf("!")).replaceAll("(?i)See Merge Request", StringUtils.EMPTY).trim();
+							n.put("web_url", "https://repository.zohocorpcloud.in/zohocorp/" + repoIdentifier +  "#/mergerequest/" + mrId + "?view=overview");
+						}
+						continue;
+					}
+					n.put("title", m);
+				}
+			}
+			else
+			{
+				n.put("title", message);
+			}
+
+			n.put("message", message);
+			n.put("merged", c.optBoolean("merged", false));
+			n.put("timestamp", c.optLong("timestamp", 0));
+			if(c.has("author"))
+			{
+				n.put("_zohoAuthor", c.getJSONObject("author"));
+			}
+			n.put("_isZohoRepo", true);
+			normalized.put(n);
+		}
+		return normalized;
+	}
+
+	private static boolean isMergeCommit(JSONObject commit)
+	{
+		if(commit.optBoolean("_isZohoRepo", false))
+		{
+			return commit.optBoolean("merged", false);
+		}
+		return commit.optString("title", "").startsWith("Merge branch ");
+	}
+
+	private static JSONObject fetchMergeRequestForCommit(ProductConfig productConfig, JSONObject commit) throws Exception
+	{
+		if(commit.optBoolean("_isZohoRepo", false))
+		{
+			return buildMergeRequestFromZohoRepoCommit(commit);
+		}
+		HttpService httpService = AppContextHolder.getBean(HttpService.class);
+		HttpContext context = new HttpContext(productConfig.getGitlabUrl().replace("/commits", "/commits/" + commit.getString("short_id") + "/merge_requests"), HttpMethod.GET.name());
+		context.setHeader("PRIVATE-TOKEN", productConfig.getGitlabToken());
+
+		HttpResponse httpResponse = httpService.makeNetworkCall(context);
+		JSONArray mrs = new JSONArray(httpResponse.getStringResponse());
+		if(mrs.isEmpty())
+		{
+			return null;
+		}
+		JSONObject mr = mrs.getJSONObject(0);
+		mr.put("merged_at_millis", DateUtil.convertDateToMilliseconds(mr.getString("merged_at"), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"));
+		return mr;
+	}
+
+	private static JSONObject buildMergeRequestFromZohoRepoCommit(JSONObject commit)
+	{
+		if(!commit.optBoolean("merged", false))
+		{
+			return null;
+		}
+		JSONObject mr = new JSONObject();
+		JSONObject author = commit.optJSONObject("_zohoAuthor");
+		JSONObject mrAuthor = new JSONObject();
+		if(author != null)
+		{
+			String userName = author.optString("userName");
+			String displayName = author.optString("fullName", author.optString("displayName", userName));
+			mrAuthor.put("username", userName);
+			mrAuthor.put("name", displayName);
+		}
+		mr.put("author", mrAuthor);
+		mr.put("title", commit.optString("title", ""));
+		mr.put("web_url", commit.optString("web_url"));
+		mr.put("merged_at_millis", commit.optLong("timestamp", 0));
+		return mr;
+	}
+
+	private static JSONArray buildProductChangeSet(ProductConfig productConfig, JSONArray commits, String commitSHAFromIDC) throws Exception
+	{
+		JSONArray productChangeSet = new JSONArray();
+		String commitSHAFromGitlab = commits.getJSONObject(0).getString("id");
+		if(StringUtils.equals(commitSHAFromGitlab, commitSHAFromIDC))
+		{
+			return productChangeSet;
+		}
+		for(int i = 0; i < commits.length(); i++)
+		{
+			JSONObject commit = commits.getJSONObject(i);
+
+			if(commit.getString("id").equals(commitSHAFromIDC))
+			{
+				break;
+			}
+			if(!isMergeCommit(commit))
+			{
+				continue;
+			}
+			JSONObject mr = fetchMergeRequestForCommit(productConfig, commit);
+			if(mr == null)
+			{
+				continue;
+			}
+
+			JSONObject commitInfo = new JSONObject();
+			commitInfo.put("commitSHA", commit.getString("short_id"));
+			commitInfo.put("commitMessage", commit.getString("message"));
+			commitInfo.put("webURL", mr.optString("web_url", ""));
+			String authorName = mr.getJSONObject("author").getString("username");
+			String authorDisplayName = mr.getJSONObject("author").getString("name").toLowerCase().trim();
+			String authorEmail = (!authorName.contains(".") && authorDisplayName.split(StringUtils.SPACE).length > 1 ? (authorDisplayName.split(StringUtils.SPACE)[0] + "." + authorDisplayName.split(StringUtils.SPACE)[1]) : authorName) + "@zohocorp.com";
+			commitInfo.put("author", authorEmail);
+			commitInfo.put("mrTitle", mr.getString("title"));
+			commitInfo.put("mergedDate", DateUtil.getFormattedTime(mr.getLong("merged_at_millis")));
+
+			productChangeSet.put(commitInfo);
+		}
+		return productChangeSet;
 	}
 
 	public static BuildResponse getBuildResponse(String url) throws Exception
