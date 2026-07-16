@@ -280,7 +280,7 @@ public class BuildWorkflowController
 	{
 		try
 		{
-			List<WorkflowInstance> instances = persistenceService.getRecentInstances(3);
+			List<WorkflowInstance> instances = persistenceService.getRecentInstances(10);
 
 			List<Map<String, Object>> instanceResponses = instances.stream()
 				.map(this::createInstanceResponse)

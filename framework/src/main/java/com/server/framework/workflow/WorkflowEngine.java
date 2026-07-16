@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Service public class WorkflowEngine
@@ -180,6 +181,14 @@ import java.util.logging.Logger;
 
 			if(transition.isTerminal())
 			{
+
+				WorkflowStatus existingStatus = workflowService.getInstance(instance.getReferenceID()).get().getStatus();
+				if(existingStatus == WorkflowStatus.CANCELLED || existingStatus == WorkflowStatus.SUSPENDED)
+				{
+					LOGGER.log(Level.INFO, "Workflow instance {0} is already in terminal state: {1}. Skipping status update.", new Object[]{instance.getReferenceID(), existingStatus});
+					return;
+				}
+
 				WorkflowStatus workflowStatus = event.getEventType().equals(WorkFlowCommonEventType.WORKFLOW_FAILED.getValue()) ? WorkflowStatus.FAILED : WorkflowStatus.COMPLETED;
 				if(workflowStatus == WorkflowStatus.COMPLETED)
 				{

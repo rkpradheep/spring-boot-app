@@ -14,6 +14,7 @@ import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.CommonService;
 import com.server.framework.common.DateUtil;
 import com.server.framework.job.TaskEnum;
+import com.server.framework.service.ConfigurationService;
 import com.server.framework.service.JobService;
 import com.server.framework.workflow.definition.WorkFlowCommonEventType;
 import com.server.framework.workflow.definition.WorkflowStep;
@@ -141,6 +142,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 
 			if(isLocalBuildSuccessful)
 			{
+				AppContextHolder.getBean(ConfigurationService.class).setValue((String) context.get("masterBuildKey"), monitorId.toString(), DateUtil.getCurrentTimeInMillis() + DateUtil.ONE_DAY_IN_MILLISECOND);
 				String initiatorMessage = "\n\nInitiated By : SCHEDULER";
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update initiated successfully for LOCAL ( " + milestoneVersion + " )" + initiatorMessage);
 

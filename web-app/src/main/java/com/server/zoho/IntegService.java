@@ -212,6 +212,8 @@ public class IntegService
 				context.put("serverProductName", serverRepoName);
 
 				String masterBuildKey = serverRepoName.concat("_").concat(dateString);
+				context.put("masterBuildKey", masterBuildKey);
+
 				String initiatorEmail = ZohoService.getCurrentUserEmail();
 				String initiatorMessage = StringUtils.equals(initiatorEmail, "SCHEDULER") ? initiatorEmail : "{@" + initiatorEmail + "}";
 
@@ -260,10 +262,9 @@ public class IntegService
 						context.put("gitlabIssueID", gitlabIssueID);
 						ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), messageID, null, null, message, "[GITLAB ISSUE CREATED](https://zpaygit.csez.zohocorpin.com/zohopay/" + serverRepoOptional.get() + "/-/issues/" + gitlabIssueID + ")");
 					}
+
+					configurationService.setValue(masterBuildKey, monitor.getId().toString(), DateUtil.getCurrentTimeInMillis() + DateUtil.ONE_DAY_IN_MILLISECOND);
 				}
-
-				configurationService.setValue(masterBuildKey, monitor.getId().toString(), DateUtil.getCurrentTimeInMillis() + DateUtil.ONE_DAY_IN_MILLISECOND);
-
 				if(StringUtils.isNotEmpty(previousBuildMilestone))
 				{
 					String buildRUL = ZohoService.getBuildURLForMilestone(serverRepoName, previousBuildMilestone);
