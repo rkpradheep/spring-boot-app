@@ -741,7 +741,7 @@ public class ZohoController
 				WorkflowInstance workflowInstance = workflowInstanceOptional.get();
 				context = (Map<String, Object>) workflowInstance.getContext();
 
-				Optional<BuildProductEntity> buildProductEntityOptional = AppContextHolder.getBean(BuildProductService.class).getProductsForMonitor(Long.valueOf(monitorId)).stream().filter(buildProductEntity -> StringUtils.equals(buildProductEntity.getProductName(), "payout_server")).findFirst();
+				Optional<BuildProductEntity> buildProductEntityOptional = AppContextHolder.getBean(BuildProductService.class).getProductsForMonitor(Long.valueOf(monitorId)).stream().filter(buildProductEntity -> StringUtils.equals(buildProductEntity.getProductName(), productName)).findFirst();
 				if(buildProductEntityOptional.isEmpty())
 				{
 					Map<String, Object> response = ApiResponseBuilder.error("No product found for the given monitor id and product name", HttpStatus.BAD_REQUEST.value());

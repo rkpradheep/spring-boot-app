@@ -192,6 +192,10 @@ public class HttpURLConnectionWrapper extends HttpsURLConnection
 		{
 			throw new RuntimeException(e);
 		}
+		finally
+		{
+			end();
+		}
 	}
 
 	public long getExpiration()

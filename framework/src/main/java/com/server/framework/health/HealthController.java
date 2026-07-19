@@ -3,7 +3,11 @@ package com.server.framework.health;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
 import jakarta.servlet.AsyncContext;
@@ -18,7 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import com.server.framework.common.AppContextHolder;
 import com.server.framework.common.AppStarted;
+import com.server.framework.common.CommonService;
+import com.server.framework.common.DateUtil;
 
 @RestController
 @RequestMapping("/_app")
@@ -128,6 +135,31 @@ public class HealthController
 	@GetMapping("/health")
 	public ResponseEntity<String> health() throws Exception
 	{
+//		URL url = new URL(CommonService.getDefaultChannelUrl().replace("/message", "/files"));
+//
+//		HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+//		httpURLConnection.setRequestMethod("POST");
+//		httpURLConnection.setDoOutput(true);
+//
+//		String boundary = "---" + Long.toHexString(DateUtil.getCurrentTimeInMillis());
+//		String fileName = "dd-changes.sql";
+//		byte[] fileContent = "This is a test file content".getBytes(StandardCharsets.UTF_8);
+//
+//		httpURLConnection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+//
+//		try(OutputStream outputStream = httpURLConnection.getOutputStream())
+//		{
+//			String header = "--" + boundary + "\r\n"
+//				+ "Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n"
+//				+ "Content-Type: text/plain\r\n\r\n";
+//			String footer = "\r\n--" + boundary + "--\r\n";
+//
+//			outputStream.write(header.getBytes(StandardCharsets.UTF_8));
+//			outputStream.write(fileContent);
+//			outputStream.write(footer.getBytes(StandardCharsets.UTF_8));
+//		}
+//
+//		String response = CommonService.getResponse(httpURLConnection);
 		return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.TEXT_PLAIN).body(AppStarted.APP_STARTED.toString());
 	}
 

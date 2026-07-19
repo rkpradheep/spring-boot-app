@@ -145,11 +145,6 @@ public class SDStatusPollTask implements Task
 			return;
 		}
 
-		if(StringUtils.equals(serverRepoName, "tpap_server"))
-		{
-			return;
-		}
-
 		String buildMovementMessage;
 		JSONObject reference;
 
@@ -186,21 +181,40 @@ public class SDStatusPollTask implements Task
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), (String) context.get("messageID"), null, null,  "MASTER BUILD", initiateMigration, references);
 			}
 
+			if(StringUtils.equals(serverRepoName, "tpap_server"))
+			{
+				buildMovementMessage = "[Move To Production]($1)";
 
-			buildMovementMessage = "[Move To Pre]($1)";
+				reference = new JSONObject()
+					.put("type", "button")
+					.put("object", new JSONObject()
+						.put("label", "Move To Production")
+						.put("action", new JSONObject()
+							.put("type", "invoke.function")
+							.put("data", new JSONObject().put("name", "zpaytpapuploadtoproduction")))
+						.put("arguments", new JSONObject()
+							.put("key", "movetopre")
+							.put("value", jsonObject.optString("monitor_id")))
+						.put("type", "+")
+					);
+			}
+			else
+			{
+				buildMovementMessage = "[Move To Pre]($1)";
 
-			reference = new JSONObject()
-				.put("type", "button")
-				.put("object", new JSONObject()
-					.put("label", "Move To Pre")
-					.put("action", new JSONObject()
-						.put("type", "invoke.function")
-						.put("data", new JSONObject().put("name", "payoutuploadtopre")))
-					.put("arguments", new JSONObject()
-						.put("key", "movetopre")
-						.put("value", jsonObject.optString("monitor_id")))
-					.put("type", "+")
-				);
+				reference = new JSONObject()
+					.put("type", "button")
+					.put("object", new JSONObject()
+						.put("label", "Move To Pre")
+						.put("action", new JSONObject()
+							.put("type", "invoke.function")
+							.put("data", new JSONObject().put("name", "payoutuploadtopre")))
+						.put("arguments", new JSONObject()
+							.put("key", "movetopre")
+							.put("value", jsonObject.optString("monitor_id")))
+						.put("type", "+")
+					);
+			}
 
 		}
 		else

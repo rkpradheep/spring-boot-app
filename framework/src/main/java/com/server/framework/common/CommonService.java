@@ -186,6 +186,18 @@ public class CommonService
 		return output.toString();
 	}
 
+	public static String getResponse(HttpURLConnection httpURLConnection) throws Exception
+	{
+		int responseCode = httpURLConnection.getResponseCode();
+		InputStream inputStream = responseCode >= 400 ? httpURLConnection.getErrorStream() : httpURLConnection.getInputStream();
+
+		if(inputStream == null)
+		{
+			return "HTTP " + responseCode + " (no response body)";
+		}
+		return getResponse(inputStream);
+	}
+
 	public static JSONObject getZohoSecrets(String dc)
 	{
 		dc = Arrays.asList("local", "dev").contains(dc) ? dc : "us";
