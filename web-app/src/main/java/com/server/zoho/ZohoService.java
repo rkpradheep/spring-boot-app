@@ -184,6 +184,14 @@ public class ZohoService
 
 	public static void uploadBuildToLocalForPatch(String productName, String patchBuildURL) throws Exception
 	{
+
+		String patchBuildLocalURL = ZohoService.getPatchBuildURL(productName, "production", "CT1", "ZOHOPAYOUT");
+		if(patchBuildURL.contains(patchBuildLocalURL))
+		{
+			LOGGER.info("Patch build URL already points to LOCAL. Skipping upload to LOCAL for product: " + productName + ", patchBuildURL: " + patchBuildURL);
+			return;
+		}
+
 		JSONObject buildOptions = new JSONObject()
 			.put("skip_continue", true)
 			.put("iast_jar_needed", true)
@@ -618,7 +626,7 @@ public class ZohoService
 
 	public static JSONObject generateZPayTPAPChangSetsFromIDC() throws Exception
 	{
-		String inURL = getSDLocalBuildURLFromSDAPI("tpap_server", "production");
+		String inURL = getSDINBuildURLFromSDAPI("tpap_server", "production");
 		return generateZPayTPAPChangSetsForURL(inURL);
 	}
 
@@ -1015,7 +1023,9 @@ public class ZohoService
 	{
 		try
 		{
-			HttpContext context = new HttpContext(AppProperties.getProperty("zoho.sd.build.status.api.url").replace("/{BUILD_ID}", ""), "GET");
+			String sdBuildUpdateUrl = AppProperties.getProperty("zoho.sd.build.status.api.url");
+			sdBuildUpdateUrl = StringUtils.equals("tpap_server", product) ? AppProperties.getProperty("zoho.zpaytpap.sd.build.status.api.url") : sdBuildUpdateUrl;
+			HttpContext context = new HttpContext(sdBuildUpdateUrl.replace("/{BUILD_ID}", ""), "GET");
 
 			context.setParam("start_date", DateUtil.getFormattedTime(DateUtil.getCurrentTime().minusDays(10).toInstant().toEpochMilli(), "yyyy-MM-dd"));
 			context.setParam("overall_status", "Completed");

@@ -102,7 +102,7 @@ public class SDPreBuildUpdateStep extends WorkflowStep
 				{
 					response = ZohoService.uploadBuild(productName, milestoneVersion, AppProperties.getProperty("zoho.in.dc.main"), "IN", "pre", isPatchBuildUpdate, buildURL);
 					LOGGER.info("SD Build Update Response PRE : " + response);
-					if(response.toLowerCase().contains("blocking scans have not yet run Runtime code violations".toLowerCase()))
+					if(response.toLowerCase().contains("blocking scans have not yet run Runtime code violations".toLowerCase()) || response.toLowerCase().contains("The following blocking scans are in progress".toLowerCase()))
 					{
 						TimeUnit.MINUTES.sleep(1);
 					}
@@ -114,6 +114,7 @@ public class SDPreBuildUpdateStep extends WorkflowStep
 				catch(Exception e)
 				{
 					LOGGER.log(Level.SEVERE, "Error in SD Build Update PRE attempt " + (i + 1) + " for monitorId: " + monitorId + ", milestoneVersion: " + milestoneVersion, e);
+					break;
 				}
 			}
 

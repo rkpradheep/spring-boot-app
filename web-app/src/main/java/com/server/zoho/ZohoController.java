@@ -204,7 +204,7 @@ public class ZohoController
 		JSONArray notifyTo = new JSONArray().put("pradheep.rkd@zohocorp.com");
 
 		String serviceName = "ZPayTPAP";
-		String productName = "ZPAYTPAP_MIGRATION";
+		String productName =  buildStage.equals("CT") ? "ZPAYTPAP_MIGRATION" : "ZPAYTPAP";
 
 		if(StringUtils.equals("payout_server", serverRepoName))
 		{
