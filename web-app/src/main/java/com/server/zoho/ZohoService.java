@@ -34,6 +34,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -1110,7 +1111,7 @@ public class ZohoService
 		}
 	}
 
-	public static Pair<String, String> getLatestMilestoneAndCommentForBuildUpload(String product, String stage)
+	public static List<Pair<String, String>> getLatestMilestoneAndCommentForBuildUpload(String product, String stage)
 	{
 		try
 		{
@@ -1134,6 +1135,7 @@ public class ZohoService
 			JSONArray buildURLs = new JSONObject(httpResponse.getStringResponse()).getJSONArray("details").getJSONObject(0)
 				.getJSONObject("build_options").getJSONObject("build_url").getJSONArray("urls");
 
+			List<Pair<String, String>> milestoneAndCommentList = new ArrayList<>();
 			for(int i = 0; i < buildURLs.length(); i++)
 			{
 				JSONObject buildURLObj = buildURLs.getJSONObject(i);
@@ -1141,10 +1143,10 @@ public class ZohoService
 				Matcher matcher = milestonePattern.matcher(buildURLObj.getString("url"));
 				if(!buildURLObj.getBoolean("is_patch_url") && matcher.matches())
 				{
-					return new ImmutablePair<>(matcher.group(1), buildURLObj.getString("comment"));
+					milestoneAndCommentList.add(new ImmutablePair<>(matcher.group(1), buildURLObj.getString("comment")));
 				}
 			}
-			return null;
+			return milestoneAndCommentList;
 		}
 		catch(Exception e)
 		{

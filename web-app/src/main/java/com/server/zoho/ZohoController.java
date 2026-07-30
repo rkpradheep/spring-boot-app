@@ -722,12 +722,14 @@ public class ZohoController
 		try
 		{
 			Map<String, Object> context = null;
-			Pair<String, String> milestoneAndComment = ZohoService.getLatestMilestoneAndCommentForBuildUpload(productName, stage);
-			if(Objects.isNull(milestoneAndComment))
+			List<Pair<String, String>> milestoneAndCommentList = ZohoService.getLatestMilestoneAndCommentForBuildUpload(productName, stage);
+			if(Objects.isNull(milestoneAndCommentList) || milestoneAndCommentList.isEmpty())
 			{
 				Map<String, Object> response = ApiResponseBuilder.error("No milestone found to update build", HttpStatus.BAD_REQUEST.value());
 				return ResponseEntity.ok(response);
 			}
+
+			Pair<String, String> milestoneAndCommentPair = milestoneAndCommentList.get(0);
 
 			String monitorId = SecurityUtil.getCurrentRequest().getParameter("monitor_id");
 			if(StringUtils.isNotEmpty(monitorId))
@@ -748,14 +750,31 @@ public class ZohoController
 					return ResponseEntity.ok(response);
 				}
 				String milestoneVersion = buildProductEntityOptional.get().getMilestoneVersion();
-				if(!StringUtils.equals(milestoneVersion, milestoneAndComment.getLeft()))
+
+				boolean matchFound = false;
+				for(Pair<String, String> mCPair : milestoneAndCommentList)
 				{
+					if(StringUtils.equals(milestoneVersion, mCPair.getLeft()))
+					{
+						milestoneAndCommentPair = mCPair;
+						matchFound = true;
+						break;
+					}
+				}
+
+				if(!matchFound)
+				{
+					String initiatorEmail = ZohoService.getCurrentUserEmail();
+					String initiatorMessage = StringUtils.equals(initiatorEmail, "SCHEDULER") ? initiatorEmail : "{@" + initiatorEmail + "}";
+					initiatorMessage = "\n\nInitiated By : " + initiatorMessage;
+
+					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Milestone version mismatch for the current build and latest milestone build updated in SD" + initiatorMessage);
 					Map<String, Object> response = ApiResponseBuilder.error("Milestone version mismatch for the current build and latest milestone build updated in SD", HttpStatus.BAD_REQUEST.value());
 					return ResponseEntity.ok(response);
 				}
 			}
 
-			String comment = milestoneAndComment.getRight();
+			String comment = milestoneAndCommentPair.getRight();
 			comment = comment.replaceAll("(.*)\\(\\s*Initiated by .*", "$1").trim();
 
 			String initiatorDetails = StringUtils.EMPTY;
@@ -765,7 +784,7 @@ public class ZohoController
 				initiatorDetails = " ( Initiated by " + ZohoService.getCurrentUserEmail() + " )";
 			}
 
-			String sdResponse = ZohoService.uploadBuild(productName, milestoneAndComment.getLeft(), AppProperties.getProperty("zoho.in.dc.main"), "IN", stage, comment + initiatorDetails, false, null);
+			String sdResponse = ZohoService.uploadBuild(productName, milestoneAndCommentPair.getLeft(), AppProperties.getProperty("zoho.in.dc.main"), "IN", stage, comment + initiatorDetails, false, null);
 			JSONObject responseJSON = new JSONObject(sdResponse);
 			boolean isUploadSuccessful = responseJSON.optString("code", "").equals("SUCCESS");
 			String preBuildMessage = responseJSON.getString("message");
