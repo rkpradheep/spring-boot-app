@@ -203,8 +203,15 @@ public class ZohoController
 
 		JSONArray notifyTo = new JSONArray().put("pradheep.rkd@zohocorp.com");
 
+		String sdBuildUpdateUrl = AppProperties.getProperty("zoho.sd.migration.api.url");
+		sdBuildUpdateUrl = StringUtils.equals("tpap_server", serverRepoName) ? AppProperties.getProperty("zoho.zpaytpap.sd.migration.api.url") : sdBuildUpdateUrl;
+
 		String serviceName = "ZPayTPAP";
 		String productName =  buildStage.equals("CT") ? "ZPAYTPAP_MIGRATION" : "ZPAYTPAP";
+		if(StringUtils.equals(productName, "ZPAYTPAP"))
+		{
+			sdBuildUpdateUrl = sdBuildUpdateUrl.replace("ZPAYTPAP_MIGRATION", "ZPAYTPAP");
+		}
 
 		if(StringUtils.equals("payout_server", serverRepoName))
 		{
@@ -235,8 +242,6 @@ public class ZohoController
 			.put("url_upload", false)
 			.put("provision_type", "migration");
 
-		String sdBuildUpdateUrl = AppProperties.getProperty("zoho.sd.migration.api.url");
-		sdBuildUpdateUrl = StringUtils.equals("tpap_server", serverRepoName) ? AppProperties.getProperty("zoho.zpaytpap.sd.migration.api.url") : sdBuildUpdateUrl;
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Authorization", ZohoService.getSDAccessToken());
 		headers.setContentType(MediaType.APPLICATION_JSON);

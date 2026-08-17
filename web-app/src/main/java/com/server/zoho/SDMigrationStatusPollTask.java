@@ -1,5 +1,6 @@
 package com.server.zoho;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -17,6 +18,7 @@ import com.server.framework.job.Task;
 import com.server.framework.service.JobService;
 import com.server.framework.service.WorkflowService;
 import com.server.framework.workflow.WorkflowEngine;
+import com.server.framework.workflow.model.WorkflowInstance;
 import com.server.zoho.service.BuildProductService;
 
 @Service @Scope("prototype") public class SDMigrationStatusPollTask implements Task
@@ -52,7 +54,12 @@ import com.server.zoho.service.BuildProductService;
 		String serverRepoName = jsonObject.getString("server_repo_name");
 		String buildID = jsonObject.getString("build_id");
 
-		JSONObject response = ZohoService.getSDMigrationBuildStatus(serverRepoName, buildID);
+
+		Optional<WorkflowInstance> instanceOpt = workflowEngine.getInstance(jsonObject.getString("monitor_id"));
+		Map context = (Map) instanceOpt.get().getContext();
+		boolean isIN = StringUtils.equals(context.get("buildStage") + "", "IN");
+
+		JSONObject response = ZohoService.getSDMigrationBuildStatus(serverRepoName, buildID, isIN);
 
 		LOGGER.info("Response from SD : " + response);
 

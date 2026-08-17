@@ -1379,10 +1379,10 @@ public class ZohoService
 			.put("build_stage", buildDetails.getString("build_stage"));
 	}
 
-	public static JSONObject getSDMigrationBuildStatus(String serverRepoName, String buildID) throws Exception
+	public static JSONObject getSDMigrationBuildStatus(String serverRepoName, String buildID, boolean isIN) throws Exception
 	{
 		String sdBuildStatusFetchUrl = AppProperties.getProperty("zoho.sd.migration.status.api.url");
-		sdBuildStatusFetchUrl = StringUtils.equals(serverRepoName, "tpap_server") ? AppProperties.getProperty("zoho.zpaytpap.sd.migration.status.api.url") : sdBuildStatusFetchUrl;
+		sdBuildStatusFetchUrl = StringUtils.equals(serverRepoName, "tpap_server") ? isIN ? AppProperties.getProperty("zoho.zpaytpap.sd.in.migration.status.api.url")  : AppProperties.getProperty("zoho.zpaytpap.sd.migration.status.api.url") : sdBuildStatusFetchUrl;
 
 		sdBuildStatusFetchUrl = sdBuildStatusFetchUrl.replace("{BUILD_ID}", buildID);
 
