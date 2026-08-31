@@ -140,6 +140,26 @@ public class ZohoService
 			.put("is_patch_update", isPatchBuild)
 			.put("provision_type", "build_update");
 
+		if(StringUtils.equals(region, "IN"))
+		{
+			String compliance = "{\n"
+				+ "    \"dpia\": {\n"
+				+ "        \"is_conducted\": false,\n"
+				+ "        \"reason\": \"Dailybuild which does not process new PII\"\n"
+				+ "    },\n"
+				+ "    \"pentest\": {\n"
+				+ "        \"reason\": \"\",\n"
+				+ "        \"is_conducted\": true\n"
+				+ "    },\n"
+				+ "    \"threat_model\": {\n"
+				+ "        \"is_conducted\": false,\n"
+				+ "        \"reason\": \"\"\n"
+				+ "    },\n"
+				+ "    \"build_release_type\": 0\n"
+				+ "}";
+			sdBuildUpdatePayload.put("compliances", new JSONObject(compliance));
+		}
+
 		if(isPatchBuild)
 		{
 			sdBuildUpdatePayload.put("sub_grids", new JSONArray().put("SAC"));
@@ -636,7 +656,7 @@ public class ZohoService
 		if(!buildURL.contains("/master"))
 		{
 			LOGGER.info("Build URL points to non-master branch. Skipping change set generation.");
-			return new JSONObject();
+			return new JSONObject().put("master_build_not_found", true);
 		}
 		List<String> payoutProducts = (List<String>) ZohoService.getMetaConfig(("PAYOUT_PRODUCTS"));
 
@@ -720,7 +740,7 @@ public class ZohoService
 		if(!buildURL.contains("/master"))
 		{
 			LOGGER.info("Build URL points to non-master branch. Skipping change set generation.");
-			return new JSONObject();
+			return new JSONObject().put("master_build_not_found", true);
 		}
 		List<String> zpayTPAPProducts = (List<String>) ZohoService.getMetaConfig(("ZPAYTPAP_PRODUCTS"));
 
@@ -848,12 +868,14 @@ public class ZohoService
 						if(m.contains("#"))
 						{
 							String mrId = m.substring(m.indexOf("#") + 1).trim();
+							n.put("mr_id", mrId);
 							String repoIdentifier = m.substring(0, m.indexOf("#")).replaceAll("(?i)See Merge Request", StringUtils.EMPTY).trim();
 							n.put("web_url", "https://repository.zohocorpcloud.in/zohocorp/" + repoIdentifier +  "#/mergerequest/" + mrId + "?view=overview");
 						}
 						else if(m.contains("!"))
 						{
 							String mrId = m.substring(m.indexOf("!") + 1).trim();
+							n.put("mr_id", mrId);
 							String repoIdentifier = m.substring(0, m.indexOf("!")).replaceAll("(?i)See Merge Request", StringUtils.EMPTY).trim();
 							n.put("web_url", "https://repository.zohocorpcloud.in/zohocorp/" + repoIdentifier +  "#/mergerequest/" + mrId + "?view=overview");
 						}
@@ -893,7 +915,7 @@ public class ZohoService
 	{
 		if(commit.optBoolean("_isZohoRepo", false))
 		{
-			return buildMergeRequestFromZohoRepoCommit(commit);
+			return buildMergeRequestFromZohoRepoCommit(productConfig, commit);
 		}
 		HttpService httpService = AppContextHolder.getBean(HttpService.class);
 		HttpContext context = new HttpContext(productConfig.getGitlabUrl().replace("/commits", "/commits/" + commit.getString("short_id") + "/merge_requests"), HttpMethod.GET.name());
@@ -910,23 +932,47 @@ public class ZohoService
 		return mr;
 	}
 
-	private static JSONObject buildMergeRequestFromZohoRepoCommit(JSONObject commit)
+	private static JSONObject buildMergeRequestFromZohoRepoCommit(ProductConfig productConfig, JSONObject commit)
 	{
 		if(!commit.optBoolean("merged", false))
 		{
 			return null;
 		}
 		JSONObject mr = new JSONObject();
-		JSONObject author = commit.optJSONObject("_zohoAuthor");
-		JSONObject mrAuthor = new JSONObject();
-		if(author != null)
+
+		String mrid = commit.optString("mr_id");
+		if(StringUtils.isNotEmpty(mrid))
 		{
-			String userName = author.optString("userName");
-			String displayName = author.optString("fullName", author.optString("displayName", userName));
-			mrAuthor.put("username", userName);
-			mrAuthor.put("name", displayName);
+			try
+			{
+				HttpService httpService = AppContextHolder.getBean(HttpService.class);
+				String commitsUrl = productConfig.getGitlabUrl();
+				String baseApiUrl = commitsUrl.contains("/commits") ? commitsUrl.substring(0, commitsUrl.indexOf("/commits")) : commitsUrl;
+				HttpContext context = new HttpContext(baseApiUrl + "/mergerequest/" + mrid, HttpMethod.GET.name());
+				setCommitApiAuthHeader(context, productConfig);
+				HttpResponse httpResponse = httpService.makeNetworkCall(context);
+				JSONObject mrResponse = new JSONObject(httpResponse.getStringResponse());
+				JSONObject mergerequestInfo = mrResponse.optJSONObject("mergerequestInfo");
+				JSONObject requestedBy = mergerequestInfo != null ? mergerequestInfo.optJSONObject("requestedBy") : null;
+				if(requestedBy != null)
+				{
+					String email = requestedBy.optString("email");
+					String name = StringUtils.substringBefore(email, "@");
+					if(StringUtils.isNotEmpty(email) && StringUtils.isNotEmpty(name))
+					{
+						JSONObject author = new JSONObject();
+						String usernameFromEmail = email.contains("@") ? email.substring(0, email.indexOf("@")) : email;
+						author.put("username", usernameFromEmail);
+						author.put("name", name.trim());
+						mr.put("author", author);
+					}
+				}
+			}
+			catch(Exception e)
+			{
+				LOGGER.log(Level.WARNING, "Failed to fetch merge request details from Zoho Repo for mr_id: " + mrid, e);
+			}
 		}
-		mr.put("author", mrAuthor);
 		mr.put("title", commit.optString("title", ""));
 		mr.put("web_url", commit.optString("web_url"));
 		mr.put("merged_at_millis", commit.optLong("timestamp", 0));
@@ -1290,6 +1336,11 @@ public class ZohoService
 	{
 		try
 		{
+			if(changeSetResponse.optBoolean("master_build_not_found"))
+			{
+				createOrSendMessageToThread(channelURL, cotext, "MASTER BUILD", "Could not generate changeset as latest build deployed in SD is not a master build.");
+				return;
+			}
 			if(changeSetResponse.isEmpty())
 			{
 				return;

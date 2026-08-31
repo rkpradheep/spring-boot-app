@@ -48,6 +48,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -792,7 +793,7 @@ public class ZohoController
 			String sdResponse = ZohoService.uploadBuild(productName, milestoneAndCommentPair.getLeft(), AppProperties.getProperty("zoho.in.dc.main"), "IN", stage, comment + initiatorDetails, false, null);
 			JSONObject responseJSON = new JSONObject(sdResponse);
 			boolean isUploadSuccessful = responseJSON.optString("code", "").equals("SUCCESS");
-			String preBuildMessage = responseJSON.getString("message");
+			String preBuildMessage = responseJSON.get("message").toString();
 
 			String message = isUploadSuccessful ? "Build update to " + stage + " initiated successfully" : "Build upload to " + stage + " failed: " + preBuildMessage;
 			Map<String, Object> response = isUploadSuccessful ? ApiResponseBuilder.success(message, null) : ApiResponseBuilder.error(message, HttpStatus.BAD_REQUEST.value());
@@ -828,6 +829,7 @@ public class ZohoController
 		}
 		catch(Exception e)
 		{
+			LOGGER.log(Level.SEVERE, "Error occurred while uploading build to IDC", e);
 			Map<String, Object> response = ApiResponseBuilder.error("API call failed : " + e.getMessage(), 400);
 			return ResponseEntity.badRequest().body(response);
 		}
@@ -838,7 +840,7 @@ public class ZohoController
 	{
 		try
 		{
-			Pattern validUrlPattern = Pattern.compile("^https://build(-new)?\\.zohocorp\\.com/zoho/(\\w+)/(\\w+)/(\\w+)/[\\w\\.]+/(\\w+)\\.zip$");
+			Pattern validUrlPattern = Pattern.compile("^https://build(-new)?\\.zohocorp\\.com/zoho/(\\w+)/(\\w+)/(\\w+)/[\\w\\.-]+/(\\w+)\\.zip$");
 
 			if(!validUrlPattern.matcher(oldBuildUrl).matches())
 			{

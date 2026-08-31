@@ -35,6 +35,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @RestController
@@ -42,6 +44,7 @@ import java.util.stream.Collectors;
 public class BuildWorkflowController
 {
 
+	private static final Logger LOGGER = Logger.getLogger(BuildWorkflowController.class.getName());
 	@Autowired
 	private WorkflowEngine workflowEngine;
 
@@ -108,10 +111,12 @@ public class BuildWorkflowController
 		}
 		catch(AppException appException)
 		{
+			LOGGER.log(Level.SEVERE, "Error starting build workflow: ", appException);
 			throw appException;
 		}
 		catch(Exception e)
 		{
+			LOGGER.log(Level.SEVERE, "Error starting build workflow: ", e);
 			return ResponseEntity.badRequest().body(ApiResponseBuilder.error("Error starting build workflow: " + e.getMessage(), 400));
 		}
 	}
