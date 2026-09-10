@@ -288,7 +288,9 @@ public class ZohoController
 				httpContext.setParam("build_id", buildId);
 
 				HttpResponse httpResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(httpContext);
-				JSONArray fileData = new JSONObject(httpResponse.getStringResponse()).optJSONArray("fileData");
+				JSONObject jsonResponse = new JSONObject(httpResponse.getStringResponse());
+				JSONArray fileData = jsonResponse.optJSONArray("fileData");
+				JSONArray metaData = jsonResponse.optJSONArray("meta");
 				if(fileData != null)
 				{
 					String diffData = fileData.getString(0);
@@ -328,6 +330,11 @@ public class ZohoController
 					references.put("1", continueReference);
 					references.put("2", abortReference);
 					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), (String) context.get("messageID"), null, null, "MASTER BUILD", confirmation, references);
+					break;
+				}
+				else if(metaData != null && !metaData.isEmpty() && metaData.optJSONObject(0, new JSONObject()).optString("response", "").toLowerCase().equalsIgnoreCase("failure"))
+				{
+					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Migration failed for " + buildId);
 					break;
 				}
 			}

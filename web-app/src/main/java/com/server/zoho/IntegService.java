@@ -178,6 +178,8 @@ public class IntegService
 
 	private void scheduleBuildWorkFlow(BuildWorkflowController.BuildWorkflowRequest request)
 	{
+		Map<String, Object> context = null;
+		String message= null;
 		try
 		{
 			Set<String> productNames = request.getProductNames();
@@ -187,12 +189,12 @@ public class IntegService
 			BuildProductEntity firstProduct = buildProductService.getNextPendingProduct(monitor.getId()).orElse(null);
 
 			String dateString = DateUtil.getFormattedCurrentTime("'Master Build' dd MMMM yyyy").toUpperCase();
-			String message = dateString + " (" + monitor.getId() + ")";
+			message = dateString + " (" + monitor.getId() + ")";
 			String messageID;
 			String gitlabIssueID;
 			List<String> qualifiedProducts = buildProductService.getProductsForMonitor(monitor.getId()).stream().map(BuildProductEntity::getProductName).collect(Collectors.toList());
 
-			Map<String, Object> context = new HashMap<>()
+			context = new HashMap<>()
 			{
 				{
 					put("monitorId", monitor.getId());
@@ -288,8 +290,12 @@ public class IntegService
 		}
 		catch(Exception e)
 		{
-			LOGGER.severe("Error scheduling build monitoring: " + e.getMessage());
 			LOGGER.log(java.util.logging.Level.SEVERE, "Exception in scheduleBuildMonitoring", e);
+
+			if(context != null)
+			{
+				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, message, "Failed to schedule build monitoring. Error : " + e.getMessage());
+			}
 			throw new AppException("Failed to schedule build monitoring");
 		}
 	}

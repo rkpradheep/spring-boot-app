@@ -64,6 +64,7 @@ public class HttpURLConnectionWrapper extends HttpsURLConnection
 					return;
 				}
 				httpLogId = (long) Thread.currentThread().getContextClassLoader().loadClass("com.server.framework.security.SecurityUtil").getDeclaredMethod("addHttpLog", HttpURLConnection.class).invoke(null, this);
+				LOGGER.log(Level.INFO, "HTTP log added :: URL : {0} :: Method {1} :: LogId : {2}", new Object[] {getURLString(), connection.getRequestMethod(), String.valueOf(httpLogId)});
 			}
 			else
 			{
