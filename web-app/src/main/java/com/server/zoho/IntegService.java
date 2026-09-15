@@ -275,7 +275,7 @@ public class IntegService
 				}
 				else
 				{
-					JSONObject changesets = serverRepoOptional.get().equals("payout_server") ? ZohoService.generatePayoutChangSetsFromIDC() : ZohoService.generateZPayTPAPChangSetsFromIDC();
+					JSONObject changesets = serverRepoOptional.get().equals("payout_server") ? ZohoService.generatePayoutChangSetsFromIDC() : ZohoService.generateZPayTPAPChangSetsFromLocal();
 					ZohoService.postChangeSet(changesets, CommonService.getDefaultChannelUrl(), context, true);
 				}
 			}

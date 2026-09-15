@@ -67,7 +67,7 @@ public class BuildAutomationService
 		zpayTPAPProducts.remove("tpap_server");
 		Set<String> productsForBuild = new HashSet<>(ZohoService.getProductsForBuildInitiation(zpayTPAPProducts));
 
-		if(productsForBuild.isEmpty() && !ZohoService.generateZPayTPAPChangSetsFromIDC().isEmpty())
+		if(productsForBuild.isEmpty() && !ZohoService.generateZPayTPAPChangSetsFromLocal().isEmpty())
 		{
 			productsForBuild.add("tpap_server");
 		}

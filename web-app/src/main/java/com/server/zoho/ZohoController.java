@@ -264,6 +264,15 @@ public class ZohoController
 
 		if(isSuccessful)
 		{
+			try
+			{
+				Thread.sleep(DateUtil.ONE_MINUTE_IN_MILLISECOND);
+			}
+			catch(InterruptedException e)
+			{
+				LOGGER.warning("Sleep interrupted");
+			}
+
 			int maxAttempts = 6;
 			int currentAttempt = 0;
 
@@ -272,15 +281,6 @@ public class ZohoController
 			while(currentAttempt < maxAttempts)
 			{
 				currentAttempt++;
-
-				try
-				{
-					Thread.sleep(DateUtil.ONE_SECOND_IN_MILLISECOND * 10);
-				}
-				catch(InterruptedException e)
-				{
-					LOGGER.warning("Sleep interrupted, attempt " + currentAttempt + " of " + maxAttempts);
-				}
 
 				String sdISUFileContentFetch = AppProperties.getProperty("zoho.sd.isu.filecontent.api.url");
 				HttpContext httpContext = new HttpContext(sdISUFileContentFetch, "GET");
@@ -336,6 +336,15 @@ public class ZohoController
 				{
 					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Migration failed for " + buildId);
 					break;
+				}
+
+				try
+				{
+					Thread.sleep(DateUtil.ONE_SECOND_IN_MILLISECOND * 10);
+				}
+				catch(InterruptedException e)
+				{
+					LOGGER.warning("Sleep interrupted, attempt " + currentAttempt + " of " + maxAttempts);
 				}
 			}
 		}
