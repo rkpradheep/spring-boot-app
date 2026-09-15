@@ -647,6 +647,12 @@ public class ZohoService
 		return generateZPayTPAPChangSetsForURL(inURL);
 	}
 
+	public static JSONObject generateZPayTPAPChangSetsFromLocal() throws Exception
+	{
+		String inURL = getSDLocalBuildURLFromSDAPI("tpap_server", "production");
+		return generateZPayTPAPChangSetsForURL(inURL);
+	}
+
 	public static JSONObject generatePayoutChangSetsForURL(String buildURL) throws Exception
 	{
 		if(!buildURL.contains("/master"))
