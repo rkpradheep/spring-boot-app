@@ -655,7 +655,7 @@ public class ZohoService
 
 	public static JSONObject generatePayoutChangSetsForURL(String buildURL) throws Exception
 	{
-		if(!buildURL.contains("/master"))
+		if(StringUtils.isEmpty(buildURL) || !buildURL.contains("/master"))
 		{
 			LOGGER.info("Build URL points to non-master branch. Skipping change set generation.");
 			return new JSONObject().put("master_build_not_found", true);
