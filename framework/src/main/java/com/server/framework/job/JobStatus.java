@@ -4,7 +4,8 @@ public enum JobStatus
 {
 	JOB_NOT_RUNNING(-1),
 	JOB_DISPATCHED(0),
-	JOB_RUNNING(1);
+	JOB_RUNNING(1),
+	JOB_DELETED(2);
 
 	private final int status;
 

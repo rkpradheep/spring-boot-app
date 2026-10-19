@@ -24,6 +24,9 @@ public interface JobRepository extends JpaRepository<JobEntity, Long> {
     
     @Query("SELECT j FROM Job j WHERE j.scheduledTime <= :executionTime AND j.status = :status")
     List<JobEntity> findJobsToExecute(@Param("executionTime") Long executionTime, @Param("status") Integer status);
+
+    @Query("SELECT j FROM Job j WHERE j.status <> :status")
+    List<JobEntity> findAllByStatusNot(@Param("status") Integer status);
     
     @Query("SELECT j FROM Job j WHERE j.taskName = :taskName AND j.isRecurring = :isRecurring")
     List<JobEntity> findByTaskNameAndIsRecurring(@Param("taskName") String taskName, @Param("isRecurring") Boolean isRecurring);

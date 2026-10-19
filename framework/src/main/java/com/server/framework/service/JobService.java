@@ -31,7 +31,7 @@ public class JobService
 
 	public List<JobEntity> getAllJobs()
 	{
-		return jobRepository.findAll();
+		return jobRepository.findAllByStatusNot(JobStatus.JOB_DELETED.getStatus());
 	}
 
 	public void scheduleJob(CustomRunnable runnable, int seconds)
@@ -96,7 +96,10 @@ public class JobService
 	{
 		if(id == -1)
 			return;
-		jobRepository.deleteById(id);
+		jobRepository.findById(id).ifPresent(j -> {
+			j.setStatus(JobStatus.JOB_DELETED);
+			jobRepository.save(j);
+		});
 		configurationService.delete(DigestUtils.sha1Hex(String.valueOf(id)));
 	}
 

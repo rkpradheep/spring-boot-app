@@ -25,11 +25,15 @@ public class JobWrapper
 
 	private static final Logger LOGGER = Logger.getLogger(JobWrapper.class.getName());
 
+	private static final int MAX_RETRY_COUNT = 3;
+	private static final long RETRY_DELAY_IN_MILLISECOND = 5 * DateUtil.ONE_MINUTE_IN_MILLISECOND;
+
 	void executeJob(JobEntity jobEntity)
 	{
 
 		LOGGER.info("Executing job: " + jobEntity.getId() + " - " + jobEntity.getTaskName());
 		Task task = null;
+		boolean failed = false;
 
 		try
 		{
@@ -43,20 +47,45 @@ public class JobWrapper
 		}
 		catch(Exception e)
 		{
+			failed = true;
 			LOGGER.log(Level.SEVERE, "Error executing job task: " + jobEntity.getId(), e);
 		}
 		finally
 		{
-			handleJobCompletion(task, jobEntity);
+			handleJobCompletion(task, jobEntity, failed);
 		}
 	}
 
-	private void handleJobCompletion(Task task, JobEntity jobEntity)
+	private void handleJobCompletion(Task task, JobEntity jobEntity, boolean failed)
 	{
 		try
 		{
 			jobEntity.setStatus(JobStatus.JOB_NOT_RUNNING);
 			jobRepository.save(jobEntity);
+
+			if(failed && jobEntity.getRetryCount() < MAX_RETRY_COUNT)
+			{
+				int nextRetry = jobEntity.getRetryCount() + 1;
+				long nextExecutionTime = DateUtil.getCurrentTimeInMillis() + RETRY_DELAY_IN_MILLISECOND;
+
+				jobEntity.setRetryCount(nextRetry);
+				jobEntity.setScheduledTime(nextExecutionTime);
+				jobRepository.save(jobEntity);
+
+				LOGGER.info("Job " + jobEntity.getId() + " failed, scheduling retry " + nextRetry + "/" + MAX_RETRY_COUNT + " at: " + DateUtil.getFormattedTime(nextExecutionTime, DateUtil.DATE_WITH_TIME_SECONDS_FORMAT));
+
+				if(!AppProperties.getBoolean("job.dispatcher.enabled"))
+				{
+					jobService.scheduleJob(jobEntity);
+				}
+				return;
+			}
+
+			if(!failed && jobEntity.getRetryCount() > 0)
+			{
+				jobEntity.setRetryCount(0);
+				jobRepository.save(jobEntity);
+			}
 
 			if(Boolean.TRUE.equals(jobEntity.getIsRecurring()) && jobEntity.getDayInterval() != null && jobEntity.getDayInterval() > 0)
 			{

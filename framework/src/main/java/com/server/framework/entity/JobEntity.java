@@ -35,6 +35,9 @@ public class JobEntity
     @Column(name = "Status", nullable = false, columnDefinition = "INT DEFAULT -1")
     private Integer status = JobStatus.JOB_NOT_RUNNING.getStatus();
 
+    @Column(name = "RetryCount", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private Integer retryCount = 0;
+
     public JobEntity() {}
     
     public JobEntity(String taskName, String data, Long scheduledTime, Integer dayInterval, Boolean isRecurring) {
@@ -100,6 +103,14 @@ public class JobEntity
 
     public void setStatus(JobStatus jobStatus) {
         this.status = jobStatus.getStatus();
+    }
+
+    public Integer getRetryCount() {
+        return retryCount;
+    }
+
+    public void setRetryCount(Integer retryCount) {
+        this.retryCount = retryCount;
     }
     
     @Override
