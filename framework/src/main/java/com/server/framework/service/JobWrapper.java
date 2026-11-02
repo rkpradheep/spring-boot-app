@@ -60,6 +60,13 @@ public class JobWrapper
 	{
 		try
 		{
+			JobEntity currentState = jobRepository.findById(jobEntity.getId()).orElse(null);
+			if(currentState == null || currentState.getStatus() == JobStatus.JOB_DELETED.getStatus())
+			{
+				LOGGER.info("Job " + jobEntity.getId() + " was deleted during execution; skipping completion handling");
+				return;
+			}
+
 			jobEntity.setStatus(JobStatus.JOB_NOT_RUNNING);
 			jobRepository.save(jobEntity);
 

@@ -15,14 +15,14 @@ public interface JobRepository extends JpaRepository<JobEntity, Long> {
 
     @Transactional
     @Modifying
-    @Query("UPDATE Job j SET j.status = -1")
+    @Query("UPDATE Job j SET j.status = -1 WHERE j.status <> 2")
     void markAllJobsAsNotRunning();
-    
+
     List<JobEntity> findByTaskName(String taskName);
-    
+
     List<JobEntity> findByIsRecurring(Boolean isRecurring);
-    
-    @Query("SELECT j FROM Job j WHERE j.scheduledTime <= :executionTime AND j.status = :status")
+
+    @Query("SELECT j FROM Job j WHERE j.scheduledTime <= :executionTime AND j.status = :status AND j.status <> 2")
     List<JobEntity> findJobsToExecute(@Param("executionTime") Long executionTime, @Param("status") Integer status);
 
     @Query("SELECT j FROM Job j WHERE j.status <> :status")
