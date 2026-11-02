@@ -47,7 +47,7 @@ public class ConfigurationService
 		return setValue(key, value, -1L);
 	}
 
-	public ConfigurationEntity setValue(String key, String value, Long expiryTime)
+	synchronized public ConfigurationEntity setValue(String key, String value, Long expiryTime)
 	{
 		Optional<ConfigurationEntity> existing = configurationRepository.findByCKey(key);
 		ConfigurationEntity conf = existing.orElseGet(() -> {
