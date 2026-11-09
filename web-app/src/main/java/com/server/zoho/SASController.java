@@ -417,7 +417,12 @@ public class SASController
 
 		for(String service : AppProperties.getProperty("taskengine.services").split(","))
 		{
-			threadPoolMeta.put(service.split("-")[0], Arrays.stream(AppProperties.getProperty("taskengine." + service.split("-")[0] + ".threadpools").split(",")).collect(Collectors.toList()));
+			String threadPools = AppProperties.getProperty("taskengine." + service.split("-")[0] + ".threadpools");
+			if(StringUtils.isEmpty(threadPools))
+			{
+				continue;
+			}
+			threadPoolMeta.put(service.split("-")[0], Arrays.stream(threadPools.split(",")).collect(Collectors.toList()));
 		}
 
 		taskEngineMeta.put("thread_pools", threadPoolMeta);

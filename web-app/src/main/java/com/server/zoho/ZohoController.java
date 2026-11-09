@@ -133,10 +133,20 @@ public class ZohoController
 
 		LOGGER.info("SD Migration confirmation Response : " + sdResponse);
 
-		JSONObject responseJSON = new JSONObject(sdResponse);
-		boolean isSuccessful = !responseJSON.getJSONObject("meta").getString("response").equals("failure");
-		JSONArray dataArray = responseJSON.optJSONArray("data");
-		String migrationUpdateMessage = dataArray != null ? dataArray.getString(0) : null;
+		boolean isSuccessful;
+		String migrationUpdateMessage = "";
+		try
+		{
+			JSONObject responseJSON = new JSONObject(sdResponse);
+			isSuccessful = !responseJSON.getJSONObject("meta").getString("response").equals("failure");
+			JSONArray dataArray = responseJSON.optJSONArray("data");
+			migrationUpdateMessage = dataArray != null ? dataArray.getString(0) : null;
+		}
+		catch(Exception e) //workaround to sd migration confirmation api. Receiving html error but request is processed
+		{
+			isSuccessful = true;
+		}
+
 
 		String message = isAbort ? (isSuccessful ? "Migration aborted successfully" : "Migration abortion failed: " + migrationUpdateMessage) :
 			isSuccessful ? "Migration confirmed successfully" : "Migration confirmation failed: " + migrationUpdateMessage;
