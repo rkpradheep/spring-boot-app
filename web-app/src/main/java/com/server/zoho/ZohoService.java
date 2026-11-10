@@ -434,7 +434,7 @@ public class ZohoService
 				httpURLConnection.setDoOutput(true);
 
 				String boundary = "---" + Long.toHexString(DateUtil.getCurrentTimeInMillis());
-				String fileName = StringUtils.contains(message, "Postgres version of diff + comments") ? "dd-changes.sql" : "large_message.txt";
+				String fileName = StringUtils.contains(message, "Postgres version of diff + comments") ? "dd-changes.txt" : "large_message.txt";
 				byte[] fileContent = message.getBytes(StandardCharsets.UTF_8);
 
 				httpURLConnection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
