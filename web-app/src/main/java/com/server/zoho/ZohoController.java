@@ -151,7 +151,7 @@ public class ZohoController
 		String message = isAbort ? (isSuccessful ? "Migration aborted successfully" : "Migration abortion failed: " + migrationUpdateMessage) :
 			isSuccessful ? "Migration confirmed successfully" : "Migration confirmation failed: " + migrationUpdateMessage;
 
-		String initiatorMessage = "\n\nInitiated By : " + ZohoService.getCurrentUserEmail();
+		String initiatorMessage = "\n\nInitiated By : " +"{@" + ZohoService.getCurrentUserEmail() + "}";
 		ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", message + initiatorMessage);
 		if(isSuccessful)
 		{
@@ -269,7 +269,7 @@ public class ZohoController
 		String message = isSuccessful ? "Migration initiated successfully" : "Migration initiation failed: " + migrationUpdateMessage;
 		Map<String, Object> response = isSuccessful ? ApiResponseBuilder.success(message, null) : ApiResponseBuilder.error(message, HttpStatus.BAD_REQUEST.value());
 
-		String initiatorMessage = "\n\nInitiated By : " + ZohoService.getCurrentUserEmail();
+		String initiatorMessage = "\n\nInitiated By : " +  "{@" + ZohoService.getCurrentUserEmail() + "}";
 		ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", message + initiatorMessage);
 
 		if(isSuccessful)
@@ -308,7 +308,7 @@ public class ZohoController
 					response.put("isu_file_content", diffData);
 					ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "ISU File Content for build ID " + buildId + ": \n\n\n" + diffData);
 
-					String confirmation = "Meta Data Migration [Continue]($1) [Quit]($2)";
+					String confirmation = "Meta Data Migration [Continue]($1) [Quit]($2) \n\n" + "{@" + ZohoService.getCurrentUserEmail() + "}";
 
 					JSONObject continueReference = new JSONObject()
 						.put("type", "button")

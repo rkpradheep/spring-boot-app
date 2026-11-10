@@ -145,6 +145,10 @@ public class SDStatusPollTask implements Task
 			return;
 		}
 
+		if(StringUtils.equals(serverRepoName, "tpap_server"))
+		{
+			return;
+		}
 		String buildMovementMessage;
 		JSONObject reference;
 

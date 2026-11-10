@@ -92,7 +92,6 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), (String) context.get("messageID"), null, null,  "MASTER BUILD", initiateMigration, references);
 
 
-
 				String resumeWorkflow = "[Resume Workflow]($1)";
 
 				 reference = new JSONObject()
