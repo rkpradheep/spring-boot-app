@@ -47,8 +47,9 @@ public class HttpURLConnectionWrapper extends HttpsURLConnection
 		{
 			return (String) Thread.currentThread().getContextClassLoader().loadClass("com.server.framework.security.SecurityUtil").getDeclaredMethod("getURLString", URL.class).invoke(null, getURL());
 		}
-		catch(Exception ignored)
+		catch(Exception e)
 		{
+			LOGGER.log(Level.SEVERE, "Exception occurred", e);
 			return null;
 		}
 	}
@@ -191,6 +192,7 @@ public class HttpURLConnectionWrapper extends HttpsURLConnection
 		}
 		catch(IOException e)
 		{
+			LOGGER.log(Level.SEVERE, "Exception occurred", e);
 			throw new RuntimeException(e);
 		}
 		finally
@@ -357,8 +359,9 @@ public class HttpURLConnectionWrapper extends HttpsURLConnection
 			start();
 			return connection.getResponseCode();
 		}
-		catch(Exception ignored)
+		catch(Exception e)
 		{
+			LOGGER.log(Level.SEVERE, "Exception occurred", e);
 			return -1;
 		}
 	}

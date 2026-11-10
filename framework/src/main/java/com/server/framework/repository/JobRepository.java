@@ -38,4 +38,8 @@ public interface JobRepository extends JpaRepository<JobEntity, Long> {
     List<JobEntity> findJobsByTimeRange(@Param("startTime") Long startTime, @Param("endTime") Long endTime);
     
     void deleteByTaskName(String taskName);
+
+    @Modifying
+    @Query("DELETE FROM Job j WHERE j.scheduledTime < :cutoffTime AND j.status <> 1")
+    int deleteOlderThan(@Param("cutoffTime") Long cutoffTime);
 }

@@ -2,6 +2,7 @@ package com.server.zoho.repository;
 
 import com.server.zoho.entity.BuildMonitorEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -21,4 +22,8 @@ public interface BuildMonitorRepository extends JpaRepository<BuildMonitorEntity
     
     @Query("DELETE FROM BuildMonitor bm WHERE bm.status IN ('COMPLETED', 'FAILED') AND bm.lastUpdateTime < :cutoffTime")
     void deleteOldCompletedMonitors(@Param("cutoffTime") Long cutoffTime);
+
+    @Modifying
+    @Query("DELETE FROM BuildMonitor bm WHERE bm.startTime < :cutoffTime")
+    int deleteOlderThan(@Param("cutoffTime") Long cutoffTime);
 }

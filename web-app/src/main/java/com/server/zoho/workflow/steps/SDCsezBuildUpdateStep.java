@@ -154,7 +154,7 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 			}
 			else
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to CSEZ Failed ( " + milestoneVersion + " )" + " : " + csezBuildMessage);
+				ZohoService.sendRetryBuildWorkflowMessage(context, "Build update to CSEZ Failed ( " + milestoneVersion + " )" + " : " + csezBuildMessage);
 
 				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail((String) context.get("serverProductName"));
 				if(StringUtils.isNotEmpty(buildOwnerEmail))
@@ -169,7 +169,7 @@ public class SDCsezBuildUpdateStep extends WorkflowStep
 		}
 		catch(Exception e)
 		{
-			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to CSEZ Failed ( " + milestoneVersion + " )");
+			ZohoService.sendRetryBuildWorkflowMessage(context, "Build update to CSEZ Failed ( " + milestoneVersion + " )");
 
 			String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail((String) context.get("serverProductName"));
 			if(StringUtils.isNotEmpty(buildOwnerEmail))

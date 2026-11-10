@@ -18,4 +18,8 @@ public interface ConfigurationRepository extends JpaRepository<ConfigurationEnti
     @Modifying
     @Query("DELETE FROM Configuration c WHERE c.cKey = :ck")
     void deleteByCKey(@Param("ck") String cKey);
+
+    @Modifying
+    @Query("DELETE FROM Configuration c WHERE c.expiryTime <> -1 AND c.expiryTime < :currentTime")
+    int deleteExpired(@Param("currentTime") Long currentTime);
 }

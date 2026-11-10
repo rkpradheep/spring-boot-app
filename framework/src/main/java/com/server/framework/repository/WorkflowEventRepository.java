@@ -2,6 +2,7 @@ package com.server.framework.repository;
 
 import com.server.framework.entity.WorkflowEventEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -28,6 +29,10 @@ public interface WorkflowEventRepository extends JpaRepository<WorkflowEventEnti
     void deleteByReferenceID(String referenceID);
 
     List<WorkflowEventEntity> findByCorrelationIdOrderByTimestampAsc(String correlationId);
+
+    @Modifying
+    @Query("DELETE FROM WorkflowEvent e WHERE e.timestamp < :cutoffTime")
+    int deleteOlderThan(@Param("cutoffTime") Long cutoffTime);
 }
 
 

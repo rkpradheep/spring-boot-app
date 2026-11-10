@@ -2,6 +2,7 @@ package com.server.framework.repository;
 
 import com.server.framework.entity.WorkflowInstanceEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -35,4 +36,8 @@ public interface WorkflowInstanceRepository extends JpaRepository<WorkflowInstan
 
     @Query("SELECT w FROM WorkflowInstance w WHERE w.status = 'RUNNING'")
     List<WorkflowInstanceEntity> findRunningInstances();
+
+    @Modifying
+    @Query("DELETE FROM WorkflowInstance w WHERE w.startTime < :cutoffTime")
+    int deleteOlderThan(@Param("cutoffTime") Long cutoffTime);
 }

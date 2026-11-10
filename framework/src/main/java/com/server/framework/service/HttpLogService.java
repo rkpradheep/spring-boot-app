@@ -73,20 +73,25 @@ public class HttpLogService
 		{
 			log.setStatusCode(connection.getResponseCode());
 			String contentType = connection.getContentType();
+
+			InputStream is = connection.getErrorStream();
+			if(is == null)
+			{
+				is = connection.getInputStream();
+			}
+
 			if(contentType != null && contentType.contains("json"))
 			{
-				InputStream is = connection.getErrorStream();
-				if(is == null)
-					is = connection.getInputStream();
 				String encoding = connection.getHeaderField("Content-Encoding");
 				if("gzip".equalsIgnoreCase(encoding))
 				{
 					is = new GZIPInputStream(is);
 				}
-				byte[] bytes = is == null ? new byte[0] : is.readAllBytes();
-				String responseData = bytes.length == 0 ? StringUtils.EMPTY : new String(bytes);
-				log.setResponseData(getMasked(responseData));
 			}
+
+			byte[] bytes = is == null ? new byte[0] : is.readAllBytes();
+			String responseData = bytes.length == 0 ? StringUtils.EMPTY : new String(bytes);
+			log.setResponseData(getMasked(responseData));
 			log.setResponseHeaders(getMasked(buildResponseHeadersJson(connection)));
 		}
 		catch(Exception e)

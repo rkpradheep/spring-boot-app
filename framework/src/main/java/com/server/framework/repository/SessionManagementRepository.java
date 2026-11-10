@@ -2,6 +2,7 @@ package com.server.framework.repository;
 
 import com.server.framework.entity.SessionManagementEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -29,8 +30,9 @@ public interface SessionManagementRepository extends JpaRepository<SessionManage
     
     void deleteBySessionId(String sessionId);
 
+    @Modifying
     @Query("DELETE FROM SessionManagement s WHERE s.expiryTime < :currentTime")
-    void deleteExpiredSessions(@Param("currentTime") Long currentTime);
+    int deleteExpiredSessions(@Param("currentTime") Long currentTime);
     
     boolean existsBySessionId(String sessionId);
 }

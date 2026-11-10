@@ -141,7 +141,7 @@ public class SDPreBuildUpdateStep extends WorkflowStep
 			}
 			else
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload to Pre Failed ( " + milestoneVersion + " )");
+				ZohoService.sendRetryBuildWorkflowMessage(context, "Build update to PRE Failed ( " + milestoneVersion + " )" + " : " + preBuildMessage);
 				LOGGER.severe("SD Build Update Failed: " + "PRE Message : " + preBuildMessage);
 				buildProductService.getById(productId).ifPresent(buildProductEntity -> buildProductService.markSDPreBuildUploadFailed(buildProductEntity, preBuildMessage));
 				return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED, Map.of("error", "SD Build Update Failed: " + "Pre Message : " + preBuildMessage));
@@ -149,7 +149,7 @@ public class SDPreBuildUpdateStep extends WorkflowStep
 		}
 		catch(Exception e)
 		{
-			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build upload to PRE Failed ( " + milestoneVersion + " )");
+			ZohoService.sendRetryBuildWorkflowMessage(context, "Build update to PRE Failed ( " + milestoneVersion + " )");
 			LOGGER.log(Level.SEVERE, "Error in SDBuildUploadStep execute", e);
 			buildProductService.getById(productId).ifPresent(buildProductEntity -> buildProductService.markSDPreBuildUploadFailed(buildProductEntity, e.getMessage()));
 			return new WorkflowEvent(WorkFlowCommonEventType.WORKFLOW_FAILED, Map.of("error", e.getMessage()));

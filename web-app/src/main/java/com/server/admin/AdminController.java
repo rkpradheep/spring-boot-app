@@ -31,6 +31,9 @@ public class AdminController
 	@Autowired
 	private AdminDBService adminDBService;
 
+	@Autowired
+	private ExpiredRecordsCleanupService expiredRecordsCleanupService;
+
 	@PostMapping("/db/execute")
 	public ResponseEntity<Map<String, Object>> handleAdminDBRequest(@RequestBody String requestBody)
 	{
@@ -50,6 +53,23 @@ public class AdminController
 		{
 			logger.error("Error executing query", e);
 			Map<String, Object> response = ApiResponseBuilder.error("Error executing query: " + e.getMessage(), "QUERY_EXECUTION_ERROR", 500);
+			return ResponseEntity.internalServerError().body(response);
+		}
+	}
+
+	@PostMapping("/delete/expired")
+	public ResponseEntity<Map<String, Object>> handleExpiredRecordsCleanup()
+	{
+		try
+		{
+			Map<String, Integer> result = expiredRecordsCleanupService.cleanupExpiredRecords();
+			Map<String, Object> response = ApiResponseBuilder.success("Expired records deleted successfully", result);
+			return ResponseEntity.ok(response);
+		}
+		catch(Exception e)
+		{
+			logger.error("Error deleting expired records", e);
+			Map<String, Object> response = ApiResponseBuilder.error("Error deleting expired records: " + e.getMessage(), "EXPIRED_CLEANUP_ERROR", 500);
 			return ResponseEntity.internalServerError().body(response);
 		}
 	}

@@ -52,7 +52,7 @@ public class AuthController {
             
             String sessionId = UUID.randomUUID().toString();
             boolean isAdminLogin = userEntity.getRoleType() != null && userEntity.getRoleType().equals(RoleEnum.ADMIN.getType());
-            long allowedSessionDurationInMillis = isAdminLogin ? 24 * 60 * 60 * 1000L : 30 * 60 * 1000L;
+            long allowedSessionDurationInMillis = isAdminLogin ? (24 * 60 * 60 * 1000L) * 7L : 30 * 60 * 1000L;
             long expiryTimeInMillis = DateUtil.getCurrentTimeInMillis() + allowedSessionDurationInMillis;
             loginService.addSession(sessionId, userEntity.getId(), expiryTimeInMillis);
             

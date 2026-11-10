@@ -168,7 +168,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 			}
 			else
 			{
-				ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to LOCAL Failed ( " + milestoneVersion + " )" + " : " + localBuildMessage);
+				ZohoService.sendRetryBuildWorkflowMessage(context, "Build update to LOCAL Failed ( " + milestoneVersion + " )" + " : " + localBuildMessage);
 
 				String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail(serverRepoName);
 				if(StringUtils.isNotEmpty(buildOwnerEmail))
@@ -185,7 +185,7 @@ public class SDLocalBuildUpdateStep extends WorkflowStep
 		}
 		catch(Exception e)
 		{
-			ZohoService.createOrSendMessageToThread(CommonService.getDefaultChannelUrl(), context, "MASTER BUILD", "Build update to LOCAL Failed ( " + milestoneVersion + " )");
+			ZohoService.sendRetryBuildWorkflowMessage(context, "Build update to LOCAL Failed ( " + milestoneVersion + " )");
 
 			String buildOwnerEmail = IntegService.getTodayBuildOwnerEmail(serverRepoName);
 			if(StringUtils.isNotEmpty(buildOwnerEmail))
