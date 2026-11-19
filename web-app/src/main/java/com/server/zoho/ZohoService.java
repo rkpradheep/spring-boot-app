@@ -422,11 +422,10 @@ public class ZohoService
 			{
 				String messageInforURL = AppProperties.getProperty("cliq.chat.url") + "/messages/" + messageID;
 				HttpContext httpContext = new HttpContext(messageInforURL, "GET");
-				httpContext.setHeader("Authorization", "Bearer " +  getCliqAccessToken());
+				httpContext.setHeader("Authorization", "Bearer " + getCliqAccessToken());
 
 				String messageInfoResponse = AppContextHolder.getBean(HttpService.class).makeNetworkCall(httpContext).getStringResponse();
 				String chatId = new JSONObject(messageInfoResponse).getJSONObject("thread_information").getString("chat_id");
-
 
 				URL url = new URL(AppProperties.getProperty("cliq.files.url").replace("{CH_ID}", chatId));
 				httpURLConnection = (HttpURLConnection) url.openConnection();
@@ -465,6 +464,31 @@ public class ZohoService
 		}
 	}
 
+	public static void sendDBToolEventAlert(String message)
+	{
+		try
+		{
+			HttpURLConnection httpURLConnection;
+
+			URL url = new URL(AppProperties.getProperty("zoho.db.tool.event.channel.url") + "?zapikey=" + AppProperties.getProperty("cliq.zapi.key"));
+			httpURLConnection = (HttpURLConnection) url.openConnection();
+			httpURLConnection.setRequestMethod("POST");
+			httpURLConnection.setDoOutput(true);
+
+			httpURLConnection.setRequestProperty("Content-Type", "application/json");
+			JSONObject payload = new JSONObject();
+			payload.put("text", message);
+			payload.put("sync_message", true);
+			payload.put("bot", new JSONObject().put("name", "DB Tool Event Alert Bot").put("image", "data:image/png;base64,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\n"));
+			httpURLConnection.getOutputStream().write(payload.toString().getBytes(StandardCharsets.UTF_8));
+			CommonService.getResponse(httpURLConnection.getResponseCode() != 200 ? httpURLConnection.getErrorStream() : httpURLConnection.getInputStream());
+		}
+		catch(Exception e)
+		{
+			LOGGER.log(Level.SEVERE, "Error in creating/updating GitLab issue", e);
+		}
+	}
+
 	public static Object getMetaConfig(String key)
 	{
 		if(ZOHO_META_MAP == null)
@@ -488,6 +512,7 @@ public class ZohoService
 		dcDomainMappingTmp.put("jp", "zoho.jp");
 		dcDomainMappingTmp.put("ca", "zohocloud.ca");
 		dcDomainMappingTmp.put("uk", "zoho.uk");
+		dcDomainMappingTmp.put("inzpay", "zohopay.in");
 
 		DC_DOMAIN_MAPPING = Collections.unmodifiableMap(dcDomainMappingTmp);
 

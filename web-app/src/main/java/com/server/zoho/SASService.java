@@ -9,6 +9,8 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -167,7 +169,7 @@ public class SASService
 		}
 	}
 
-	public void handleQuery(String query, String server, String ip, String db, String user, String password, Map<String, Object> resultMap, Long sasStartRange, Long sasEndRange, boolean skipScoping)
+	public void handleQuery(String query, String server, String ip, String db, String user, String password, Map<String, Object> resultMap, Long sasStartRange, Long sasEndRange, boolean skipScoping, String service)
 	{
 		String pkName = null;
 		if(query == null || query.replaceAll(" ", "").length() == 0)
@@ -177,62 +179,55 @@ public class SASService
 		query = query.replaceAll("\n", " ").trim();
 		query = query.replaceAll("(\\.|;)$", "");
 		boolean isUpdateOrDelete = false;
+		boolean isSelectQuery = false;
 		try(Connection connection = getDBConnection(server, ip, db, user, password))
 		{
 			PreparedStatement preparedStatement;
 
 			Pattern selectQuerPattern = Pattern.compile("(?i)(select)(.*)(from)\\s+(\\w+)(.*)");
 			Matcher selectQueryMatcher = selectQuerPattern.matcher(query);
-			Pattern updatePattern = Pattern.compile("(?i)(Update)\\s+(\\w+)\\s+(set)(.*)\\s+(where)\\s+(.*)");
+			Pattern updatePattern = Pattern.compile("(?i)(Update)\\s+(\\w+)\\s+(set)(.*)\\s+(.*)");
 			Matcher updateMatcher = updatePattern.matcher(query);
-			Pattern deletePattern = Pattern.compile("(?i)(Delete)\\s+(from)\\s+(\\w+)\\s+(where)\\s+(.*)");
+			Pattern deletePattern = Pattern.compile("(?i)(Delete)\\s+(from)\\s+(\\w+)\\s+(.*)");
 			Matcher deleteMatcher = deletePattern.matcher(query);
+			String tableName = null;
 			if(selectQueryMatcher.matches())
 			{
-				ResultSet primaryKeys = connection.getMetaData().getPrimaryKeys(null, "jbossdb", getNormalisedName(connection, selectQueryMatcher.group(4)));
-				while(primaryKeys.next())
-				{
-					pkName = primaryKeys.getString("COLUMN_NAME");
-					if(pkName.matches("(.*)(?i)(id)"))
-					{
-						Pattern allisaPattern = Pattern.compile("(?i)(select)(.*)(from)\\s+(\\w+)\\s+AS\\s+(\\w+)\\s+(.*)");
-						Matcher aliasMatcher = allisaPattern.matcher(query);
-						pkName = (aliasMatcher.matches() ? aliasMatcher.group(5) : selectQueryMatcher.group(4)).concat(".").concat(pkName);
-						break;
-					}
-				}
+				tableName  =selectQueryMatcher.group(4);
+				isSelectQuery = true;
 			}
 			else if(updateMatcher.matches() || deleteMatcher.matches())
 			{
 				isUpdateOrDelete = true;
-				String tableName = updateMatcher.matches() ? updateMatcher.group(2) : deleteMatcher.group(3);
+				tableName = updateMatcher.matches() ? updateMatcher.group(2) : deleteMatcher.group(3);
 				tableName = getNormalisedName(connection, tableName);
-				ResultSet primaryKeys = connection.getMetaData().getPrimaryKeys(null, "jbossdb", tableName);
-				while(primaryKeys.next())
-				{
-					pkName = primaryKeys.getString("COLUMN_NAME");
-					if(pkName.matches("(.*)(?i)(id)"))
-					{
-						break;
-					}
-					else
-					{
-						pkName = null;
-					}
-				}
+			}
 
-				int datType = -1;
-				ResultSet resultSet = connection.getMetaData().getColumns(null, "jbossdb", tableName, null);
-				while(resultSet.next())
+			Map<String, Integer> columnNameDataType = new HashMap<>();
+			ResultSet resultSet = connection.getMetaData().getColumns(null, "jbossdb", tableName, null);
+			while(resultSet.next())
+			{
+				columnNameDataType.put(resultSet.getString("COLUMN_NAME"), Integer.parseInt(resultSet.getString("DATA_TYPE")));
+			}
+
+			ResultSet primaryKeys = connection.getMetaData().getPrimaryKeys(null, "jbossdb", tableName);
+			while(primaryKeys.next())
+			{
+				pkName = primaryKeys.getString("COLUMN_NAME");
+				if(pkName.matches("(.*)(?i)(id)") && columnNameDataType.get(pkName) == Types.BIGINT)
 				{
-					if(StringUtils.equals(pkName, resultSet.getString("COLUMN_NAME")))
+					if(isSelectQuery)
 					{
-						datType = Integer.parseInt(resultSet.getString("DATA_TYPE"));
+						Pattern allisaPattern = Pattern.compile("(?i)(select)(.*)(from)\\s+(\\w+)\\s+AS\\s+(\\w+)\\s+(.*)");
+						Matcher aliasMatcher = allisaPattern.matcher(query);
+						pkName = (aliasMatcher.matches() ? aliasMatcher.group(5) : selectQueryMatcher.group(4)).concat(".").concat(pkName);
+
 					}
+					break;
 				}
-				if(StringUtils.isEmpty(pkName) || datType != Types.BIGINT)
+				else
 				{
-					throw new AppException("Update query cannot be performed as PK column with BIGINT type is not found for this table!");
+					pkName = null;
 				}
 			}
 
@@ -286,14 +281,44 @@ public class SASService
 
 			if(isUpdateOrDelete || isInsert)
 			{
+				String userEmail = StringUtils.defaultIfBlank(ZohoService.getCurrentUserEmail(), StringUtils.EMPTY);
+				//				String allowdUsers = AppProperties.getProperty("zoho.db.modify.allowd.users", StringUtils.EMPTY);
+				//				boolean isUserNotAuthorized = StringUtils.isEmpty(userEmail) || Arrays.stream(allowdUsers.split(",")).map(StringUtils::trim).noneMatch(email-> StringUtils.equalsIgnoreCase(email, userEmail));
+				//				if(isUserNotAuthorized)
+				//				{
+				//					connection.rollback();
+				//					throw new AppException("Query cannot be executed as the current user " + userEmail + (StringUtils.isNotEmpty(userEmail) ? " " : "") +  "does not have enough permission!");
+				//				}
 				int updatedRecords = preparedStatement.executeUpdate();
-				if(updatedRecords > 1)
+				if(updatedRecords > AppProperties.getIntProperty("max.db.modify.rows", 10))
 				{
 					connection.rollback();
-					throw new AppException("Query cannot be executed as it affects more than one record");
+					throw new AppException("Query cannot be executed as it affects more than ten records");
 				}
 
 				connection.commit();
+				if(StringUtils.isNotEmpty(userEmail) && updatedRecords > 0)
+				{
+					service = service.toUpperCase();
+					if(service.split("-").length == 2)
+					{
+						service = service.split("-")[0] + " " + service.split("-")[1];
+					}
+
+					if(StringUtils.length(query) > 3000)
+					{
+						query = StringUtils.substring(query, 0, 3000) + "...";
+					}
+					String message = "Hi Team, \n\n{@" + userEmail + "} has executed below query which affected " + updatedRecords + " record(s).\n\n*Service* : " + service + "\n\n*Dataspace Name*: " + ((Map) resultMap.get("sas_meta")).get("zsid") + "\n\n*Query*: " +
+						query;
+
+					if(skipScoping)
+					{
+						message += "\n\nSAS scoping skipped by this user";
+					}
+					ZohoService.sendDBToolEventAlert(message);
+				}
+
 				resultMap.put("query_output", (isInsert ? "Insert" : (updateMatcher.matches() ? "Update" : "Delete")) + " query executed successfully");
 				return;
 			}

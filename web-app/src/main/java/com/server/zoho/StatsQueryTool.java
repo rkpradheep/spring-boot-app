@@ -64,6 +64,7 @@ public class StatsQueryTool {
             String reqId = String.valueOf(Math.abs(query.hashCode()));
 
             File file = new File(SecurityUtil.getUploadsPath() + "/" + reqId + "_inprocess.csv");
+            file.getParentFile().mkdirs();
             if (file.exists()) {
                 throw new AppException("Stats is already in running state for this query");
             }
@@ -108,11 +109,23 @@ public class StatsQueryTool {
                     LOGGER.log(Level.SEVERE, "Exception in stats job", e);
                 } finally {
                     try {
-                        File destFile = new File(file.getAbsolutePath().replace("_inprocess", ""));
-                        IOUtils.copy(new FileInputStream(destFile), new FileOutputStream(CommonService.HOME_PATH + "/uploads/" + destFile.getName()));
-                        file.renameTo(destFile);
                         if (output != null) {
                             output.close();
+                            output = null;
+                        }
+                        File destFile = new File(file.getAbsolutePath().replace("_inprocess", ""));
+                        if (file.exists() && !file.renameTo(destFile)) {
+                            LOGGER.log(Level.WARNING, "Failed to rename {0} to {1}", new Object[] {file.getAbsolutePath(), destFile.getAbsolutePath()});
+                        }
+                        if (destFile.exists() && CommonService.HOME_PATH != null) {
+                            File targetDir = new File(CommonService.HOME_PATH + "/uploads");
+                            if (!targetDir.getCanonicalFile().equals(destFile.getParentFile().getCanonicalFile())) {
+                                targetDir.mkdirs();
+                                try (FileInputStream in = new FileInputStream(destFile);
+                                     FileOutputStream out = new FileOutputStream(new File(targetDir, destFile.getName()))) {
+                                    IOUtils.copy(in, out);
+                                }
+                            }
                         }
                     } catch (Exception e) {
                         LOGGER.log(Level.SEVERE, "Exception in finally block", e);
@@ -121,7 +134,7 @@ public class StatsQueryTool {
 
             }, 1);
 
-            return Map.of("message", "Stats request initiated successfully with RequestId : " + reqId);
+            return Map.of("message", "Stats request initiated successfully with RequestId : " + reqId, "request_id", reqId);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Exception in handleStats", e);
            throw e;

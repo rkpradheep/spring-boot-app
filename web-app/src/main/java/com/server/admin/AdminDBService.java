@@ -96,40 +96,30 @@ public class AdminDBService {
 
         if (StringUtils.equals(table, "Throttle")) {
             result.put("columns", Arrays.asList("IP", "URI", "REQUEST_COUNT", "TIME_FRAME_START"));
-            result.put("pk", "");
+            result.put("pk", Collections.emptyList());
             return result;
         }
 
         DatabaseMetaData metaData = connection.getMetaData();
         List<String> columnList = new ArrayList<>();
-        List<String> bigIntColumns = new ArrayList<>();
-        String pkName = "";
+        List<String> pkColumns = new ArrayList<>();
 
         ResultSet columnResultSet = metaData.getColumns(null, null, table, null);
         while (columnResultSet.next()) {
             String columnName = columnResultSet.getString("COLUMN_NAME").toUpperCase();
             columnList.add(columnName);
-            if (columnResultSet.getInt("DATA_TYPE") == Types.BIGINT) {
-                bigIntColumns.add(columnName);
-            }
             if (StringUtils.equals("CreatedTime".toUpperCase(), columnName)) {
                 columnList.add("FormattedTime");
             }
         }
 
-        if (!bigIntColumns.isEmpty()) {
-            ResultSet primaryKeys = metaData.getPrimaryKeys(null, null, table);
-            while (primaryKeys.next()) {
-                String pk = primaryKeys.getString("COLUMN_NAME").toUpperCase();
-                if (bigIntColumns.contains(pk)) {
-                    pkName = pk;
-                    break;
-                }
-            }
+        ResultSet primaryKeys = metaData.getPrimaryKeys(null, null, table);
+        while (primaryKeys.next()) {
+            pkColumns.add(primaryKeys.getString("COLUMN_NAME").toUpperCase());
         }
 
         result.put("columns", columnList);
-        result.put("pk", pkName);
+        result.put("pk", pkColumns);
         return result;
     }
 

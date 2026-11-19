@@ -1,108 +1,320 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Upgrade TOOL</title>
-    <script type="text/javascript">
+    <title>Sign In · Zoho DB Tool</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+        (function() {
+            try {
+                var saved = localStorage.getItem('dbtool-theme');
+                var theme = (saved === 'light' || saved === 'dark') ? saved
+                    : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) {}
+        })();
     </script>
-    <link href="https://fonts.googleapis.com/css?family=Lato:100" rel="stylesheet" type="text/css">
-
     <style>
-        *, *::before, *::after {
-            box-sizing: border-box;
+        :root {
+            --brand: #529432;
+            --brand-dark: #3f7625;
+            --accent: #529432;
+            --accent-strong: #3f7625;
+            --bg: #f3f5f2;
+            --card-bg: #ffffff;
+            --text: #222;
+            --muted: #666;
+            --border: #d9d9d9;
+            --subtle-bg: #f8faf6;
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+            --focus-ring: rgba(82, 148, 50, 0.25);
+        }
+        [data-theme="dark"] {
+            --brand: #3b82f6;
+            --brand-dark: #60a5fa;
+            --accent: #3b82f6;
+            --accent-strong: #60a5fa;
+            --bg: #0f1216;
+            --card-bg: #181c22;
+            --text: #e6e9ee;
+            --muted: #9ca3af;
+            --border: #2e3338;
+            --subtle-bg: #1c2029;
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 2px 10px rgba(0, 0, 0, 0.35);
+            --focus-ring: rgba(59, 130, 246, 0.35);
+            color-scheme: dark;
         }
 
+        * { box-sizing: border-box; }
         html, body {
             height: 100%;
             margin: 0;
             padding: 0;
         }
-
         body {
-            width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 100;
-            font-family: 'Lato', sans-serif;
-            background: #f9f9f9;
-            color: #000;
+            overflow: hidden;
+            position: relative;
         }
 
-        .content {
-            background: #EDEDED;
+        body::before,
+        body::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.35;
+            z-index: 0;
+            pointer-events: none;
+        }
+        body::before {
             width: 420px;
-            padding: 24px 0 20px;
-            border-radius: 8px;
-            box-shadow: 0px 2px 4px 2px #e5e5e5;
+            height: 420px;
+            background: var(--accent);
+            top: -120px;
+            left: -120px;
+            animation: float-a 14s ease-in-out infinite;
+        }
+        body::after {
+            width: 360px;
+            height: 360px;
+            background: var(--accent-strong);
+            bottom: -100px;
+            right: -100px;
+            animation: float-b 16s ease-in-out infinite;
+        }
+        @keyframes float-a {
+            0%, 100% { transform: translate(0, 0); }
+            50%      { transform: translate(70px, 90px); }
+        }
+        @keyframes float-b {
+            0%, 100% { transform: translate(0, 0); }
+            50%      { transform: translate(-60px, -80px); }
+        }
+
+        .card {
+            position: relative;
+            z-index: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 42px 44px 32px;
+            box-shadow: var(--shadow);
+            width: 420px;
+            max-width: calc(100vw - 32px);
             text-align: center;
+            animation: card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        @keyframes card-in {
+            from { opacity: 0; transform: translateY(20px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        #loginwelcome {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 16px;
-        }
-
-        hr {
-            display: block;
-            height: 1px;
-            border: 0;
-            border-bottom: 1px solid #ccc;
-            box-shadow: 1px 1px 2px 1px #e5e5e5;
-            margin: 0 0 16px;
-            padding: 0;
-        }
-
-        #loginbyzoho {
+        .logo-chip {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            height: 49px;
-            width: 260px;
-            border-radius: 8px;
-            background: transparent;
-            border: 1px solid #ccc;
-            cursor: pointer;
+            padding: 14px 24px;
+            background: #ffffff;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
+        }
+        .logo-chip img {
+            height: 32px;
+            width: auto;
+            display: block;
         }
 
-        #loginbyzoho a {
-            display: flex;
+        h1 {
+            margin: 0 0 8px;
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: -0.3px;
+        }
+        .subtitle {
+            margin: 0 0 30px;
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .signin-btn {
+            display: inline-flex;
             align-items: center;
-            gap: 8px;
-            color: #000;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 13px 20px;
+            border-radius: 10px;
+            background: var(--accent);
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 600;
             text-decoration: none;
-            font-size: 0.9em;
-            font-weight: 900;
+            letter-spacing: 0.2px;
+            transition: background 0.2s ease, transform 0.08s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 14px -4px var(--accent);
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
         }
-
-        #loginbyzoho img {
-            height: 30px;
-            width: 86px;
-            vertical-align: middle;
+        .signin-btn:hover {
+            background: var(--brand-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px -6px var(--accent);
         }
+        .signin-btn:active { transform: translateY(0); }
+        .signin-btn.hiding { display: none; }
+        .signin-btn svg {
+            width: 18px;
+            height: 18px;
+            transition: transform 0.2s ease;
+        }
+        .signin-btn:hover svg { transform: translateX(3px); }
 
-        #loadimg {
+        .loading-state {
             display: none;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            font-size: 0.9em;
+            gap: 12px;
+            padding: 13px 20px;
+            font-size: 14px;
+            color: var(--muted);
         }
+        .loading-state.active { display: flex; }
 
-        #loadimg img {
-            width: 108px;
-            height: 54px;
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2.5px solid var(--border);
+            border-top-color: var(--accent);
+            border-right-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.85s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .footer svg { width: 12px; height: 12px; }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            width: 38px;
+            height: 38px;
+            padding: 0;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+        }
+        .theme-toggle:hover {
+            border-color: var(--accent);
+        }
+        .theme-toggle:active { transform: scale(0.94); }
+        .theme-toggle svg {
+            width: 18px;
+            height: 18px;
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div class="content">
-<!--        <div id="loginwelcome">Corp Account Sign In</div>-->
-        <hr>
-        <div id="loginbyzoho">
-            <a href="${REDIRECT_URL}">Sign In using &nbsp;<img src="https://www.zohowebstatic.com/sites/zweb/images/zoho_general_pages/zohologowhitebg.svg" alt="ZOHO" onload="hideDiv()"></a>
+    <button type="button" id="themeToggle" class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle theme">
+        <svg id="themeToggleIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+    </button>
+
+    <div class="card">
+        <div class="logo-chip">
+            <img src="https://www.zohowebstatic.com/sites/zweb/images/zoho_general_pages/zohologowhitebg.svg" alt="Zoho" />
         </div>
-        <div id="loadimg">&nbsp;&nbsp;Please wait...<img src="../images/loading.gif"></div>
+        <h1>Corp Account Sign In</h1>
+        <p class="subtitle">Sign in with your Zoho corp account to access the&nbsp;DB&nbsp;Tool.</p>
+        <a href="${REDIRECT_URL}" class="signin-btn" id="signinBtn" onclick="showLoading()">
+            Continue with Zoho
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M13 5l7 7-7 7"/>
+            </svg>
+        </a>
+        <div class="loading-state" id="loadingState">
+            <div class="spinner"></div>
+            <span>Redirecting to Zoho&hellip;</span>
+        </div>
+        <div class="footer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            Secure OAuth Login
+        </div>
     </div>
+
+    <script>
+        function showLoading() {
+            document.getElementById('signinBtn').classList.add('hiding');
+            document.getElementById('loadingState').classList.add('active');
+        }
+
+        (function() {
+            var KEY = 'dbtool-theme';
+            var moonIcon = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+            var sunIcon  = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>';
+            function render(theme) {
+                var svg = document.getElementById('themeToggleIcon');
+                var btn = document.getElementById('themeToggle');
+                if (!svg || !btn) return;
+                svg.innerHTML = theme === 'dark' ? sunIcon : moonIcon;
+                btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+                btn.setAttribute('title', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+            }
+            function current() {
+                var t = document.documentElement.getAttribute('data-theme');
+                return (t === 'light' || t === 'dark') ? t : 'light';
+            }
+            window.toggleTheme = function() {
+                var next = current() === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                try { localStorage.setItem(KEY, next); } catch (e) {}
+                render(next);
+            };
+            if (window.matchMedia) {
+                var mq = window.matchMedia('(prefers-color-scheme: dark)');
+                var mqListener = function(e) {
+                    try { if (localStorage.getItem(KEY)) return; } catch (ex) {}
+                    var next = e.matches ? 'dark' : 'light';
+                    document.documentElement.setAttribute('data-theme', next);
+                    render(next);
+                };
+                if (mq.addEventListener) mq.addEventListener('change', mqListener);
+                else if (mq.addListener) mq.addListener(mqListener);
+            }
+            render(current());
+        })();
+    </script>
 </body>
 </html>

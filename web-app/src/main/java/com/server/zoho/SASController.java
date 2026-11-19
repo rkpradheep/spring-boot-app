@@ -25,7 +25,6 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -128,7 +127,7 @@ public class SASController
 			if(isStats)
 			{
 				Map<String, String> statsResult = statsQueryTool.handleStats(credentials);
-				Map<String, Object> apiResponse = ApiResponseBuilder.success("Stats executed successfully", statsResult);
+				Map<String, Object> apiResponse = ApiResponseBuilder.success("Stats triggered successfully", statsResult);
 				return ResponseEntity.ok(apiResponse);
 			}
 
@@ -218,7 +217,7 @@ public class SASController
 
 			Map<String, Object> finalResponse = new LinkedHashMap<>();
 			finalResponse.put("sas_meta", responseMap);
-			sasService.handleQuery(query, server, clusterIP, schema, user, password, finalResponse, limits[0], limits[1], skipScoping);
+			sasService.handleQuery(query, server, clusterIP, schema, user, password, finalResponse, limits[0], limits[1], skipScoping, credentials.getString("service"));
 
 			return finalResponse;
 		}
@@ -317,34 +316,36 @@ public class SASController
 
 		Map<String, Object> result = new LinkedHashMap<>();
 		List<String> columnList = new ArrayList<>();
-		List<String> bigIntColumns = new ArrayList<>();
-		String pkName = "";
+		List<String> pkColumns = new ArrayList<>();
 		ResultSet columnResultSet = databaseMetaData.getColumns(null, "jbossdb", table, null);
 		while(columnResultSet.next())
 		{
 			String columnName = columnResultSet.getString("COLUMN_NAME").toUpperCase();
 			columnList.add(columnName);
-			if(columnResultSet.getInt("DATA_TYPE") == Types.BIGINT)
-			{
-				bigIntColumns.add(columnName);
-			}
 		}
-		if(!bigIntColumns.isEmpty())
-		{
-			ResultSet primaryKeys = connection.getMetaData().getPrimaryKeys(null, "jbossdb", table);
+		DatabaseMetaData metaData = connection.getMetaData();
 
-			while(primaryKeys.next())
-			{
-				String pk = primaryKeys.getString("COLUMN_NAME").toUpperCase();
-				if(bigIntColumns.contains(pk))
-				{
-					pkName = pk;
-					break;
-				}
-			}
+		String databaseType = metaData.getDatabaseProductName();
+
+		String catalog = null;
+		String schema = null;
+
+		if("MySQL".equalsIgnoreCase(databaseType))
+		{
+			catalog = connection.getCatalog();
+		}
+		else if("PostgreSQL".equalsIgnoreCase(databaseType))
+		{
+			schema = connection.getSchema();
+		}
+
+		ResultSet primaryKeys = metaData.getPrimaryKeys(catalog, schema, table);
+		while(primaryKeys.next())
+		{
+			pkColumns.add(primaryKeys.getString("COLUMN_NAME").toUpperCase());
 		}
 		result.put("columns", columnList);
-		result.put("pk", pkName);
+		result.put("pk", pkColumns);
 
 		return result;
 	}

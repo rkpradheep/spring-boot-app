@@ -49,7 +49,8 @@ public class SecurityUtil
 	public static final List<String> SKIP_AUTHENTICATION_ENDPOINTS = Arrays.asList(
 		"/_app/health", "/api/v1/(admin/)?authenticate", "/login(\\.html)?",
 		"((/(resources|css|js|uploads)/.*)|/favicon.ico)", "/api/v1/jobs", "/payoutlogs",
-		 "/api/v1/admin/live/logs", "/.well-known/.*","/livelogs", "(.*/(zoho|sas)/.*)"
+		 "/api/v1/admin/live/logs", "/.well-known/.*","/livelogs", "(.*/(zoho|sas)/.*)",
+		 "/api/v1/concurrency"
 	);
 	public static final Function<String, Boolean> IS_SKIP_AUTHENTICATION_ENDPOINTS = requestURI ->
 		SKIP_AUTHENTICATION_ENDPOINTS.stream().anyMatch(requestURI::matches);

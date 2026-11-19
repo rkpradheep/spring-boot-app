@@ -3,90 +3,534 @@
     <head>
         <title>DB Tool</title>
         <meta charset="utf-8" />
-        <!--<meta name="viewport" content="width=device-width, initial-scale=1.0" />-->
-         <link rel="stylesheet" href="/css/loading.css" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="/css/loading.css" />
+        <script>
+            (function() {
+                try {
+                    var saved = localStorage.getItem('dbtool-theme');
+                    var theme = (saved === 'light' || saved === 'dark')
+                        ? saved
+                        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                    document.documentElement.setAttribute('data-theme', theme);
+                } catch (e) { /* ignore */ }
+            })();
+        </script>
     </head>
     <script src="/js/common.js"></script>
     <style>
+        :root {
+            --brand: #529432;
+            --brand-dark: #3f7625;
+            --brand-light: #abdd93;
+            --brand-50: #eef7e6;
+            --accent: #529432;
+            --accent-strong: #3f7625;
+            --danger: #c0392b;
+            --danger-dark: #9d2c21;
+            --muted: #666;
+            --border: #d9d9d9;
+            --bg: #f3f5f2;
+            --card-bg: #ffffff;
+            --text: #222;
+            --label-text: #333;
+            --input-bg: #ffffff;
+            --tab-bg: #eef0ed;
+            --tab-text: #444;
+            --tab-hover-bg: #e0e3df;
+            --tab-active-bg: #ffffff;
+            --tab-active-text: var(--accent-strong);
+            --table-border: #c3dfb1;
+            --table-header-bg: #abdd93;
+            --table-header-text: #233a16;
+            --table-row-even-bg: #f6faf2;
+            --table-row-hover-bg: #eef4e8;
+            --subtle-bg: #f8faf6;
+            --isc-bg: #fbeeea;
+            --isc-hover-bg: #f6ddd6;
+            --grouped-border: #eaeaea;
+            --divider: #d4d4d4;
+            --kbd-bg: #fafafa;
+            --focus-ring: rgba(82, 148, 50, 0.15);
+            --btn-primary-bg: #529432;
+            --btn-primary-bg-hover: #3f7625;
+            --btn-primary-text: #ffffff;
+            --btn-secondary-bg: #8aa389;
+            --btn-secondary-bg-hover: #6f8a6d;
+            --btn-secondary-text: #ffffff;
+            --btn-ghost-bg: #888;
+            --btn-ghost-bg-hover: #666;
+            --btn-ghost-text: #ffffff;
+            --btn-danger-bg: #c0392b;
+            --btn-danger-bg-hover: #9d2c21;
+            --btn-danger-text: #ffffff;
+            --radius: 10px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        [data-theme="dark"] {
+            --brand: #3b82f6;
+            --brand-dark: #60a5fa;
+            --brand-light: #3e5c2a;
+            --brand-50: #1e2b14;
+            --accent: #3b82f6;
+            --accent-strong: #60a5fa;
+            --danger: #f87171;
+            --danger-dark: #ef4444;
+            --muted: #9ca3af;
+            --border: #2e3338;
+            --bg: #0f1216;
+            --card-bg: #181c22;
+            --text: #e6e9ee;
+            --label-text: #c6cbd3;
+            --input-bg: #1f242b;
+            --tab-bg: #141820;
+            --tab-text: #aab0bb;
+            --tab-hover-bg: #202631;
+            --tab-active-bg: #262c36;
+            --tab-active-text: var(--accent-strong);
+            --table-border: #2b3a44;
+            --table-header-bg: #233244;
+            --table-header-text: #cfe3ff;
+            --table-row-even-bg: #1d222a;
+            --table-row-hover-bg: #232935;
+            --subtle-bg: #1c2029;
+            --isc-bg: #3b1f1f;
+            --isc-hover-bg: #4b2727;
+            --grouped-border: #262b33;
+            --divider: #2a3038;
+            --kbd-bg: #1f242b;
+            --focus-ring: rgba(59, 130, 246, 0.35);
+            --btn-primary-bg: #3b82f6;
+            --btn-primary-bg-hover: #2563eb;
+            --btn-primary-text: #ffffff;
+            --btn-secondary-bg: #475569;
+            --btn-secondary-bg-hover: #334155;
+            --btn-secondary-text: #e6e9ee;
+            --btn-ghost-bg: #3f4650;
+            --btn-ghost-bg-hover: #2d333b;
+            --btn-ghost-text: #e6e9ee;
+            --btn-danger-bg: #ef4444;
+            --btn-danger-bg-hover: #dc2626;
+            --btn-danger-text: #ffffff;
+            --shadow: 0 1px 3px rgba(0,0,0,0.5), 0 2px 10px rgba(0,0,0,0.35);
+            color-scheme: dark;
+        }
+
+        * { box-sizing: border-box; }
+
+        html { overflow-y: scroll; }
+
         body {
             margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 24px;
         }
-        html {
-            overflow-y: scroll;
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--brand);
         }
+        .page-header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--brand-dark);
+        }
+        .page-header .subtitle {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+        }
+        .card-title {
+            margin: 0 0 14px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--brand-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .form-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .form-row > label,
+        .field-label {
+            font-weight: 500;
+            color: var(--label-text);
+            min-width: 140px;
+        }
+        .field-label-sm {
+            font-weight: 500;
+            color: var(--label-text);
+        }
+
+        input[type="text"],
+        input[type="password"],
+        select,
+        textarea {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            background: var(--input-bg);
+            color: var(--text);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            outline: none;
+        }
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px var(--focus-ring);
+        }
+        input[type="text"],
+        input[type="password"] {
+            height: 32px;
+        }
+        select {
+            height: 32px;
+            cursor: pointer;
+        }
+        textarea {
+            min-height: 110px;
+            resize: vertical;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 13px;
+            padding: 10px;
+        }
+
+        input[type="checkbox"],
+        input[type="radio"] {
+            cursor: pointer;
+            accent-color: var(--brand);
+            margin: 0;
+        }
+
+        .checkbox-label,
+        .radio-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+
         button {
-            background-color: rgba(76, 175, 80);
+            background-color: var(--btn-primary-bg);
             border: none;
-            color: white;
-            padding: 5px 12px;
+            color: var(--btn-primary-text);
+            padding: 7px 14px;
             text-align: center;
             text-decoration: none;
             display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
+            font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
-            -webkit-transition-duration: 0.4s; /* Safari */
-            transition-duration: 0.4s;
-            border-radius: 10px
+            transition: background-color 0.2s ease, transform 0.05s ease, box-shadow 0.2s ease;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+        button:hover { background-color: var(--btn-primary-bg-hover); }
+        button:active { transform: translateY(1px); }
+        button.secondary {
+            background-color: var(--btn-secondary-bg);
+            color: var(--btn-secondary-text);
+        }
+        button.secondary:hover { background-color: var(--btn-secondary-bg-hover); }
+        button.ghost {
+            background-color: var(--btn-ghost-bg);
+            color: var(--btn-ghost-text);
+        }
+        button.ghost:hover { background-color: var(--btn-ghost-bg-hover); }
+        button.danger {
+            background-color: var(--btn-danger-bg);
+            color: var(--btn-danger-text);
+        }
+        button.danger:hover { background-color: var(--btn-danger-bg-hover); }
+        button.small { padding: 4px 10px; font-size: 12px; border-radius: 5px; }
+
+        .button-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
         }
 
-        button:hover {
-            background-color: rgba(76, 175, 80, 0.8)
+        .bulk-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--danger);
+            border-radius: 6px;
+            background: var(--table-row-hover-bg);
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        .bulk-bar .bulk-count { font-size: 13px; }
+        .bulk-bar .bulk-count b { color: var(--danger); }
+        .bulk-bar .spacer { flex: 1; }
+
+        .dbtool-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9998;
+        }
+        .dbtool-modal {
+            background: var(--card-bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px 22px;
+            width: min(460px, 92vw);
+            max-height: 90vh;
+            overflow: auto;
+        }
+        .dbtool-modal-title {
+            margin: 0 0 6px 0;
+            font-size: 16px;
+            color: var(--accent-strong);
+        }
+        .dbtool-modal-sub {
+            margin: 0 0 14px 0;
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .dbtool-modal-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .dbtool-modal-row .field-label { min-width: 110px; }
+        .dbtool-modal-row select,
+        .dbtool-modal-row input {
+            flex: 1;
+        }
+        .dbtool-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .dbtool-query-preview {
+            background: var(--subtle-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 12px;
+            color: var(--text);
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 260px;
+            overflow: auto;
+            margin: 0 0 12px 0;
+        }
+        .dbtool-modal-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            margin: 10px 0 0 0;
+            padding: 8px 10px;
+            background: var(--brand-50);
+            border: 1px solid var(--brand-light);
+            border-radius: 6px;
+            font-size: 11.5px;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+        .dbtool-modal-note .dbtool-note-icon {
+            color: var(--accent-strong);
+            font-weight: 700;
         }
 
         option:hover {
             cursor: pointer;
-            background-color: #d3d3d3;
+            background-color: var(--tab-hover-bg);
         }
 
         .fixTableHead {
             overflow: auto;
             max-height: 500px;
             width: 100%;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
         }
         .fixTableHead thead th {
             position: sticky;
             top: 0;
+            z-index: 2;
         }
         table {
             border-collapse: collapse;
+            font-size: 13px;
+            width: 100%;
         }
         th,
         td {
             padding: 8px 15px;
-            border: 2px solid #529432;
+            border: 1px solid var(--table-border);
             max-width: 500px;
             word-wrap: break-word;
+            vertical-align: top;
         }
         th {
-            background: #abdd93;
+            background: var(--table-header-bg);
+            color: var(--table-header-text);
+            text-align: left;
         }
-
-        tr:nth-child(even) {
-            background-color: #dddddd;
-        }
+        tr:nth-child(even) { background-color: var(--table-row-even-bg); }
+        tbody tr:hover { background-color: var(--table-row-hover-bg); }
 
         .table-search-input {
-            width: 200px;
-            height: 25px;
-            padding: 2px 5px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            font-size: 14px;
+            width: 220px;
+            height: 32px;
         }
         .cell-content {
             max-height: 80px;
             overflow: hidden;
             white-space: pre-wrap;
         }
-        .cell-content.expanded {
+        .cell-content.expanded { max-height: none; }
+        .cell-content.editable-cell {
+            cursor: text;
+            min-height: 20px;
+            min-width: 20px;
+            border-radius: 3px;
+            transition: outline 0.12s ease, background 0.12s ease;
+            outline: 1px dashed transparent;
+            outline-offset: -1px;
+        }
+        .cell-content.editable-cell:hover {
+            outline-color: var(--border);
+            background: var(--subtle-bg);
+        }
+        .cell-content.editable-cell:focus {
+            outline: 2px solid var(--accent);
+            background: var(--input-bg);
             max-height: none;
+            overflow: visible;
+            white-space: pre;
+        }
+        .cell-content.editable-cell.cell-dirty {
+            outline: 2px solid var(--accent);
+            background: var(--input-bg);
+        }
+
+        .info-btn {
+            background: transparent;
+            color: var(--muted);
+            border: 1.5px solid var(--border);
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            border-radius: 50%;
+            font-size: 11px;
+            font-weight: 700;
+            font-style: italic;
+            font-family: Georgia, "Times New Roman", serif;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 10px;
+            vertical-align: middle;
+            text-transform: none;
+            letter-spacing: 0;
+            transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+        }
+        .info-btn:hover {
+            color: var(--accent-strong);
+            border-color: var(--accent);
+            background: var(--subtle-bg);
+        }
+        .info-btn.active {
+            color: #fff;
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .info-popover {
+            position: absolute;
+            top: 52px;
+            left: 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 18px;
+            box-shadow: var(--shadow);
+            font-size: 13px;
+            z-index: 100;
+            max-width: 360px;
+            min-width: 280px;
+            animation: dbtool-popover-in 0.18s ease-out;
+        }
+        .info-popover h4 {
+            margin: 0 0 8px 0;
+            font-size: 12px;
+            color: var(--accent-strong);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+        }
+        .info-popover ul {
+            margin: 0;
+            padding-left: 18px;
+            color: var(--text);
+            line-height: 1.7;
+        }
+        .info-popover li { margin-bottom: 2px; }
+        .info-popover kbd {
+            background: var(--kbd-bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 11px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            color: var(--text);
+        }
+        @keyframes dbtool-popover-in {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .read-more-btn {
             display: none;
             background: none;
             border: none;
-            color: #529432;
+            color: var(--brand);
             font-size: 11px;
             cursor: pointer;
             padding: 2px 0;
@@ -94,208 +538,1483 @@
             font-weight: bold;
             text-decoration: underline;
         }
+
+        #queryOutput td { position: relative; }
+        .cell-menu-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            display: none;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 1px 5px;
+            border-radius: 3px;
+            opacity: 0.9;
+        }
+        #queryOutput td:hover > .cell-menu-btn,
+        .cell-menu-btn.pinned { display: inline-block; }
+        .cell-menu {
+            position: fixed;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+            padding: 4px;
+            z-index: 100;
+            min-width: 140px;
+        }
+        .cell-menu button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            color: var(--text);
+            padding: 6px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        .cell-menu button:hover { background: var(--table-row-hover-bg); }
+        .cell-menu .danger-item { color: var(--danger); }
+
+        .nl-decrypt-btn {
+            background: var(--accent);
+            color: #fff;
+            border: 1px solid var(--accent-strong);
+            padding: 4px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .nl-decrypt-btn:hover { background: var(--accent-strong); }
+
+        .nl-modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none; align-items: flex-start; justify-content: center;
+            padding-top: 60px;
+            z-index: 9999;
+        }
+        .nl-modal-overlay.visible { display: flex; }
+        .nl-modal-box {
+            background: var(--card-bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            width: min(960px, 94vw);
+            max-height: 85vh;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .nl-modal-head {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        }
+        .nl-modal-head h3 { margin: 0; font-size: 15px; color: var(--accent-strong); }
+        .nl-modal-sub {
+            font-size: 11.5px; color: var(--muted);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            word-break: break-all;
+        }
+        .nl-modal-body { padding: 16px 20px; overflow: auto; flex: 1; }
+        .nl-modal-foot {
+            padding: 10px 20px;
+            border-top: 1px solid var(--border);
+            background: var(--subtle-bg);
+            display: flex; justify-content: flex-end; gap: 8px;
+        }
+        .nl-result-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .nl-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 4px; background: var(--subtle-bg); border: 1px solid var(--border); color: var(--muted); }
+        .nl-badge-ok  { background: var(--brand-50); color: var(--accent-strong); border-color: var(--brand-light); }
+        .nl-badge-err { background: #fdecea; color: var(--danger); border-color: #f5c6c0; }
+        .nl-result-time { font-size: 12px; color: var(--muted); }
+
+        .nl-detail-table { width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+        .nl-detail-table th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 8px 14px; border-bottom: 1px solid var(--border); background: var(--subtle-bg); }
+        .nl-detail-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .nl-detail-table td:first-child { color: var(--muted); font-size: 12px; white-space: nowrap; width: 200px; font-weight: 500; }
+        .nl-detail-table td:last-child { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; color: var(--text); word-break: break-all; }
+        .nl-detail-table tr:last-child td { border-bottom: none; }
+        .nl-payload-cell { display: block; max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.5; }
+        .nl-code { position: relative; background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 76px 8px 12px; }
+        .nl-code .nl-payload-cell { max-height: 260px; }
+        .nl-copy { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border: 1px solid var(--border); border-radius: 4px; background: var(--card-bg); color: var(--text); font-size: 11.5px; cursor: pointer; }
+        .nl-copy:hover { background: var(--subtle-bg); }
+        .nl-copy.copied { color: var(--accent-strong); border-color: var(--brand-light); background: var(--brand-50); }
+        .nl-code .nl-copy { position: absolute; top: 6px; right: 6px; }
+        .nl-raw { background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; word-break: break-all; max-height: 420px; overflow: auto; color: var(--text); margin: 0; }
+
+        #query {
+            width: 100%;
+            max-width: 720px;
+        }
+        #autocomplete-container {
+            margin-top: 6px;
+            height: 80px;
+            width: 260px;
+            overflow-y: scroll;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+        #output {
+            width: 100%;
+            max-width: 720px;
+            min-height: 150px;
+            color: var(--danger);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 13px;
+            background: var(--input-bg);
+        }
+        #suggestionHint {
+            font-size: 11px;
+            color: var(--muted);
+            margin: 4px 0;
+        }
+
+        .inline-input { width: 200px; }
+        .inline-input-sm { width: 160px; }
+        .inline-input-md { width: 260px; }
+        .inline-input-lg { width: 400px; }
+
+        .hint {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            background: var(--subtle-bg);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 3px solid var(--brand);
+        }
+        .hint b { color: var(--brand-dark); }
+
+        .isc-value {
+            color: var(--danger);
+            cursor: pointer;
+            font-weight: 500;
+            padding: 6px 10px;
+            display: inline-block;
+            background: var(--isc-bg);
+            border-radius: 6px;
+            margin: 8px 0 0 0;
+            word-break: break-all;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 13px;
+        }
+        .isc-value:hover { background: var(--isc-hover-bg); }
+        .isc-value:empty { display: none; }
+
+        .ear-result {
+            color: var(--danger);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            word-break: break-all;
+            margin: 10px 0 0 0;
+            font-size: 13px;
+        }
+        .ear-result:empty { display: none; }
+
+        .taskengine-result {
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: var(--subtle-bg);
+            border-radius: 6px;
+            border-left: 3px solid var(--brand);
+            font-size: 13px;
+        }
+        .taskengine-result:empty { display: none; }
+
+        .grouped-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 10px 0;
+            border-bottom: 1px dashed var(--grouped-border);
+        }
+        .grouped-row:last-child { border-bottom: none; }
+        .grouped-row .field-label { min-width: 200px; }
+
+        .section-divider {
+            margin: 14px 0 10px 0;
+            border: none;
+            border-top: 1px dashed var(--divider);
+        }
+
+        .action-tabs {
+            display: inline-flex;
+            background: var(--tab-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 3px;
+            margin-bottom: 12px;
+            gap: 2px;
+        }
+        .action-tab {
+            background: transparent;
+            color: var(--tab-text);
+            border: none;
+            padding: 6px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .action-tab:hover {
+            background: var(--tab-hover-bg);
+            color: var(--text);
+        }
+        .action-tab.active {
+            background: var(--tab-active-bg);
+            color: var(--tab-active-text);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        }
+        .action-tab.active.danger-tab {
+            color: var(--danger);
+        }
+
+        .theme-toggle {
+            background: var(--tab-bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+        }
+        .theme-toggle:hover {
+            background: var(--tab-hover-bg);
+            border-color: var(--brand);
+        }
+        .theme-toggle:active { transform: scale(0.94); }
+        .theme-toggle svg { width: 18px; height: 18px; display: block; }
+
+        .section-tabs {
+            display: flex;
+            gap: 2px;
+            border-bottom: 1px solid var(--border);
+            margin: 0 0 20px 0;
+            flex-wrap: wrap;
+            padding: 0;
+        }
+        .section-tab {
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            letter-spacing: 0.2px;
+            transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+        }
+        .section-tab:hover {
+            color: var(--text);
+            background: var(--tab-hover-bg);
+        }
+        .section-tab.active {
+            color: var(--accent-strong);
+            border-bottom-color: var(--accent);
+            background: transparent;
+        }
+
+        #loading {
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at center, rgba(15, 22, 35, 0.75) 0%, rgba(3, 6, 12, 0.96) 70%),
+                radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(82, 148, 50, 0.08) 0%, transparent 40%);
+            -webkit-backdrop-filter: blur(10px) saturate(0.85);
+            backdrop-filter: blur(10px) saturate(0.85);
+            z-index: 9999;
+            color: transparent;
+            font-size: 0;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 42px;
+            animation: dbtool-overlay-in 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        #loading[style*="block"] { display: flex !important; }
+
+        #pageContent {
+            transition: transform 0.4s ease, filter 0.4s ease;
+        }
+        html:has(#loading[style*="block"]) #pageContent {
+            filter: blur(4px) brightness(0.62) saturate(0.85);
+            transform: scale(0.985);
+            pointer-events: none;
+        }
+
+        /* Hypnotic swirling vortex around the central bullseye.
+           Two counter-rotating conic gradients masked to a ring. */
+        #loading::before,
+        #loading::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 180vmax;
+            height: 180vmax;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            border-radius: 50%;
+        }
+        #loading::before {
+            background: conic-gradient(
+                from 0deg,
+                transparent 0deg,
+                rgba(59, 130, 246, 0.35) 55deg,
+                transparent 110deg,
+                rgba(82, 148, 50, 0.28) 180deg,
+                transparent 240deg,
+                rgba(59, 130, 246, 0.4) 310deg,
+                transparent 360deg
+            );
+            -webkit-mask: radial-gradient(circle at center, transparent 90px, #000 180px, #000 46%, transparent 72%);
+                    mask: radial-gradient(circle at center, transparent 90px, #000 180px, #000 46%, transparent 72%);
+            animation: dbtool-vortex 14s linear infinite;
+            filter: blur(14px);
+        }
+        #loading::after {
+            background: conic-gradient(
+                from 180deg,
+                transparent 0deg,
+                rgba(255, 255, 255, 0.18) 30deg,
+                transparent 70deg,
+                rgba(59, 130, 246, 0.25) 150deg,
+                transparent 210deg,
+                rgba(82, 148, 50, 0.22) 280deg,
+                transparent 340deg
+            );
+            -webkit-mask: radial-gradient(circle at center, transparent 130px, #000 220px, #000 55%, transparent 80%);
+                    mask: radial-gradient(circle at center, transparent 130px, #000 220px, #000 55%, transparent 80%);
+            animation: dbtool-vortex-reverse 22s linear infinite;
+            filter: blur(22px);
+            opacity: 0.9;
+        }
+
+        @keyframes dbtool-vortex {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        @keyframes dbtool-vortex-reverse {
+            to { transform: translate(-50%, -50%) rotate(-360deg); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            html:has(#loading[style*="block"]) #pageContent {
+                filter: blur(2px) brightness(0.8);
+                transform: none;
+            }
+            #loading::before,
+            #loading::after { animation: none; opacity: 0.35; }
+        }
+
+        .loader-stage {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            z-index: 2;
+            animation: dbtool-stage-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .loader-label { position: relative; z-index: 2; }
+
+        .loader-glow {
+            position: absolute;
+            inset: 15px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--accent) 0%, transparent 65%);
+            filter: blur(22px);
+            opacity: 0.45;
+            animation: dbtool-glow 2.4s ease-in-out infinite;
+        }
+
+        .loader-ring {
+            position: absolute;
+            border-radius: 50%;
+            border-style: solid;
+            border-color: transparent;
+            box-sizing: border-box;
+        }
+        .loader-ring-outer {
+            inset: 0;
+            border-width: 2px;
+            border-top-color: var(--accent);
+            border-right-color: var(--accent);
+            animation: dbtool-spin 1.8s linear infinite;
+            filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.45));
+        }
+        .loader-ring-middle {
+            inset: 22px;
+            border-width: 2px;
+            border-bottom-color: var(--accent-strong);
+            border-left-color: var(--accent-strong);
+            animation: dbtool-spin-reverse 1.3s linear infinite;
+            opacity: 0.9;
+        }
+        .loader-ring-inner {
+            inset: 44px;
+            border-width: 2px;
+            border-top-color: #ffffff;
+            border-right-color: rgba(255, 255, 255, 0.35);
+            animation: dbtool-spin 0.9s linear infinite;
+        }
+        .loader-core {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 14px;
+            height: 14px;
+            background: #ffffff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 24px rgba(255, 255, 255, 0.85), 0 0 48px var(--accent);
+            animation: dbtool-core 1.6s ease-in-out infinite;
+        }
+        .loader-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--accent-strong);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            box-shadow: 0 0 10px var(--accent-strong);
+        }
+        .loader-particle-1 { animation: dbtool-orbit 3s linear infinite; }
+        .loader-particle-2 { animation: dbtool-orbit 3s linear infinite; animation-delay: -0.75s; }
+        .loader-particle-3 { animation: dbtool-orbit 3s linear infinite; animation-delay: -1.5s; }
+        .loader-particle-4 { animation: dbtool-orbit 3s linear infinite; animation-delay: -2.25s; }
+
+        .loader-label {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            letter-spacing: 4px;
+            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.6), 0 0 30px var(--accent);
+            animation: dbtool-label-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+        }
+        .loader-dots {
+            display: inline-flex;
+            gap: 1px;
+            letter-spacing: 0;
+        }
+        .loader-dots span {
+            animation: dbtool-dot 1.4s infinite;
+            display: inline-block;
+        }
+        .loader-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loader-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dbtool-overlay-in {
+            from { opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+            to { opacity: 1; }
+        }
+        @keyframes dbtool-stage-in {
+            0% { transform: scale(0.4); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes dbtool-label-in {
+            from { opacity: 0; transform: translateY(6px); letter-spacing: 8px; }
+            to { opacity: 1; transform: translateY(0); letter-spacing: 4px; }
+        }
+        @keyframes dbtool-spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes dbtool-spin-reverse {
+            to { transform: rotate(-360deg); }
+        }
+        @keyframes dbtool-glow {
+            0%, 100% { opacity: 0.3; transform: scale(0.85); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
+        @keyframes dbtool-core {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
+            50% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+        }
+        @keyframes dbtool-orbit {
+            0%   { transform: translate(-50%, -50%) rotate(0deg) translateX(70px) rotate(0deg); opacity: 0; }
+            10%  { opacity: 1; }
+            90%  { opacity: 1; }
+            100% { transform: translate(-50%, -50%) rotate(360deg) translateX(70px) rotate(-360deg); opacity: 0; }
+        }
+        @keyframes dbtool-dot {
+            0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+            30% { opacity: 1; transform: translateY(-3px); }
+        }
     </style>
-    <body style="padding:30px">
-        <div class="loading" id="loading" style="display:none">Loading&#8230;</div>
-        <br/>
-        <br/>
-        Product &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        <select id="product" onchange="getDBCredential(true)">
-        <option value="custom">CUSTOM</option>
-        </select>
-        <br />
-         <br />
-        <div id="credentials_box" style="display:none">
-        <form>
-            Server &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" id="mysql" name="server" value="mysql" />
-            <label for="mysql">MySql</label>
-            <input type="radio" id="postgresql" name="server" value="postgresql" />
-            <label for="postgresql">Postgresql</label>
-        </form>
-        Main Cluster IP &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="text" id="ip" style="width: 400px; height: 25px;" /><br />
-        <br />
-        User &nbsp;&nbsp;&nbsp&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="text" id="user" style="width: 400px; height: 25px;" />
-        <br />
-        <br />
-        Password &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="password" id="password" style="width: 400px; height: 25px;" /><br />
-        </div>
-        <!-- <select name="columnList" id="columnList">
-            <option value="" disabled selected>COLUMN</option>
-        </select> -->
-        <br />
-        <br />
-      <!--  Enter either ZSID or PK Value : <br />
-        <br /> -->
-        DataSpace Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="text" id="zsid" list="zsidOptions" style="width: 150px; height: 25px;" autocomplete="off" onchange="handleZsidChange()" /><datalist id="zsidOptions"></datalist><br /><br />
-        <!-- PK Value &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
-        <input type="text" id="pk" style="width: 200px; height: 19px;display: none" placeholder="PK"/><br />
-        <input type="checkbox" id="skip_scoping"> SKIP SAS SCOPE &nbsp;&nbsp</br>
-        <!--<p>Click on <b>Enable Autocomplete and Quick Execution</b> button to enable intellisense support.</p>-->
-        <button id="quickExe" onclick="getTables()">Populate tables</button><br />
-        <div id="tableSelection" style="display: none;">
-            Table&nbsp;&nbsp;&nbsp;
-            <input type="text" class="table-search-input" id="tableListSearch" list="tableListOptions" placeholder="Search tables..." onchange="handleTableListChange()" autocomplete="off">
-            <datalist id="tableListOptions"></datalist>
-            <select name="tableList" id="tableList" onchange="handleTableListChange()" style="display: none;">
-                <option value="" disabled selected>Loading .. </option>
-            </select>
-            &nbsp;&nbsp;&nbsp;Limit :
-            <select name="recordLimit" id="recordLimit" onchange="handleLimitChange()">
-                <option value="50" selected>50</option>
-                <option value="100">100</option>
-                <option value="1000">1000</option>
-                <option value="5000">5000</option>
-            </select>
-            &nbsp;&nbsp;&nbsp <button onclick="refreshTable()">REFRESH</button>
-            <br>
-             SET &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp; <select name="columnListForSet" id="columnListForSet">
-                   <option value="" disabled selected>Loading .. </option>
-             </select>
-             &nbsp;&nbsp;&nbsp<input type="text" id="set_column_value"/> <br/>
-
-             WHERE &nbsp;&nbsp;&nbsp; <select name="columnListForWhere" id="columnListForWhere">
-                   <option value="" disabled selected>Loading .. </option>
-             </select>
-             &nbsp;&nbsp;&nbsp<input type="text" id="where_column_value"/>
-            &nbsp;&nbsp;&nbsp<button onclick="updateRow()">UPDATE</button> &nbsp;&nbsp;&nbsp
-            <button style='background-color:red' onclick="deleteRow()">DELETE</button>
-
-        </div>
-        <br />
-        <br />
-        <br />
-        <div id="queryOutputContainer" style="display: none;max-width: fit-content;" class="fixTableHead"><table id="queryOutput"></table></div>
-        <br />
-        <br />
-
-        <b>Plain Query</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br />
-        <br />
-        <textarea id="query" rows="10" cols="50" style="height: 100px; width: 500px;"> </textarea><br />
-        <p style="font-size: 11px; display: none;" id="suggestionHint">* Click on the matching suggestion to autocomplete</p>
-        <select id="autocomplete-container" style="height: 80px; width: 250px; overflow-y: scroll; display: none;"></select>
-        <br />
-        <button onclick="execute()">Execute</button><button onclick="runStats()">Run As Stats</button> <button onclick="window.open('/sasstats')">View Stats</button><br />
-        <br />
-        <br />
-        <div id="response" style="display: none;">
-            <textarea readonly id="output" name="output" rows="10" cols="50" style="font-size: 18px;color:red"></textarea>
+    <body>
+        <div class="loading" id="loading" style="display:none">
+            <div class="loader-stage">
+                <div class="loader-glow"></div>
+                <div class="loader-ring loader-ring-outer"></div>
+                <div class="loader-ring loader-ring-middle"></div>
+                <div class="loader-ring loader-ring-inner"></div>
+                <div class="loader-core"></div>
+                <div class="loader-particle loader-particle-1"></div>
+                <div class="loader-particle loader-particle-2"></div>
+                <div class="loader-particle loader-particle-3"></div>
+                <div class="loader-particle loader-particle-4"></div>
+            </div>
+            <div class="loader-label">
+                <span class="loader-text">LOADING</span>
+                <span class="loader-dots"><span>.</span><span>.</span><span>.</span></span>
+            </div>
         </div>
 
+        <div id="pageContent">
+        <div class="page-header">
+            <h1>Zoho DB Tool</h1>
+            <button type="button" id="themeToggle" class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle theme">
+                <svg id="themeToggleIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+            </button>
+        </div>
+        <script>
+            (function() {
+                var KEY = 'dbtool-theme';
+                var moonIcon = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+                var sunIcon  = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>';
+                function render(theme) {
+                    var svg = document.getElementById('themeToggleIcon');
+                    var btn = document.getElementById('themeToggle');
+                    if (!svg || !btn) return;
+                    svg.innerHTML = theme === 'dark' ? sunIcon : moonIcon;
+                    btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+                    btn.setAttribute('title', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+                }
+                function current() {
+                    var t = document.documentElement.getAttribute('data-theme');
+                    return (t === 'light' || t === 'dark') ? t : 'light';
+                }
+                window.toggleTheme = function() {
+                    var next = current() === 'dark' ? 'light' : 'dark';
+                    document.documentElement.setAttribute('data-theme', next);
+                    try { localStorage.setItem(KEY, next); } catch (e) {}
+                    render(next);
+                };
+                if (window.matchMedia) {
+                    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+                    var mqListener = function(e) {
+                        try { if (localStorage.getItem(KEY)) return; } catch (ex) {}
+                        var next = e.matches ? 'dark' : 'light';
+                        document.documentElement.setAttribute('data-theme', next);
+                        render(next);
+                    };
+                    if (mq.addEventListener) mq.addEventListener('change', mqListener);
+                    else if (mq.addListener) mq.addListener(mqListener);
+                }
+                render(current());
+            })();
+        </script>
 
-        <br />
-        <br />
-        Product &nbsp;&nbsp;&nbsp;&nbsp;
-        <select id="isc_product">
-        </select>
-        <button onclick="generateIsc()">GENERATE ISC</button>
-        <p id="isc" style="color:red;cursor:pointer" onclick="copyToClipboard(document.getElementById('isc').innerHTML)"></p>
-        <br>
-        <select id="test_org_products">
-            <option value="payout-local">PAYOUT LOCAL</option>
-            <option value="books-local">BOOKS LOCAL</option>
-            <option value="payout-csez">PAYOUT CSEZ</option>
-        </select>&nbsp;&nbsp;ZSID &nbsp;&nbsp;<input type="text" id="test_org_zsid"/> <button onclick="markAsTestOrPaidOrg(false)">Mark As Test Org</button>
-        <br>
-        <select id="non_test_org_products">
-            <option value="payout-local">PAYOUT LOCAL</option>
-            <option value="books-local">BOOKS LOCAL</option>
-            <option value="payout-csez">PAYOUT CSEZ</option>
-        </select>&nbsp;&nbsp;ZSID &nbsp;&nbsp;<input type="text" id="non_test_org_zsid"/> <button onclick="markAsNonTestOrg(false)">Mark As Non Test Org</button>
-        <br>
-        <select id="paid_org_products">
-            <option value="books-local">BOOKS LOCAL</option>
-            <option value="erp-local">ERP LOCAL</option>
-        </select>&nbsp;&nbsp;ZSID &nbsp;&nbsp;<input type="text" id="paid_org_zsid"/> <button onclick="markAsTestOrPaidOrg(true)">Mark As Paid Org</button>
-        <br>
-        <select id="org_count_increase_products">
-            <option value="books-local">BOOKS LOCAL</option>
-        </select>&nbsp;&nbsp;ZUID &nbsp;&nbsp;<input type="text" id="org_count_increase_zuid"/> &nbsp;&nbsp;Count &nbsp;&nbsp;<input type="text" id="org_count_increase_value"/> <button onclick="increaseOrgCount()">Update Free Org Creation Count</button>
-        <br>
-        <input type="text" id="erp-unique-id" placeholder="ERP Unique ID"/>
-        <button onclick="setupSBI()">Setup SBI</button>
-        <br>
-        <br>
-        <br>
-         Product &nbsp;
-        <select id="ear_product">
-        </select>
-         &nbsp;&nbsp;&nbsp;Key Label &nbsp;<input type="text" id="key_label"/>
-         &nbsp;&nbsp;&nbsp;Cipher Text &nbsp;<input type="text" id="cipher_text"/>
-         &nbsp;&nbsp;&nbsp; <input type="checkbox" id="is_oek"> IS OEK &nbsp;&nbsp;
-         &nbsp;&nbsp;&nbsp;<input type="checkbox" id="is_searchable" checked> IS SEARCHABLE &nbsp;&nbsp
-        <button onclick="doEARDecrypt()">EAR DECRYPT</button>
-        <p id="ear_decrypted" style="color:red"></p>
-        <br>
-        <br>
-         Product &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        <select id="taskengine_product" onchange="doTaskEngineProductSwitchChanges()">
-        </select>
-         &nbsp;&nbsp;&nbsp;ThreadPool Name &nbsp;&nbsp;<select id="thread_pool" onchange="handleThreadPoolChange()">
-         </select>
-         <input type="text" id="thread_pool_custom" placeholder="Enter thread pool name" style="display:none;margin-left: 5px;">
-        <div id="idc_jobs_container" style="display:none">
-          &nbsp;&nbsp;&nbsp;User Id &nbsp;&nbsp;&nbsp;<input type="text" id="user_id"/>
-         &nbsp;&nbsp;&nbsp;Customer Id  &nbsp;<input type="text" id="customer_id"/>
-        </div>
-        <div id="local_jobs_container" style="display:inline">
-         &nbsp;&nbsp;DataSpace Name &nbsp;&nbsp;&nbsp;<input type="text" id="dataspace_id"/>
-        </div>
-        <br>
-           <label for="jobEntity-manage">JOB</label>
-            <input type="radio" name="taskengine-manage" value="jobEntity-manage" checked onclick="doChangeForTaskEngineManagement()"/>
-             &nbsp;&nbsp;&nbsp;<label for="repetition-manage">REPETITION</label>
-            <input type="radio" name="taskengine-manage" value="repetition-manage" onclick="doChangeForTaskEngineManagement()"/>
-                  <br>
-                  <br>
-         <div id="jobEntity-management">
-         &nbsp;&nbsp;&nbsp; <input type="checkbox" id="is_repetitive" style="margin-left:-15" onchange="changeIsRepetitive()"> IS REPETITIVE &nbsp;&nbsp;
-        <br>
-         Job ID &nbsp;&nbsp;<input type="text" id="job_id"/>
-         <label id="repetition_label" style="display:none"> &nbsp;&nbsp;&nbsp;Repetition Name &nbsp;&nbsp;</label><input type="text" id="repetition" style="display:none"/>
-         &nbsp;&nbsp;&nbsp;Retry Repetition Name &nbsp;&nbsp;<input type="text" id="retry_repetition"/>
-         &nbsp;&nbsp;&nbsp;Class Name &nbsp;<input type="text" id="class_name"/>
-         <label id="delay_seconds_label"> &nbsp;&nbsp;&nbsp;Delay second(s)</label> &nbsp;<input type="text" id="delay_seconds"/>
-        <br>
-        <button onclick="getJobDetails()">FETCH JOB DETAILS</button>
-        <button onclick="addOrUpdateJob()">ADD OR UPDATE JOB</button>
-        <button onclick="deleteJob()">DELETE JOB</button>
-        </div>
-        <div id="repetition-management" style="display:none">
-         Repetition Name &nbsp;<input type="text" id="repetition_name"/>
-          &nbsp; &nbsp;Is Common &nbsp;<input type="checkbox" id="is_common" onchange="showAlertForIsCommon()"/>
+        <nav class="section-tabs" role="tablist">
+            <button type="button" class="section-tab active" data-panel="dbtool" onclick="switchSectionTab('dbtool')">DB Tool</button>
+            <button type="button" class="section-tab" data-panel="isc" onclick="switchSectionTab('isc')">ISC</button>
+            <button type="button" class="section-tab" data-panel="org" onclick="switchSectionTab('org')">Org Management</button>
+            <button type="button" class="section-tab" data-panel="ear" onclick="switchSectionTab('ear')">EAR Decrypt</button>
+            <button type="button" class="section-tab" data-panel="taskengine" onclick="switchSectionTab('taskengine')">Task Engine</button>
+        </nav>
+        <script>
+            function switchSectionTab(id) {
+                document.querySelectorAll('.section-tab').forEach(function(t) {
+                    t.classList.toggle('active', t.getAttribute('data-panel') === id);
+                });
+                document.querySelectorAll('.section-panel').forEach(function(p) {
+                    p.style.display = p.getAttribute('data-panel') === id ? '' : 'none';
+                });
+                try { localStorage.setItem('dbtool-section', id); } catch (e) {}
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        </script>
 
-          <label for="periodicity" id="periodicity_label">  &nbsp;&nbsp;&nbsp;Periodicity &nbsp;</label>
-        <input type="text" id="periodicity" placeholder="Enter seconds"/>
-          <label for="frequency" id="frequency_label" style="display:none"> &nbsp;&nbsp;&nbsp;Frequency &nbsp;</label>
-                 <select id="frequency" style="display:none" onclick="doChangeForFrequency()">
-                 <option value="daily">DAILY</option>
-                 <option value="weekly">WEEKLY</option>
-                 <option value="monthly">MONTHLY</option>
-                 </select>
-         <label for="day-of-week" id="day-of-week-label" style="display:none">&nbsp;&nbsp;&nbsp;Day of Week &nbsp;</label>
-         <input type="text" id="day-of-week" style="display:none"/>
-           <label for="date-of-month" id="date-of-month-label" style="display:none">&nbsp;&nbsp;&nbsp;Date of Month &nbsp;</label>
-            <input type="text" id="date-of-month" style="display:none"/>
-        <label for="time" id="time_label" style="display:none">&nbsp;&nbsp;&nbsp;Time Of Day &nbsp;</label>
-        <input type="text" id="time" placeholder="hh:mm:ss" style="display:none"/> <br>
-           <label for="periodic_repetition">IS PERIODIC</label>
-            <input type="radio" id="periodic_repetition" name="repetition-type" value="periodic_repetition" checked onclick="doChangeForRepetitionType()"/>
-             &nbsp;&nbsp;&nbsp;<label for="calender_repetition">IS CALENDER</label>
-            <input type="radio" id="calender_repetition" name="repetition-type" value="calender_repetition" onclick="doChangeForRepetitionType()"/><br>
-         <button onclick="getRepetitionDetails()">FETCH REPETITION DETAILS </button>
-         <button onclick="addOrUpdateRepetition()">ADD OR UPDATE REPETITION </button>
-         <button onclick="deleteRepetition()">DELETE REPETITION </button>
+        <div class="section-panel" data-panel="dbtool">
+
+        <!-- SECTION: Database Connection -->
+        <div class="card">
+            <h2 class="card-title">Database Connection</h2>
+            <div class="form-row">
+                <label class="field-label" for="product">Product</label>
+                <select id="product" onchange="getDBCredential(true)">
+                    <option value="custom">CUSTOM</option>
+                </select>
+            </div>
+            <div id="credentials_box" style="display:none">
+                <div class="form-row">
+                    <label class="field-label">Server</label>
+                    <label class="radio-label">
+                        <input type="radio" id="mysql" name="server" value="mysql" />
+                        MySql
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" id="postgresql" name="server" value="postgresql" />
+                        Postgresql
+                    </label>
+                </div>
+                <div class="form-row">
+                    <label class="field-label" for="ip">Main Cluster IP</label>
+                    <input type="text" id="ip" class="inline-input-lg" />
+                </div>
+                <div class="form-row">
+                    <label class="field-label" for="user">User</label>
+                    <input type="text" id="user" class="inline-input-lg" />
+                </div>
+                <div class="form-row">
+                    <label class="field-label" for="password">Password</label>
+                    <input type="password" id="password" class="inline-input-lg" />
+                </div>
+            </div>
+            <div class="form-row">
+                <label class="field-label">Query By</label>
+                <div class="action-tabs" role="tablist">
+                    <button type="button" class="action-tab active" id="sourceTabZsid" onclick="switchSourceTab('zsid')">DataSpace Name</button>
+                    <button type="button" class="action-tab" id="sourceTabPk" onclick="switchSourceTab('pk')">PK</button>
+                </div>
+            </div>
+            <div class="form-row" id="zsidRow">
+                <label class="field-label" for="zsid">DataSpace Name</label>
+                <input type="text" id="zsid" list="zsidOptions" class="inline-input" autocomplete="off" onchange="handleZsidChange()" />
+                <datalist id="zsidOptions"></datalist>
+            </div>
+            <div class="form-row" id="pkRow" style="display:none">
+                <label class="field-label" for="pk">PK</label>
+                <input type="text" id="pk" class="inline-input" style="display:none" placeholder="Enter PK value"/>
+            </div>
+            <script>
+                function switchSourceTab(tab) {
+                    var isZsid = tab === 'zsid';
+                    document.getElementById('sourceTabZsid').classList.toggle('active', isZsid);
+                    document.getElementById('sourceTabPk').classList.toggle('active', !isZsid);
+                    document.getElementById('zsidRow').style.display = isZsid ? '' : 'none';
+                    document.getElementById('pkRow').style.display = isZsid ? 'none' : '';
+                    document.getElementById('pk').style.display = isZsid ? 'none' : 'block';
+                    if (isZsid) {
+                        document.getElementById('pk').value = '';
+                    } else {
+                        document.getElementById('zsid').value = '';
+                    }
+                }
+            </script>
+            <div class="form-row">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="skip_scoping"> SKIP SAS SCOPE
+                </label>
+            </div>
+            <div class="button-row">
+                <button id="quickExe" onclick="getTables()">Populate Tables</button>
+            </div>
         </div>
-        <p id="taskengine"></p>
-        <br>
-        <br>
+
+        <!-- SECTION: Table Explorer -->
+        <div class="card" id="tableSelection" style="display: none;">
+            <h2 class="card-title">Table Explorer</h2>
+            <div class="form-row">
+                <label class="field-label">Table</label>
+                <input type="text" class="table-search-input" id="tableListSearch" list="tableListOptions" placeholder="Search tables..." onchange="handleTableListChange()" autocomplete="off">
+                <datalist id="tableListOptions"></datalist>
+                <select name="tableList" id="tableList" onchange="handleTableListChange()" style="display: none;">
+                    <option value="" disabled selected>Loading..</option>
+                </select>
+                <span class="field-label-sm">Limit</span>
+                <select name="recordLimit" id="recordLimit" onchange="handleLimitChange()">
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
+                    <option value="1000">1000</option>
+                    <option value="5000">5000</option>
+                </select>
+                <button class="secondary" onclick="refreshTable()">REFRESH</button>
+                <button type="button" class="ghost" id="toggleModifyBtn" onclick="toggleModifySection()">Modify Rows &#9662;</button>
+            </div>
+            <div id="modifySection" style="display:none">
+                <hr class="section-divider"/>
+                <div class="action-tabs" role="tablist">
+                    <button type="button" class="action-tab active" id="actionTabUpdate" onclick="switchActionTab('update')">UPDATE</button>
+                    <button type="button" class="action-tab danger-tab" id="actionTabDelete" onclick="switchActionTab('delete')">DELETE</button>
+                </div>
+                <div id="setRow" class="form-row">
+                    <label class="field-label">SET</label>
+                    <select name="columnListForSet" id="columnListForSet">
+                        <option value="" disabled selected>Loading..</option>
+                    </select>
+                    <span>=</span>
+                    <input type="text" id="set_column_value" class="inline-input" placeholder="New value"/>
+                    <label class="checkbox-label" title="Set the column to SQL NULL instead of a string value">
+                        <input type="checkbox" id="set_null" onchange="toggleSetNull()"/> NULL
+                    </label>
+                </div>
+                <div class="form-row">
+                    <label class="field-label" id="whereLabel">WHERE</label>
+                    <select name="columnListForWhere" id="columnListForWhere">
+                        <option value="" disabled selected>Loading..</option>
+                    </select>
+                    <select id="whereOperator" onchange="onWhereOperatorChange()">
+                        <option value="=" selected>EQUAL</option>
+                        <option value="!=">NOT EQUAL</option>
+                        <option value=">">GREATER THAN</option>
+                        <option value="<">LESS THAN</option>
+                        <option value=">=">GREATER THAN OR EQUAL</option>
+                        <option value="<=">LESS THAN OR EQUAL</option>
+                        <option value="LIKE">LIKE</option>
+                        <option value="NOT LIKE">NOT LIKE</option>
+                        <option value="IS NULL">IS NULL</option>
+                        <option value="IS NOT NULL">IS NOT NULL</option>
+                    </select>
+                    <input type="text" id="where_column_value" class="inline-input" placeholder="Criteria value"/>
+                    <button id="updateBtn" onclick="updateRow()">UPDATE</button>
+                    <button id="deleteBtn" class="danger" onclick="deleteRow()" style="display:none">DELETE</button>
+                </div>
+                <div class="hint" id="rowSelectionHint">
+                    <span id="rowSelectionTip">Tip: Tick rows in the result table to update them in bulk. Max 10 rows.</span>
+                    <span>Selected: <b id="rowSelectionCount">0</b>/10</span>
+                    <button type="button" class="ghost small" id="clearRowSelectionBtn" onclick="clearRowSelection()">Clear selection</button>
+                </div>
+            </div>
+            <script>
+                function switchActionTab(tab) {
+                    var isUpdate = tab === 'update';
+                    document.getElementById('actionTabUpdate').classList.toggle('active', isUpdate);
+                    document.getElementById('actionTabDelete').classList.toggle('active', !isUpdate);
+                    document.getElementById('setRow').style.display = isUpdate ? '' : 'none';
+                    document.getElementById('updateBtn').style.display = isUpdate ? '' : 'none';
+                    document.getElementById('deleteBtn').style.display = isUpdate ? 'none' : '';
+                    document.getElementById('rowSelectionTip').textContent = isUpdate
+                        ? 'Tip: Tick rows in the result table to update them in bulk. Max 10 rows.'
+                        : 'Tip: Tick rows in the result table to delete them in bulk. Max 10 rows.';
+                    if (!isUpdate) {
+                        document.getElementById('set_column_value').value = '';
+                        var nullCb = document.getElementById('set_null');
+                        if (nullCb && nullCb.checked) { nullCb.checked = false; toggleSetNull(); }
+                    }
+                }
+
+                function toggleModifySection() {
+                    var panel = document.getElementById('modifySection');
+                    var btn = document.getElementById('toggleModifyBtn');
+                    var isOpen = panel.style.display !== 'none';
+                    panel.style.display = isOpen ? 'none' : '';
+                    btn.innerHTML = isOpen ? 'Modify Rows ▾' : 'Hide Modify ▴';
+                }
+
+                function toggleSetNull() {
+                    var cb = document.getElementById('set_null');
+                    var valInput = document.getElementById('set_column_value');
+                    if (!cb || !valInput) return;
+                    valInput.disabled = cb.checked;
+                    if (cb.checked) {
+                        valInput.value = '';
+                        valInput.placeholder = 'NULL (value ignored)';
+                    } else {
+                        valInput.placeholder = 'New value';
+                    }
+                }
+            </script>
+        </div>
+
+        <!-- SECTION: Query Result -->
+        <div class="card" id="queryOutputContainer" style="display: none; max-width: fit-content; position: relative;">
+            <h2 class="card-title">Query Result<button type="button" class="info-btn" id="editHelpBtn" onclick="toggleEditHelp(event)" aria-label="How to edit cells" title="How to edit cells">i</button></h2>
+            <div class="info-popover" id="editHelpPopover" style="display:none">
+                <h4>Edit any cell inline</h4>
+                <ul>
+                    <li>Click a cell to start editing</li>
+                    <li>Press <kbd>Enter</kbd> to save, <kbd>Esc</kbd> to cancel</li>
+                </ul>
+            </div>
+            <div id="bulkActionBar" class="bulk-bar" style="display:none">
+                <span class="bulk-count"><b id="bulkSelCount">0</b> row(s) selected</span>
+                <div class="spacer"></div>
+                <button type="button" class="small" onclick="openBulkUpdateDialog()">Update selected</button>
+                <button type="button" class="danger small" onclick="quickDeleteSelected()">Delete selected</button>
+                <button type="button" class="ghost small" onclick="clearRowSelection()">Clear</button>
+            </div>
+            <div id="queryConfirmOverlay" class="dbtool-modal-overlay" style="display:none" onclick="if(event.target===this)cancelQueryConfirm()">
+                <div class="dbtool-modal" role="dialog" aria-modal="true" aria-labelledby="queryConfirmTitle" onclick="event.stopPropagation()">
+                    <h3 id="queryConfirmTitle" class="dbtool-modal-title">Confirm query</h3>
+                    <p class="dbtool-modal-sub">Review the query below before running it.</p>
+                    <pre id="queryConfirmPreview" class="dbtool-query-preview"></pre>
+                    <p class="dbtool-modal-note">
+                        <span class="dbtool-note-icon" aria-hidden="true">&#9432;</span>
+                        This operation will be posted to the Cliq channel along with your user details.
+                    </p>
+                    <div class="dbtool-modal-actions">
+                        <button type="button" class="ghost" onclick="cancelQueryConfirm()">Cancel</button>
+                        <button type="button" id="queryConfirmProceed" onclick="acceptQueryConfirm()">Proceed</button>
+                    </div>
+                </div>
+            </div>
+            <div id="bulkUpdateOverlay" class="dbtool-modal-overlay" style="display:none" onclick="if(event.target===this)closeBulkUpdateDialog()">
+                <div class="dbtool-modal" role="dialog" aria-modal="true" aria-labelledby="bulkUpdateTitle" onclick="event.stopPropagation()">
+                    <h3 id="bulkUpdateTitle" class="dbtool-modal-title">Update selected rows</h3>
+                    <p class="dbtool-modal-sub"><b id="bulkUpdateCount">0</b> row(s) will be updated. <span id="bulkUpdateWhereMode"></span></p>
+                    <div class="dbtool-modal-row">
+                        <label class="field-label" for="bulkUpdateSetCol">Update column</label>
+                        <select id="bulkUpdateSetCol"></select>
+                    </div>
+                    <div class="dbtool-modal-row">
+                        <label class="field-label" for="bulkUpdateSetVal">Update value</label>
+                        <input type="text" id="bulkUpdateSetVal" class="inline-input" placeholder="New value"/>
+                        <label class="checkbox-label" title="Set the column to SQL NULL instead of a string value">
+                            <input type="checkbox" id="bulkUpdateSetNull" onchange="onBulkUpdateSetNullChange()"/> NULL
+                        </label>
+                    </div>
+                    <div class="dbtool-modal-actions">
+                        <button type="button" class="ghost" onclick="closeBulkUpdateDialog()">Cancel</button>
+                        <button type="button" onclick="submitBulkUpdateDialog()">Proceed</button>
+                    </div>
+                </div>
+            </div>
+            <div class="fixTableHead"><table id="queryOutput"></table></div>
+            <div id="cellActionMenu" class="cell-menu" style="display:none" onclick="event.stopPropagation()">
+                <button type="button" class="danger-item" onclick="setCellToNull()">Set to NULL</button>
+            </div>
+
+            <div class="nl-modal-overlay" id="networkLogDecryptModal" onclick="if (event.target === this) closeNetworkLogDecryptModal();">
+                <div class="nl-modal-box" role="dialog" aria-modal="true" aria-labelledby="nl-dc-title">
+                    <div class="nl-modal-head">
+                        <h3 id="nl-dc-title">Decrypted Network Log</h3>
+                        <span class="nl-modal-sub" id="nl-dc-subtitle"></span>
+                    </div>
+                    <div class="nl-modal-body">
+                        <div class="nl-result-meta">
+                            <span class="nl-badge" id="nl-dc-badge"></span>
+                            <span class="nl-result-time" id="nl-dc-time"></span>
+                        </div>
+                        <table class="nl-detail-table" id="nl-dc-table" style="display:none;">
+                            <thead><tr><th>Field</th><th>Value</th></tr></thead>
+                            <tbody id="nl-dc-table-body"></tbody>
+                        </table>
+                        <pre class="nl-raw" id="nl-dc-raw" style="display:none;"></pre>
+                    </div>
+                    <div class="nl-modal-foot">
+                        <button type="button" class="nl-copy" id="nl-dc-copy-all" onclick="copyNlDecryptSummary(this)" style="display:none;">Copy All</button>
+                        <button type="button" onclick="closeNetworkLogDecryptModal()">Close</button>
+                    </div>
+                </div>
+            </div>
+            <script>
+                function toggleEditHelp(event) {
+                    if (event) { event.stopPropagation(); }
+                    var pop = document.getElementById('editHelpPopover');
+                    var btn = document.getElementById('editHelpBtn');
+                    if (!pop || !btn) return;
+                    var isOpen = pop.style.display !== 'none';
+                    pop.style.display = isOpen ? 'none' : '';
+                    btn.classList.toggle('active', !isOpen);
+                }
+                document.addEventListener('click', function(e) {
+                    var pop = document.getElementById('editHelpPopover');
+                    var btn = document.getElementById('editHelpBtn');
+                    if (!pop || !btn || pop.style.display === 'none') return;
+                    if (!pop.contains(e.target) && e.target !== btn) {
+                        pop.style.display = 'none';
+                        btn.classList.remove('active');
+                    }
+                });
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        var pop = document.getElementById('editHelpPopover');
+                        var btn = document.getElementById('editHelpBtn');
+                        if (pop && pop.style.display !== 'none') {
+                            pop.style.display = 'none';
+                            if (btn) btn.classList.remove('active');
+                        }
+                    }
+                });
+            </script>
+        </div>
+
+        <div class="button-row" style="margin-bottom:12px">
+            <button type="button" class="ghost" id="togglePlainQueryBtn" onclick="togglePlainQuery()">Show Plain Query &#9662;</button>
+        </div>
+
+        <!-- SECTION: Plain Query -->
+        <div class="card" id="plainQueryCard" style="display:none">
+            <h2 class="card-title">Plain Query</h2>
+            <textarea id="query" rows="10" cols="50"> </textarea>
+            <p id="suggestionHint" style="display: none;">* Click on the matching suggestion to autocomplete</p>
+            <select id="autocomplete-container" style="display: none;"></select>
+            <div class="button-row">
+                <button onclick="execute()">Execute</button>
+                <button class="secondary" onclick="runStats()">Run As Stats</button>
+                <button class="ghost" onclick="window.open('/zoho/sasstats')">View Stats</button>
+            </div>
+            <div id="response" style="display: none; margin-top: 12px;">
+                <textarea readonly id="output" name="output" rows="10" cols="50"></textarea>
+            </div>
+            <script>
+                (function() {
+                    var q = document.getElementById('query');
+                    if (!q) return;
+                    q.addEventListener('keydown', function(e) {
+                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                            e.preventDefault();
+                            if (typeof execute === 'function') { execute(); }
+                        }
+                    });
+                })();
+
+                function togglePlainQuery() {
+                    var card = document.getElementById('plainQueryCard');
+                    var btn = document.getElementById('togglePlainQueryBtn');
+                    if (!card || !btn) return;
+                    var shouldOpen = card.style.display === 'none';
+                    card.style.display = shouldOpen ? '' : 'none';
+                    btn.innerHTML = shouldOpen ? 'Hide Plain Query ▴' : 'Show Plain Query ▾';
+                    if (shouldOpen) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }
+            </script>
+        </div>
+
+        </div>
+        <div class="section-panel" data-panel="isc" style="display:none">
+
+        <!-- SECTION: ISC Generation -->
+        <div class="card">
+            <h2 class="card-title">ISC Generation</h2>
+            <div class="form-row">
+                <label class="field-label" for="isc_product">Product</label>
+                <select id="isc_product"></select>
+                <button onclick="generateIsc()">GENERATE ISC</button>
+            </div>
+            <p id="isc" class="isc-value" onclick="copyToClipboard(document.getElementById('isc').innerHTML)" title="Click to copy"></p>
+        </div>
+
+        </div>
+        <div class="section-panel" data-panel="org" style="display:none">
+
+        <!-- SECTION: Org Management -->
+        <div class="card">
+            <h2 class="card-title">Org Management</h2>
+            <div class="grouped-row">
+                <label class="field-label">Mark as Test Org</label>
+                <select id="test_org_products">
+                    <option value="payout-local">PAYOUT LOCAL</option>
+                    <option value="books-local">BOOKS LOCAL</option>
+                    <option value="payout-csez">PAYOUT CSEZ</option>
+                </select>
+                <span class="field-label-sm">ZSID</span>
+                <input type="text" id="test_org_zsid" class="inline-input-sm"/>
+                <button onclick="markAsTestOrPaidOrg(false)">Mark As Test Org</button>
+            </div>
+            <div class="grouped-row">
+                <label class="field-label">Mark as Non-Test Org</label>
+                <select id="non_test_org_products">
+                    <option value="payout-local">PAYOUT LOCAL</option>
+                    <option value="books-local">BOOKS LOCAL</option>
+                    <option value="payout-csez">PAYOUT CSEZ</option>
+                </select>
+                <span class="field-label-sm">ZSID</span>
+                <input type="text" id="non_test_org_zsid" class="inline-input-sm"/>
+                <button onclick="markAsNonTestOrg(false)">Mark As Non Test Org</button>
+            </div>
+            <div class="grouped-row">
+                <label class="field-label">Mark as Paid Org</label>
+                <select id="paid_org_products">
+                    <option value="books-local">BOOKS LOCAL</option>
+                    <option value="erp-local">ERP LOCAL</option>
+                </select>
+                <span class="field-label-sm">ZSID</span>
+                <input type="text" id="paid_org_zsid" class="inline-input-sm"/>
+                <button onclick="markAsTestOrPaidOrg(true)">Mark As Paid Org</button>
+            </div>
+            <div class="grouped-row">
+                <label class="field-label">Free Org Creation Count</label>
+                <select id="org_count_increase_products">
+                    <option value="books-local">BOOKS LOCAL</option>
+                </select>
+                <span class="field-label-sm">ZUID</span>
+                <input type="text" id="org_count_increase_zuid" class="inline-input-sm"/>
+                <span class="field-label-sm">Count</span>
+                <input type="text" id="org_count_increase_value" class="inline-input-sm"/>
+                <button onclick="increaseOrgCount()">Update Free Org Creation Count</button>
+            </div>
+            <div class="grouped-row">
+                <label class="field-label">Setup SBI</label>
+                <input type="text" id="erp-unique-id" class="inline-input" placeholder="ERP Unique ID"/>
+                <button onclick="setupSBI()">Setup SBI</button>
+            </div>
+        </div>
+
+        </div>
+        <div class="section-panel" data-panel="ear" style="display:none">
+
+        <!-- SECTION: EAR Decrypt -->
+        <div class="card">
+            <h2 class="card-title">EAR Decrypt</h2>
+            <div class="form-row">
+                <label class="field-label" for="ear_product">Product</label>
+                <select id="ear_product"></select>
+                <span class="field-label-sm">Key Label</span>
+                <input type="text" id="key_label" class="inline-input-sm"/>
+                <span class="field-label-sm">Cipher Text</span>
+                <input type="text" id="cipher_text" class="inline-input-md"/>
+            </div>
+            <div class="form-row">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="is_oek"> IS OEK
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="is_searchable" checked> IS SEARCHABLE
+                </label>
+                <button onclick="doEARDecrypt()">EAR DECRYPT</button>
+            </div>
+            <p id="ear_decrypted" class="ear-result"></p>
+        </div>
+
+        </div>
+        <div class="section-panel" data-panel="taskengine" style="display:none">
+
+        <!-- SECTION: Task Engine -->
+        <div class="card">
+            <h2 class="card-title">Task Engine</h2>
+            <div class="form-row">
+                <label class="field-label" for="taskengine_product">Product</label>
+                <select id="taskengine_product" onchange="doTaskEngineProductSwitchChanges()"></select>
+                <span class="field-label-sm">ThreadPool Name</span>
+                <select id="thread_pool" onchange="handleThreadPoolChange()"></select>
+                <input type="text" id="thread_pool_custom" placeholder="Enter thread pool name" class="inline-input-sm" style="display:none;">
+            </div>
+            <div id="idc_jobs_container" style="display:none">
+                <div class="form-row">
+                    <span class="field-label-sm">User Id</span>
+                    <input type="text" id="user_id" class="inline-input-sm"/>
+                    <span class="field-label-sm">Customer Id</span>
+                    <input type="text" id="customer_id" class="inline-input-sm"/>
+                </div>
+            </div>
+            <div id="local_jobs_container" style="display:inline">
+                <div class="form-row">
+                    <span class="field-label-sm">DataSpace Name</span>
+                    <input type="text" id="dataspace_id" class="inline-input-sm"/>
+                </div>
+            </div>
+            <hr class="section-divider"/>
+            <div class="form-row">
+                <label class="radio-label">
+                    <input type="radio" name="taskengine-manage" value="jobEntity-manage" checked onclick="doChangeForTaskEngineManagement()"/>
+                    JOB
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="taskengine-manage" value="repetition-manage" onclick="doChangeForTaskEngineManagement()"/>
+                    REPETITION
+                </label>
+            </div>
+            <div id="jobEntity-management">
+                <div class="action-tabs" role="tablist">
+                    <button type="button" class="action-tab active" id="jobTabFetch" onclick="switchJobTab('fetch')">FETCH</button>
+                    <button type="button" class="action-tab" id="jobTabAddUpdate" onclick="switchJobTab('addupdate')">ADD / UPDATE</button>
+                    <button type="button" class="action-tab danger-tab" id="jobTabDelete" onclick="switchJobTab('delete')">DELETE</button>
+                </div>
+                <div class="form-row">
+                    <span class="field-label-sm">Job ID</span>
+                    <input type="text" id="job_id" class="inline-input-sm"/>
+                </div>
+                <div id="jobAddUpdateFields" style="display:none">
+                    <div class="form-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="is_repetitive" onchange="changeIsRepetitive()"> IS REPETITIVE
+                        </label>
+                        <label id="repetition_label" style="display:none">Repetition Name</label>
+                        <input type="text" id="repetition" class="inline-input-sm" style="display:none"/>
+                        <span class="field-label-sm">Retry Repetition Name</span>
+                        <input type="text" id="retry_repetition" class="inline-input-sm"/>
+                    </div>
+                    <div class="form-row">
+                        <span class="field-label-sm">Class Name</span>
+                        <input type="text" id="class_name" class="inline-input-md"/>
+                        <label id="delay_seconds_label">Delay second(s)</label>
+                        <input type="text" id="delay_seconds" class="inline-input-sm"/>
+                    </div>
+                </div>
+                <div class="button-row">
+                    <button id="jobFetchBtn" onclick="getJobDetails()">FETCH JOB DETAILS</button>
+                    <button id="jobAddUpdateBtn" onclick="addOrUpdateJob()" style="display:none">ADD OR UPDATE JOB</button>
+                    <button id="jobDeleteBtn" class="danger" onclick="deleteJob()" style="display:none">DELETE JOB</button>
+                </div>
+            </div>
+            <div id="repetition-management" style="display:none">
+                <div class="action-tabs" role="tablist">
+                    <button type="button" class="action-tab active" id="repTabFetch" onclick="switchRepTab('fetch')">FETCH</button>
+                    <button type="button" class="action-tab" id="repTabAddUpdate" onclick="switchRepTab('addupdate')">ADD / UPDATE</button>
+                    <button type="button" class="action-tab danger-tab" id="repTabDelete" onclick="switchRepTab('delete')">DELETE</button>
+                </div>
+                <div class="form-row">
+                    <span class="field-label-sm">Repetition Name</span>
+                    <input type="text" id="repetition_name" class="inline-input-sm"/>
+                    <label class="checkbox-label" id="isCommonWrapper">
+                        <input type="checkbox" id="is_common" onchange="showAlertForIsCommon()"/> Is Common
+                    </label>
+                </div>
+                <div id="repAddUpdateFields" style="display:none">
+                    <div class="form-row">
+                        <label for="periodicity" id="periodicity_label" class="field-label-sm">Periodicity</label>
+                        <input type="text" id="periodicity" placeholder="Enter seconds" class="inline-input-sm"/>
+                        <label for="frequency" id="frequency_label" class="field-label-sm" style="display:none">Frequency</label>
+                        <select id="frequency" style="display:none" onclick="doChangeForFrequency()">
+                            <option value="daily">DAILY</option>
+                            <option value="weekly">WEEKLY</option>
+                            <option value="monthly">MONTHLY</option>
+                        </select>
+                        <label for="day-of-week" id="day-of-week-label" class="field-label-sm" style="display:none">Day of Week</label>
+                        <input type="text" id="day-of-week" class="inline-input-sm" style="display:none"/>
+                        <label for="date-of-month" id="date-of-month-label" class="field-label-sm" style="display:none">Date of Month</label>
+                        <input type="text" id="date-of-month" class="inline-input-sm" style="display:none"/>
+                        <label for="time" id="time_label" class="field-label-sm" style="display:none">Time Of Day</label>
+                        <input type="text" id="time" placeholder="hh:mm:ss" class="inline-input-sm" style="display:none"/>
+                    </div>
+                    <div class="form-row">
+                        <label class="radio-label">
+                            <input type="radio" id="periodic_repetition" name="repetition-type" value="periodic_repetition" checked onclick="doChangeForRepetitionType()"/>
+                            IS PERIODIC
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" id="calender_repetition" name="repetition-type" value="calender_repetition" onclick="doChangeForRepetitionType()"/>
+                            IS CALENDER
+                        </label>
+                    </div>
+                </div>
+                <div class="button-row">
+                    <button id="repFetchBtn" onclick="getRepetitionDetails()">FETCH REPETITION DETAILS</button>
+                    <button id="repAddUpdateBtn" onclick="addOrUpdateRepetition()" style="display:none">ADD OR UPDATE REPETITION</button>
+                    <button id="repDeleteBtn" class="danger" onclick="deleteRepetition()" style="display:none">DELETE REPETITION</button>
+                </div>
+            </div>
+            <script>
+                function switchJobTab(tab) {
+                    var map = {
+                        fetch: 'jobTabFetch',
+                        addupdate: 'jobTabAddUpdate',
+                        'delete': 'jobTabDelete'
+                    };
+                    var btnMap = {
+                        fetch: 'jobFetchBtn',
+                        addupdate: 'jobAddUpdateBtn',
+                        'delete': 'jobDeleteBtn'
+                    };
+                    for (var k in map) {
+                        document.getElementById(map[k]).classList.toggle('active', k === tab);
+                        document.getElementById(btnMap[k]).style.display = k === tab ? '' : 'none';
+                    }
+                    document.getElementById('jobAddUpdateFields').style.display = tab === 'addupdate' ? '' : 'none';
+                }
+
+                function switchRepTab(tab) {
+                    var map = {
+                        fetch: 'repTabFetch',
+                        addupdate: 'repTabAddUpdate',
+                        'delete': 'repTabDelete'
+                    };
+                    var btnMap = {
+                        fetch: 'repFetchBtn',
+                        addupdate: 'repAddUpdateBtn',
+                        'delete': 'repDeleteBtn'
+                    };
+                    for (var k in map) {
+                        document.getElementById(map[k]).classList.toggle('active', k === tab);
+                        document.getElementById(btnMap[k]).style.display = k === tab ? '' : 'none';
+                    }
+                    document.getElementById('repAddUpdateFields').style.display = tab === 'addupdate' ? '' : 'none';
+                    document.getElementById('isCommonWrapper').style.display = tab === 'delete' ? 'none' : '';
+                }
+            </script>
+            <p id="taskengine" class="taskengine-result"></p>
+        </div>
+        </div>
+
+        <script>
+            (function() {
+                try {
+                    var saved = localStorage.getItem('dbtool-section');
+                    var panels = ['dbtool', 'isc', 'org', 'ear', 'taskengine'];
+                    if (saved && panels.indexOf(saved) !== -1 && saved !== 'dbtool') {
+                        switchSectionTab(saved);
+                        window.scrollTo(0, 0);
+                    }
+                } catch (e) { /* ignore */ }
+            })();
+        </script>
+
         <script>
                     var SAS_META;
                     var QUERY_OUTPUT = "";
-                    var CURRENT_TABLE_PK = "";
+                    var CURRENT_TABLE_PK = [];
                     var TABLE_LIST = [];
                     var COLUMN_LIST = [];
                     var isEncrypted = true;
+
+                    // Row-selection state for bulk UPDATE/DELETE
+                    // Keyed by stable row key (concatenated PK values if available, else JSON) -> row object
+                    var SELECTED_ROWS = new Map();
+                    var MAX_SELECTED_ROWS = 10;
+
+                    function hasPkCols() {
+                        return Array.isArray(CURRENT_TABLE_PK) && CURRENT_TABLE_PK.length > 0;
+                    }
+
+                    function rowHasAllPkValues(row) {
+                        if (!hasPkCols()) return false;
+                        for (var i = 0; i < CURRENT_TABLE_PK.length; i++) {
+                            var v = row[CURRENT_TABLE_PK[i]];
+                            if (v === undefined || v === null || String(v).length === 0) return false;
+                        }
+                        return true;
+                    }
+
+                    function buildPkWhereForRow(row) {
+                        if (!rowHasAllPkValues(row)) return null;
+                        var parts = [];
+                        for (var i = 0; i < CURRENT_TABLE_PK.length; i++) {
+                            var col = CURRENT_TABLE_PK[i];
+                            parts.push(col + " = '" + sqlEscape(row[col]) + "'");
+                        }
+                        return parts.join(' AND ');
+                    }
+
+                    function buildAllColumnsWhereForRow(row) {
+                        if (!Array.isArray(COLUMN_LIST) || COLUMN_LIST.length === 0) return null;
+                        var parts = [];
+                        for (var i = 0; i < COLUMN_LIST.length; i++) {
+                            var col = COLUMN_LIST[i];
+                            var v = row[col];
+                            if (v === undefined || v === null) {
+                                parts.push(col + " IS NULL");
+                            } else {
+                                parts.push(col + " = '" + sqlEscape(v) + "'");
+                            }
+                        }
+                        return parts.length > 0 ? parts.join(' AND ') : null;
+                    }
+
+                    function getRowKey(row) {
+                        if (rowHasAllPkValues(row)) {
+                            return CURRENT_TABLE_PK.map(function(c) { return String(row[c]); }).join('\u001F');
+                        }
+                        return JSON.stringify(row);
+                    }
+
+                    function onRowCheckboxChange(checkbox) {
+                        var tr = checkbox.closest('tr');
+                        if (!tr) return;
+                        var row;
+                        try { row = JSON.parse(tr.getAttribute('data-row')); }
+                        catch (e) { row = null; }
+                        if (!row) { checkbox.checked = false; return; }
+                        var key = getRowKey(row);
+                        if (checkbox.checked) {
+                            if (SELECTED_ROWS.size >= MAX_SELECTED_ROWS && !SELECTED_ROWS.has(key)) {
+                                checkbox.checked = false;
+                                alert("You can select at most " + MAX_SELECTED_ROWS + " rows.");
+                                return;
+                            }
+                            SELECTED_ROWS.set(key, row);
+                        } else {
+                            SELECTED_ROWS.delete(key);
+                        }
+                        updateSelectionCounter();
+                    }
+
+                    function clearRowSelection() {
+                        SELECTED_ROWS.clear();
+                        document.querySelectorAll('.row-select-cb').forEach(function(cb) { cb.checked = false; });
+                        updateSelectionCounter();
+                    }
+
+                    function updateSelectionCounter() {
+                        var n = SELECTED_ROWS.size;
+                        var el = document.getElementById('rowSelectionCount');
+                        if (el) el.textContent = n;
+                        var bar = document.getElementById('bulkActionBar');
+                        if (bar) {
+                            bar.style.display = n > 0 ? '' : 'none';
+                            var countEl = document.getElementById('bulkSelCount');
+                            if (countEl) countEl.textContent = n;
+                        }
+                    }
+
+                    function quickDeleteSelected() {
+                        if (SELECTED_ROWS.size === 0) return;
+                        if (!hasPkCols()) {
+                            alert("Cannot auto-delete: this table has no primary key. Use the Modify Rows panel to pick a WHERE column.");
+                            return;
+                        }
+                        var tableName = document.getElementById("tableList").value;
+                        if (!tableName) { alert("No table selected."); return; }
+
+                        var rowClauses = [];
+                        var skipped = 0;
+                        SELECTED_ROWS.forEach(function(row) {
+                            var w = buildPkWhereForRow(row);
+                            if (w) rowClauses.push('(' + w + ')');
+                            else skipped++;
+                        });
+                        if (rowClauses.length === 0) {
+                            alert("Selected row(s) are missing primary-key values; cannot build a safe DELETE.");
+                            return;
+                        }
+                        if (skipped > 0 && !confirm(skipped + " selected row(s) had missing PK values and will be skipped. Continue with the remaining " + rowClauses.length + "?")) {
+                            return;
+                        }
+                        var deleteQuery = "Delete from " + tableName + " Where " + rowClauses.join(' OR ');
+                        document.getElementById("query").value = deleteQuery;
+                        confirmAndExecute();
+                    }
+
+                    function openBulkUpdateDialog() {
+                        if (SELECTED_ROWS.size === 0) return;
+                        if (!Array.isArray(COLUMN_LIST) || COLUMN_LIST.length === 0) {
+                            alert("No columns are loaded for this table yet.");
+                            return;
+                        }
+                        var opts = '';
+                        for (var i = 0; i < COLUMN_LIST.length; i++) {
+                            opts += '<option>' + COLUMN_LIST[i] + '</option>';
+                        }
+                        var setSel = document.getElementById('bulkUpdateSetCol');
+                        setSel.innerHTML = '<option value="" disabled selected>Select Column</option>' + opts;
+                        document.getElementById('bulkUpdateSetVal').value = '';
+                        var nullCb = document.getElementById('bulkUpdateSetNull');
+                        if (nullCb) { nullCb.checked = false; }
+                        onBulkUpdateSetNullChange();
+                        document.getElementById('bulkUpdateCount').textContent = SELECTED_ROWS.size;
+                        var modeEl = document.getElementById('bulkUpdateWhereMode');
+                        if (modeEl) {
+                            modeEl.textContent = hasPkCols()
+                                ? 'Rows will be matched by primary key (' + CURRENT_TABLE_PK.join(', ') + ').'
+                                : 'No primary key on this table — rows will be matched by all column values.';
+                        }
+                        document.getElementById('bulkUpdateOverlay').style.display = 'flex';
+                    }
+
+                    function closeBulkUpdateDialog() {
+                        document.getElementById('bulkUpdateOverlay').style.display = 'none';
+                    }
+
+                    function onBulkUpdateSetNullChange() {
+                        var cb = document.getElementById('bulkUpdateSetNull');
+                        var valInput = document.getElementById('bulkUpdateSetVal');
+                        if (!cb || !valInput) return;
+                        valInput.disabled = cb.checked;
+                        if (cb.checked) {
+                            valInput.value = '';
+                            valInput.placeholder = 'NULL (value ignored)';
+                        } else {
+                            valInput.placeholder = 'New value';
+                        }
+                    }
+
+                    function submitBulkUpdateDialog() {
+                        if (SELECTED_ROWS.size === 0) {
+                            alert("No rows selected.");
+                            closeBulkUpdateDialog();
+                            return;
+                        }
+                        var tableName = document.getElementById("tableList").value;
+                        if (!tableName) { alert("No table selected."); return; }
+                        var setCol = document.getElementById('bulkUpdateSetCol').value;
+                        var setVal = document.getElementById('bulkUpdateSetVal').value;
+                        var setNullCb = document.getElementById('bulkUpdateSetNull');
+                        var isSetNull = setNullCb && setNullCb.checked;
+                        if (!setCol) {
+                            alert("Please choose an Update column.");
+                            return;
+                        }
+                        if (!isSetNull && (setVal === undefined || setVal.length < 1)) {
+                            alert("Please enter a value to update, or tick NULL to set the column to SQL NULL.");
+                            return;
+                        }
+
+                        var usePk = hasPkCols();
+                        var rowClauses = [];
+                        var skipped = 0;
+                        SELECTED_ROWS.forEach(function(row) {
+                            var w = usePk ? buildPkWhereForRow(row) : buildAllColumnsWhereForRow(row);
+                            if (w) rowClauses.push('(' + w + ')');
+                            else skipped++;
+                        });
+                        if (rowClauses.length === 0) {
+                            alert(usePk
+                                ? "Selected row(s) are missing primary-key values; cannot build a safe UPDATE."
+                                : "Could not build a WHERE clause from the selected row(s).");
+                            return;
+                        }
+                        if (skipped > 0 && !confirm(skipped + " selected row(s) could not be matched and will be skipped. Continue with the remaining " + rowClauses.length + "?")) {
+                            return;
+                        }
+
+                        var setFragment = isSetNull
+                            ? (setCol + " = NULL")
+                            : (setCol + " = '" + sqlEscape(setVal) + "'");
+                        var updateQuery = "Update " + tableName + " set " + setFragment + " Where " + rowClauses.join(' OR ');
+                        document.getElementById("query").value = updateQuery;
+                        closeBulkUpdateDialog();
+                        confirmAndExecute();
+                    }
+
+                    function buildInClauseFromSelection(column) {
+                        var values = [];
+                        SELECTED_ROWS.forEach(function(row) {
+                            var v = row[column];
+                            if (v === undefined || v === null) return;
+                            // Escape single quotes for SQL string literal
+                            values.push("'" + String(v).replace(/'/g, "''") + "'");
+                        });
+                        return values.join(", ");
+                    }
+
+                    function onWhereOperatorChange() {
+                        var op = document.getElementById('whereOperator').value;
+                        var valInput = document.getElementById('where_column_value');
+                        var noValue = (op === 'IS NULL' || op === 'IS NOT NULL');
+                        valInput.disabled = noValue;
+                        if (noValue) {
+                            valInput.value = '';
+                            valInput.placeholder = op + ' (value ignored)';
+                        } else {
+                            valInput.placeholder = 'Criteria value';
+                        }
+                    }
+
+                    function buildWhereClauseFromInputs() {
+                        var column = document.getElementById("columnListForWhere").value;
+                        var operator = document.getElementById("whereOperator").value;
+                        var value = document.getElementById("where_column_value").value;
+                        if (operator === 'IS NULL' || operator === 'IS NOT NULL') {
+                            return { ok: true, clause: column + ' ' + operator };
+                        }
+                        if (value == undefined || value.length < 1) {
+                            return { ok: false };
+                        }
+                        var literal = value;
+                        if ((operator === 'LIKE' || operator === 'NOT LIKE') && literal.indexOf('%') === -1) {
+                            literal = '%' + literal + '%';
+                        }
+                        return { ok: true, clause: column + ' ' + operator + " '" + sqlEscape(literal) + "'" };
+                    }
 
 
                     function updateRow()
@@ -314,24 +2033,35 @@
                             return;
                         }
                         const setColumnValue = document.getElementById("set_column_value").value;
-                        const whereColumnValue = document.getElementById("where_column_value").value;
+                        const setNullCheckbox = document.getElementById("set_null");
+                        const isSetNull = setNullCheckbox && setNullCheckbox.checked;
                          var gotConsent = true;
-                        if(setColumnValue == undefined || setColumnValue.length < 1)
+                        if(!isSetNull && (setColumnValue == undefined || setColumnValue.length < 1))
                         {
-                            alert("Please enter valid column value");
+                            alert("Please enter a column value, or tick NULL to set the column to SQL NULL");
                             return;
                         }
 
-                        var updateQuery = "Update " + tableName + " set " + setColumnName + " = '" + setColumnValue + "'";
+                        var updateQuery = isSetNull
+                            ? "Update " + tableName + " set " + setColumnName + " = NULL"
+                            : "Update " + tableName + " set " + setColumnName + " = '" + setColumnValue + "'";
 
-                       if(whereColumnValue == undefined || whereColumnValue.length < 1)
-                       {
-                            alert('Criteria is mandatory for update query')
-                            return;
-                       }
+                        if (SELECTED_ROWS.size > 0) {
+                            const inClause = buildInClauseFromSelection(whereColumnName);
+                            if (inClause.length < 1) {
+                                alert("Selected rows have no value for the WHERE column '" + whereColumnName + "'.");
+                                return;
+                            }
+                            updateQuery = updateQuery + " Where " + whereColumnName + " IN (" + inClause + ")";
+                        }
                         else
                         {
-                        updateQuery = updateQuery + " Where " + whereColumnName + " = '" + whereColumnValue + "'"
+                            var w = buildWhereClauseFromInputs();
+                            if (!w.ok) {
+                                alert('Criteria is mandatory for update query (either tick rows or enter a WHERE value)');
+                                return;
+                            }
+                            updateQuery = updateQuery + " Where " + w.clause;
                         }
 
                         document.getElementById("query").value = updateQuery
@@ -343,29 +2073,537 @@
                     {
                         const tableName = document.getElementById("tableList").value;
                         const columnName = document.getElementById("columnListForWhere").value;
-                        const columnValue = document.getElementById("where_column_value").value;
 
                         var deleteQuery = "Delete from " + tableName;
 
-                        if(columnValue == undefined || columnValue.length < 1)
-                        {
-                            alert('Criteria is mandatory for delete query')
-                            return;
+                        if (SELECTED_ROWS.size > 0) {
+                            const inClause = buildInClauseFromSelection(columnName);
+                            if (inClause.length < 1) {
+                                alert("Selected rows have no value for the WHERE column '" + columnName + "'.");
+                                return;
+                            }
+                            deleteQuery = deleteQuery + " Where " + columnName + " IN (" + inClause + ")";
                         }
-                        else
-                            deleteQuery = deleteQuery + " Where " + columnName + " = '" + columnValue + "'"
+                        else {
+                            var w = buildWhereClauseFromInputs();
+                            if (!w.ok) {
+                                alert('Criteria is mandatory for delete query (either tick rows or enter a WHERE value)');
+                                return;
+                            }
+                            deleteQuery = deleteQuery + " Where " + w.clause;
+                        }
 
                         document.getElementById("query").value = deleteQuery;
                         confirmAndExecute();
                     }
 
-                    function confirmAndExecute()
+                    var QUERY_CONFIRM_CANCEL_CB = null;
+
+                    function confirmAndExecute(onCancel)
                     {
-                    if(confirm("Do you want to continue?\n\nQuery to be executed : \n" + document.getElementById("query").value))
-                    {
-                        execute();
-                     }
+                        var query = document.getElementById("query").value;
+                        document.getElementById("queryConfirmPreview").textContent = query;
+                        document.getElementById("queryConfirmOverlay").style.display = 'flex';
+                        QUERY_CONFIRM_CANCEL_CB = (typeof onCancel === 'function') ? onCancel : null;
+                        var proceedBtn = document.getElementById("queryConfirmProceed");
+                        if (proceedBtn) {
+                            try { proceedBtn.focus(); } catch (e) { /* ignore */ }
+                        }
                     }
+
+                    function cancelQueryConfirm()
+                    {
+                        document.getElementById("queryConfirmOverlay").style.display = 'none';
+                        var cb = QUERY_CONFIRM_CANCEL_CB;
+                        QUERY_CONFIRM_CANCEL_CB = null;
+                        if (cb) { try { cb(); } catch (e) { /* ignore */ } }
+                    }
+
+                    function acceptQueryConfirm()
+                    {
+                        document.getElementById("queryConfirmOverlay").style.display = 'none';
+                        QUERY_CONFIRM_CANCEL_CB = null;
+                        execute();
+                    }
+
+                    function sqlEscape(v)
+                    {
+                        return String(v).replace(/'/g, "''");
+                    }
+
+                    function revertCellEdit(cell)
+                    {
+                        if (!cell) return;
+                        cell.textContent = cell.getAttribute('data-original') || '';
+                        cell.classList.remove('cell-dirty');
+                    }
+
+                    function commitCellEdit(cell)
+                    {
+                        if (!cell) return;
+                        var newValue = cell.textContent.replace(/\n/g, ' ').trim();
+                        var originalValue = cell.getAttribute('data-original') || '';
+                        if (newValue === originalValue) {
+                            cell.classList.remove('cell-dirty');
+                            cell.blur();
+                            return;
+                        }
+
+                        var columnName = cell.getAttribute('data-column');
+                        var tr = cell.closest('tr');
+                        if (!tr) { revertCellEdit(cell); return; }
+                        var rowData;
+                        try { rowData = JSON.parse(tr.getAttribute('data-row')); }
+                        catch (e) { rowData = null; }
+                        if (!rowData) {
+                            alert('Could not read row data for this cell.');
+                            revertCellEdit(cell);
+                            return;
+                        }
+
+                        var tableName = document.getElementById('tableList').value;
+                        if (!tableName) {
+                            alert('No table selected.');
+                            revertCellEdit(cell);
+                            return;
+                        }
+
+                        var whereClause = buildPkWhereForRow(rowData);
+                        if (!whereClause) {
+                            var parts = [];
+                            for (var col in rowData) {
+                                if (col === columnName) continue;
+                                var v = rowData[col];
+                                if (v === null || v === undefined || v === '') {
+                                    parts.push(col + ' IS NULL');
+                                } else {
+                                    parts.push(col + " = '" + sqlEscape(v) + "'");
+                                }
+                            }
+                            if (parts.length === 0) {
+                                alert('Cannot identify this row uniquely (no primary key and no other columns). Aborting.');
+                                revertCellEdit(cell);
+                                return;
+                            }
+                            whereClause = parts.join(' AND ');
+                            if (!confirm("No primary key available for this table.\nThe WHERE clause will match the row using all other columns, which may affect more than one row.\n\nContinue?")) {
+                                revertCellEdit(cell);
+                                return;
+                            }
+                        }
+
+                        var updateQuery = "Update " + tableName + " set " + columnName + " = '" + sqlEscape(newValue) + "' Where " + whereClause;
+                        document.getElementById('query').value = updateQuery;
+                        cell.classList.remove('cell-dirty');
+                        cell.blur();
+                        confirmAndExecute(function() { revertCellEdit(cell); });
+                    }
+
+                    var CELL_MENU_TARGET = null;
+
+                    function toggleCellMenu(event, btn) {
+                        event.stopPropagation();
+                        var menu = document.getElementById('cellActionMenu');
+                        if (!menu) return;
+                        var td = btn.closest('td');
+                        var cell = td ? td.querySelector('.editable-cell') : null;
+                        if (CELL_MENU_TARGET === cell && menu.style.display !== 'none') {
+                            closeCellMenu();
+                            return;
+                        }
+                        closeCellMenu();
+                        CELL_MENU_TARGET = cell;
+                        btn.classList.add('pinned');
+                        menu.style.display = '';
+                        var rect = btn.getBoundingClientRect();
+                        var mw = menu.offsetWidth;
+                        menu.style.top = (rect.bottom + 4) + 'px';
+                        menu.style.left = (rect.right - mw) + 'px';
+                    }
+
+                    function closeCellMenu() {
+                        var menu = document.getElementById('cellActionMenu');
+                        if (menu) menu.style.display = 'none';
+                        document.querySelectorAll('.cell-menu-btn.pinned').forEach(function(b) { b.classList.remove('pinned'); });
+                        CELL_MENU_TARGET = null;
+                    }
+
+                    function setCellToNull() {
+                        var cell = CELL_MENU_TARGET;
+                        closeCellMenu();
+                        if (!cell) return;
+
+                        var columnName = cell.getAttribute('data-column');
+                        var tr = cell.closest('tr');
+                        if (!tr) return;
+                        var rowData;
+                        try { rowData = JSON.parse(tr.getAttribute('data-row')); }
+                        catch (e) { rowData = null; }
+                        if (!rowData) { alert('Could not read row data for this cell.'); return; }
+
+                        var tableName = document.getElementById('tableList').value;
+                        if (!tableName) { alert('No table selected.'); return; }
+
+                        var whereClause = buildPkWhereForRow(rowData);
+                        if (!whereClause) {
+                            var parts = [];
+                            for (var col in rowData) {
+                                if (col === columnName) continue;
+                                var v = rowData[col];
+                                if (v === null || v === undefined || v === '') {
+                                    parts.push(col + ' IS NULL');
+                                } else {
+                                    parts.push(col + " = '" + sqlEscape(v) + "'");
+                                }
+                            }
+                            if (parts.length === 0) {
+                                alert('Cannot identify this row uniquely (no primary key and no other columns). Aborting.');
+                                return;
+                            }
+                            whereClause = parts.join(' AND ');
+                            if (!confirm("No primary key available for this table.\nThe WHERE clause will match the row using all other columns, which may affect more than one row.\n\nContinue?")) return;
+                        }
+
+                        var updateQuery = "Update " + tableName + " set " + columnName + " = NULL Where " + whereClause;
+                        document.getElementById('query').value = updateQuery;
+                        if (!confirm("Do you want to continue?\n\nQuery to be executed : \n" + updateQuery)) return;
+                        execute();
+                    }
+
+                    document.addEventListener('click', function(e) {
+                        var menu = document.getElementById('cellActionMenu');
+                        if (!menu || menu.style.display === 'none') return;
+                        if (menu.contains(e.target)) return;
+                        if (e.target && e.target.classList && e.target.classList.contains('cell-menu-btn')) return;
+                        closeCellMenu();
+                    });
+
+                    window.addEventListener('scroll', function() {
+                        var menu = document.getElementById('cellActionMenu');
+                        if (menu && menu.style.display !== 'none') closeCellMenu();
+                    }, true);
+
+                    document.addEventListener('keydown', function(e) {
+                        var target = e.target;
+                        if (!target || !target.classList || !target.classList.contains('editable-cell')) return;
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            commitCellEdit(target);
+                        } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            revertCellEdit(target);
+                            target.blur();
+                        }
+                    });
+
+                    document.addEventListener('input', function(e) {
+                        var target = e.target;
+                        if (!target || !target.classList || !target.classList.contains('editable-cell')) return;
+                        var original = target.getAttribute('data-original') || '';
+                        if (target.textContent !== original) {
+                            target.classList.add('cell-dirty');
+                        } else {
+                            target.classList.remove('cell-dirty');
+                        }
+                    });
+
+                    var NL_FIELD_LABELS = {
+                        id: 'Log ID', account_id: 'Account ID', reference_id: 'Reference ID',
+                        processor: 'Processor', type: 'Operation Type', url: 'URL',
+                        http_method: 'HTTP Method', request_payload: 'Request Payload',
+                        request_headers: 'Request Headers', http_status_code: 'HTTP Status',
+                        response_payload: 'Response Payload', response_headers: 'Response Headers',
+                        duration_ms: 'Duration (ms)', created_time: 'Created Time', last_modified_time: 'Last Modified'
+                    };
+                    var NL_PAYLOAD_FIELDS = ['request_payload', 'request_headers', 'response_payload', 'response_headers'];
+                    var NL_COPY_FIELDS = ['url', 'request_payload', 'response_payload'];
+                    var nlCurrentDecryptedLog = null;
+
+                    function nlPickRowValue(row, name) {
+                        var lower = name.toLowerCase();
+                        for (var k in row) { if (k && k.toLowerCase() === lower) return row[k]; }
+                        return null;
+                    }
+
+                    function nlBeautifyPayload(str) {
+                        try { return JSON.stringify(JSON.parse(str), null, 2); } catch (e) {}
+                        var trimmed = String(str == null ? '' : str).trim();
+                        if (trimmed.charAt(0) === '<' && trimmed.charAt(trimmed.length - 1) === '>' && nlIsWellFormedXml(trimmed)) {
+                            try { return nlBeautifyXml(trimmed); } catch (e) {}
+                        }
+                        return str;
+                    }
+
+                    function nlIsWellFormedXml(str) {
+                        try {
+                            var doc = new DOMParser().parseFromString(str, 'application/xml');
+                            return !doc.getElementsByTagName('parsererror').length;
+                        } catch (e) { return false; }
+                    }
+
+                    function nlBeautifyXml(xml) {
+                        var PAD = '  ';
+                        var pad = 0;
+                        var normalized = xml.replace(/>\s*</g, '><').replace(/(>)(<)(\/*)/g, '$1\n$2$3');
+                        var lines = normalized.split('\n');
+                        var result = '';
+                        for (var i = 0; i < lines.length; i++) {
+                            var node = lines[i];
+                            if (!node) continue;
+                            var indent = 0;
+                            if (node.match(/^<\?xml/) || node.match(/^<!--/) || node.match(/^<!DOCTYPE/)) {
+                                indent = 0;
+                            } else if (node.match(/^<\/[^>]+>$/)) {
+                                if (pad > 0) pad -= 1;
+                            } else if (node.match(/^<[^!?][^>]*[^\/]>[^<]*<\/[^>]+>$/)) {
+                                indent = 0;
+                            } else if (node.match(/^<[^!?\/][^>]*[^\/]>$/)) {
+                                indent = 1;
+                            }
+                            result += new Array(pad + 1).join(PAD) + node + '\n';
+                            pad += indent;
+                        }
+                        return result.replace(/\n$/, '');
+                    }
+
+                    function nlFormatLogTime(val) {
+                        var s = String(val);
+                        return /^\d+$/.test(s) ? new Date(parseInt(s, 10)).toLocaleString() + ' (' + s + ')' : s;
+                    }
+
+                    function nlLogCreatedAt(log) {
+                        var t = (log.created_time !== undefined && log.created_time !== null && log.created_time !== '') ? nlFormatLogTime(log.created_time) : '';
+                        return [log.created_date || '', t].filter(Boolean).join(' ');
+                    }
+
+                    function nlCopyText(text, button) {
+                        var done = function() {
+                            var original = button.textContent;
+                            button.textContent = 'Copied';
+                            button.classList.add('copied');
+                            setTimeout(function() { button.textContent = original; button.classList.remove('copied'); }, 1500);
+                        };
+                        if (navigator.clipboard && window.isSecureContext) {
+                            navigator.clipboard.writeText(text).then(done, function() { nlFallbackCopy(text, done); });
+                            return;
+                        }
+                        nlFallbackCopy(text, done);
+                    }
+
+                    function nlFallbackCopy(text, done) {
+                        var area = document.createElement('textarea');
+                        area.value = text;
+                        area.style.position = 'fixed';
+                        area.style.opacity = '0';
+                        document.body.appendChild(area);
+                        area.select();
+                        try { document.execCommand('copy'); } catch (e) {}
+                        document.body.removeChild(area);
+                        done();
+                    }
+
+                    function nlCopyButton(text) {
+                        var b = document.createElement('button');
+                        b.type = 'button';
+                        b.className = 'nl-copy';
+                        b.textContent = 'Copy';
+                        b.onclick = function() { nlCopyText(text, b); };
+                        return b;
+                    }
+
+                    function openNetworkLogDecryptPopup(btn) {
+                        var tr = btn.closest('tr');
+                        if (!tr) return;
+                        var row;
+                        try { row = JSON.parse(tr.getAttribute('data-row') || '{}'); }
+                        catch (e) { row = {}; }
+                        var logId = nlPickRowValue(row, 'id');
+                        var accountId = nlPickRowValue(row, 'zuid');
+                        if (logId === null || logId === undefined || logId === '') {
+                            alert('Could not find ID in this row.');
+                            return;
+                        }
+                        if (accountId === null || accountId === undefined || accountId === '') {
+                            alert('Could not find ZUID in this row.');
+                            return;
+                        }
+                        showNetworkLogDecryptModal(String(logId), String(accountId));
+                        fetchNetworkLogDecrypt(String(logId), String(accountId));
+                    }
+
+                    function showNetworkLogDecryptModal(logId, accountId) {
+                        var modal = document.getElementById('networkLogDecryptModal');
+                        document.getElementById('nl-dc-subtitle').textContent = 'log_id=' + logId + '  ·  account_id=' + accountId;
+                        var badge = document.getElementById('nl-dc-badge');
+                        badge.textContent = 'Loading…';
+                        badge.className = 'nl-badge';
+                        document.getElementById('nl-dc-time').textContent = '';
+                        document.getElementById('nl-dc-table').style.display = 'none';
+                        document.getElementById('nl-dc-table-body').innerHTML = '';
+                        var raw = document.getElementById('nl-dc-raw');
+                        raw.style.display = 'none';
+                        raw.textContent = '';
+                        document.getElementById('nl-dc-copy-all').style.display = 'none';
+                        nlCurrentDecryptedLog = null;
+                        modal.classList.add('visible');
+                    }
+
+                    function closeNetworkLogDecryptModal() {
+                        var modal = document.getElementById('networkLogDecryptModal');
+                        if (modal) modal.classList.remove('visible');
+                        nlCurrentDecryptedLog = null;
+                    }
+
+                    function nlExtractLogFromConcurrencyResponse(parsed) {
+                        if (!parsed || !Array.isArray(parsed.data)) return null;
+                        for (var i = 0; i < parsed.data.length; i++) {
+                            var bucket = parsed.data[i];
+                            if (!bucket || typeof bucket !== 'object') continue;
+                            for (var k in bucket) {
+                                var inner = bucket[k];
+                                if (inner && typeof inner === 'object' && inner.network_log) {
+                                    return inner.network_log;
+                                }
+                            }
+                        }
+                        return null;
+                    }
+
+                    function fetchNetworkLogDecrypt(logId, accountId) {
+                        var productEl = document.getElementById('product');
+                        var product = productEl ? (productEl.value || '').toLowerCase() : '';
+                        var host = (product === 'custom')
+                            ? (window.location && window.location.origin) || ''
+                            : 'https://zpay.localzoho.com';
+                        // 'zpaytpap-local' falls through to the default zpay.localzoho.com host above.
+                        var targetUrl = host + '/api/v1/admin/networklogs?log_id=' + encodeURIComponent(logId) + '&account_id=' + encodeURIComponent(accountId);
+
+                        var meta = {
+                            url: targetUrl,
+                            method: 'GET',
+                            headers: {
+                                'x-device-id': 'admin-console-device',
+                                'x-device-instance': 'admin-console-instance'
+                            },
+                            concurrency_calls: '1',
+                            params: {},
+                            password: '',
+                            proxy_meta: {}
+                        };
+                        var formData = new FormData();
+                        formData.append('meta_json', JSON.stringify(meta));
+
+                        var t0 = Date.now();
+                        unHideElement("loading");
+                        fetch('/api/v1/concurrency', { method: 'POST', body: formData })
+                            .then(function(r) { return r.text().then(function(body) { return { status: r.status, body: body }; }); })
+                            .then(function(res) {
+                                hideElement("loading");
+                                var ms = Date.now() - t0;
+                                var parsed = null;
+                                try { parsed = JSON.parse(res.body); } catch (e) {}
+                                if (parsed && typeof handleRedirection === 'function' && handleRedirection(parsed)) return;
+
+                                var badge = document.getElementById('nl-dc-badge');
+                                document.getElementById('nl-dc-time').textContent = ms + ' ms';
+
+                                if (!parsed) {
+                                    badge.textContent = 'HTTP ' + res.status;
+                                    badge.className = 'nl-badge nl-badge-err';
+                                    nlDecryptRenderRaw(res.body);
+                                    return;
+                                }
+
+                                var upstreamStatus = (parsed.status_code !== undefined && parsed.status_code !== null) ? parsed.status_code : res.status;
+                                var ok = upstreamStatus >= 200 && upstreamStatus < 300;
+                                badge.textContent = 'HTTP ' + upstreamStatus;
+                                badge.className = 'nl-badge ' + (ok ? 'nl-badge-ok' : 'nl-badge-err');
+
+                                var log = nlExtractLogFromConcurrencyResponse(parsed);
+                                if (ok && log) { nlDecryptRenderTable(log); }
+                                else { nlDecryptRenderRaw(JSON.stringify(parsed, null, 2)); }
+                            })
+                            .catch(function(err) {
+                                hideElement("loading");
+                                var badge = document.getElementById('nl-dc-badge');
+                                badge.textContent = 'Error';
+                                badge.className = 'nl-badge nl-badge-err';
+                                document.getElementById('nl-dc-time').textContent = '';
+                                nlDecryptRenderRaw(JSON.stringify({ error: err && err.message ? err.message : String(err) }, null, 2));
+                            });
+                    }
+
+                    function nlDecryptRenderTable(log) {
+                        nlCurrentDecryptedLog = log;
+                        var tbody = document.getElementById('nl-dc-table-body');
+                        tbody.innerHTML = '';
+                        Object.keys(NL_FIELD_LABELS).forEach(function(key) {
+                            var val = (key === 'created_time') ? nlLogCreatedAt(log) : log[key];
+                            if (val === undefined || val === null || val === '') return;
+                            var tr = document.createElement('tr');
+                            var tdL = document.createElement('td'); tdL.textContent = NL_FIELD_LABELS[key];
+                            var tdV = document.createElement('td');
+                            var str = String(val);
+                            if (NL_COPY_FIELDS.indexOf(key) !== -1) {
+                                var isPayload = NL_PAYLOAD_FIELDS.indexOf(key) !== -1;
+                                var text = isPayload ? nlBeautifyPayload(str) : str;
+                                var code = document.createElement('div'); code.className = 'nl-code';
+                                var content = document.createElement('span');
+                                if (isPayload) content.className = 'nl-payload-cell';
+                                content.textContent = text;
+                                code.appendChild(content);
+                                code.appendChild(nlCopyButton(text));
+                                tdV.appendChild(code);
+                            } else if (NL_PAYLOAD_FIELDS.indexOf(key) !== -1) {
+                                var span = document.createElement('span');
+                                span.className = 'nl-payload-cell';
+                                span.textContent = nlBeautifyPayload(str);
+                                tdV.appendChild(span);
+                            } else if (key === 'last_modified_time') {
+                                tdV.textContent = nlFormatLogTime(str);
+                            } else {
+                                tdV.textContent = str;
+                            }
+                            tr.appendChild(tdL); tr.appendChild(tdV);
+                            tbody.appendChild(tr);
+                        });
+                        document.getElementById('nl-dc-table').style.display = '';
+                        document.getElementById('nl-dc-raw').style.display = 'none';
+                        document.getElementById('nl-dc-copy-all').style.display = '';
+                    }
+
+                    function nlDecryptRenderRaw(text) {
+                        nlCurrentDecryptedLog = null;
+                        var raw = document.getElementById('nl-dc-raw');
+                        raw.textContent = text;
+                        raw.style.display = '';
+                        document.getElementById('nl-dc-table').style.display = 'none';
+                        document.getElementById('nl-dc-copy-all').style.display = 'none';
+                    }
+
+                    function copyNlDecryptSummary(btn) {
+                        if (!nlCurrentDecryptedLog) return;
+                        var log = nlCurrentDecryptedLog;
+                        var parts = [
+                            'Created Time: ' + (nlLogCreatedAt(log) || '-'),
+                            'URL: ' + (log.url || '-'),
+                            '',
+                            'Request Payload:',
+                            (log.request_payload !== undefined && log.request_payload !== null) ? nlBeautifyPayload(String(log.request_payload)) : '-',
+                            '',
+                            'Response Payload:',
+                            (log.response_payload !== undefined && log.response_payload !== null) ? nlBeautifyPayload(String(log.response_payload)) : '-'
+                        ];
+                        nlCopyText(parts.join('\n'), btn);
+                    }
+
+                    document.addEventListener('keydown', function(e) {
+                        if (e.key !== 'Escape') return;
+                        var modal = document.getElementById('networkLogDecryptModal');
+                        if (modal && modal.classList.contains('visible')) {
+                            closeNetworkLogDecryptModal();
+                        }
+                    });
 
             function doChangeForTaskEngineManagement()
             {
@@ -903,6 +3141,76 @@
 
             var initCompleted = false;
 
+                    var DBTOOL_SESSION_KEY = 'dbtool-session';
+                    var DBTOOL_PENDING_TABLE = null;
+
+                    function dbtoolLoadSession() {
+                        try { return JSON.parse(localStorage.getItem(DBTOOL_SESSION_KEY) || '{}') || {}; }
+                        catch (e) { return {}; }
+                    }
+                    function dbtoolSaveSession(patch) {
+                        var s = dbtoolLoadSession();
+                        for (var k in patch) { s[k] = patch[k]; }
+                        try { localStorage.setItem(DBTOOL_SESSION_KEY, JSON.stringify(s)); } catch (e) {}
+                    }
+                    function dbtoolSaveZsidForProduct(product, zsid) {
+                        var s = dbtoolLoadSession();
+                        s.zsidByProduct = s.zsidByProduct || {};
+                        if (product) { s.zsidByProduct[product] = zsid; }
+                        s.zsid = zsid;
+                        try { localStorage.setItem(DBTOOL_SESSION_KEY, JSON.stringify(s)); } catch (e) {}
+                    }
+                    function dbtoolHostDefaults() {
+                        var hostname = (window.location && window.location.hostname) || '';
+                        if (hostname === 'zpay-u20-1.csez.zohocorpin.com') {
+                            return { product: 'zpaytpap-local', table: 'networklogs' };
+                        }
+                        if (/^pradheep-\d+\.csez\.zohocorpin\.com$/i.test(hostname)) {
+                            return { product: 'custom', server: 'postgresql', user: 'root', ip: 'localhost' };
+                        }
+                        return {};
+                    }
+                    function dbtoolProductHasOption(val) {
+                        var el = document.getElementById('product');
+                        if (!el) return false;
+                        for (var i = 0; i < el.options.length; i++) {
+                            if (el.options[i].value === val) return true;
+                        }
+                        return false;
+                    }
+                    function applyInitialState() {
+                        var session = dbtoolLoadSession();
+                        var hostDefaults = dbtoolHostDefaults();
+                        var hadCachedProduct = !!(session.product && dbtoolProductHasOption(session.product));
+                        var productEl = document.getElementById('product');
+                        var desiredProduct = hadCachedProduct ? session.product
+                                           : (hostDefaults.product && dbtoolProductHasOption(hostDefaults.product)) ? hostDefaults.product
+                                           : null;
+                        if (desiredProduct) {
+                            productEl.value = desiredProduct;
+                        }
+                        var product = productEl.value;
+                        var cachedZsid = (session.zsidByProduct && session.zsidByProduct[product]) || '';
+                        var zsid = cachedZsid || 'admin';
+                        setElementValue('zsid', zsid);
+                        DBTOOL_PENDING_TABLE = session.table || hostDefaults.table || null;
+                        if (product === 'custom') {
+                            unHideElement('credentials_box');
+                            unHideElement('quickExe');
+                            if (hostDefaults.server) setElementChecked(hostDefaults.server, true);
+                            if (hostDefaults.user) setElementValue('user', hostDefaults.user);
+                            if (hostDefaults.ip) setElementValue('ip', hostDefaults.ip);
+                        }
+                        dbtoolSaveSession({ product: product, zsid: zsid });
+                        getDBCredential(false);
+                        if (product === 'custom'
+                            && getElementValue('ip').length !== 0
+                            && getElementValue('user').length !== 0
+                            && document.querySelector('input[name="server"]:checked')) {
+                            populateNeededEntity();
+                        }
+                    }
+
                     function getSASMeta() {
                         fetch("/api/v1/sas/meta", {
                                 method: "GET",
@@ -933,8 +3241,7 @@
                                 populateTaskEngineProducts();
                                 populateEARProducts()
                                 populateDBProducts()
-                                setElementValue("zsid", "admin");
-                                getDBCredential(false);
+                                applyInitialState();
                                 initCompleted = true;
                             })
                             .catch((error) => {
@@ -1060,6 +3367,7 @@
                             "skip_scoping" : document.getElementById("skip_scoping").checked,
                             "query": document.getElementById("query").value,
                             "is_encrypted": isEncrypted,
+                            "service": document.getElementById("product").value
                         }
 
                         var res;
@@ -1197,7 +3505,16 @@
                                   handleZohoAuth(res.data.auth_uri)
                                   return;
                                  }
-                                 alert(res.message)
+                                 var requestId = responseData && responseData.request_id;
+                                 if (!requestId && responseData && typeof responseData.message === 'string') {
+                                     var m = responseData.message.match(/RequestId\s*:\s*(\S+)/);
+                                     if (m) { requestId = m[1]; }
+                                 }
+                                 if (requestId) {
+                                     window.open('/zoho/sasstats?stats_id=' + encodeURIComponent(requestId), '_blank');
+                                 } else {
+                                     alert(res.message);
+                                 }
                             })
                             .catch((error) => {
                                 hideElement("loading");
@@ -1629,7 +3946,11 @@
                         }
                         document.getElementById("tableList").innerHTML = tableListOptions;
 
-                        if (getElementValue("zsid") == "admin") {
+                        if (DBTOOL_PENDING_TABLE && TABLE_LIST.indexOf(DBTOOL_PENDING_TABLE) !== -1) {
+                            document.getElementById("tableList").value = DBTOOL_PENDING_TABLE;
+                            document.getElementById("tableListSearch").value = DBTOOL_PENDING_TABLE;
+                            DBTOOL_PENDING_TABLE = null;
+                        } else if (getElementValue("zsid") == "admin") {
                             var defaultTable = document.getElementById("mysql").checked ? "SASAccounts" : "sasaccounts";
                             document.getElementById("tableList").value = defaultTable;
                             document.getElementById("tableListSearch").value = defaultTable;
@@ -1639,6 +3960,7 @@
                     }
 
                     function handleZsidChange() {
+                        dbtoolSaveZsidForProduct(getElementValue('product'), getElementValue('zsid'));
                         if (TABLE_LIST.length > 0 && getElementValue("tableList").length > 0) {
                             refreshTable();
                         }
@@ -1648,6 +3970,8 @@
                         // Sync the hidden select with the search input value
                         var searchValue = document.getElementById("tableListSearch").value;
                         document.getElementById("tableList").value = searchValue;
+                        dbtoolSaveSession({ table: searchValue });
+                        clearRowSelection();
                         getColumns();
                     }
 
@@ -1668,7 +3992,7 @@
 
                     function getLimitAndOrderBy() {
                         const createdTimeColForOrder = COLUMN_LIST.find(col => col.toUpperCase() === 'CREATEDTIME');
-                        const orderByCol = createdTimeColForOrder !== undefined ? createdTimeColForOrder : CURRENT_TABLE_PK;
+                        const orderByCol = createdTimeColForOrder !== undefined ? createdTimeColForOrder : (hasPkCols() ? CURRENT_TABLE_PK[0] : "");
                         const orderBy = orderByCol && orderByCol.length > 0 ? " Order By " + orderByCol + " DESC" : "";
                         const limit = getElementValue("recordLimit");
                         return orderBy + " LIMIT " + limit;
@@ -1686,20 +4010,37 @@
                         }
 
                         var tableOutput = "";
-                        var tableHeader = "<thead><tr><th>S.No</th>";
+                        var currentProductForNl = (document.getElementById('product') ? (document.getElementById('product').value || '') : '').toLowerCase();
+                        var isNetworklogsTable = (((document.getElementById("tableList").value || '').toLowerCase() === 'networklogs')
+                            && (currentProductForNl === 'custom' || currentProductForNl === 'zpaytpap-local'));
+                        var tableHeader = "<thead><tr><th title=\"Tick rows to use WHERE col IN (...) for UPDATE/DELETE. Max 10.\">&#10003;</th><th>S.No</th>";
+                        if (isNetworklogsTable) {
+                            tableHeader += "<th>Action</th>";
+                        }
                         const createdTimeCol = COLUMN_LIST.find(col => col.toUpperCase() === 'CREATEDTIME');
                         const lastModifiedTimeCol = COLUMN_LIST.find(col => col.toUpperCase() === 'LASTMODIFIEDTIME');
+                        var urlColForNl = null;
+                        if (isNetworklogsTable) {
+                            var firstRowKeys = outputJson.query_output[0];
+                            for (var _k in firstRowKeys) { if (_k && _k.toUpperCase() === 'URL') { urlColForNl = _k; break; } }
+                        }
                         if (createdTimeCol) {
                             tableHeader += "<th>FORMATTED_CREATED_TIME</th>";
                         }
-                        if (lastModifiedTimeCol) {
+                        function buildCriteriaTag(colName) {
+                            if (criteria != colName) {
+                                return '<br><input type="text" autocomplete="off" id="' + colName + '" oninput="getFiltered(' + "'" + colName + "'" + ')" placeholder="Search" title="eg.(abc or >5 or <10 or>5<10)"/><br><button style="width:80px;background-color:grey;font-size: 10px;" title="Search for the criteria without applying limit" onclick="getFilteredFromDB(' + "'" + colName + "'" + ')">Hit DB</button>';
+                            }
+                            return '<br><input type="text" autocomplete="off" value="' + criteriaValue + '" id="' + colName + '" oninput="getFiltered(' + "'" + colName + "'" + ')" placeholder="Search" title="eg.(abc or >5 or <10 or>5<10)"/><br><button style="width:80px;background-color:grey;font-size: 10px;" title="Search for the criteria without applying limit" onclick="getFilteredFromDB(' + "'" + colName + "'" + ')">Hit DB</button>';
+                        }
+                        if (isNetworklogsTable && urlColForNl) {
+                            tableHeader += "<th>" + urlColForNl + buildCriteriaTag(urlColForNl) + "</th>";
+                        } else if (lastModifiedTimeCol) {
                             tableHeader += "<th>FORMATTED_LAST_MODIFIED_TIME</th>";
                         }
                         for (var i in outputJson.query_output[0]) {
-                            var criteriaTag = "";
-                            if (criteria != i) criteriaTag = '<br><input type="text" autocomplete="off" id="' + i + '" oninput="getFiltered(' + "'" + i + "'" + ')" placeholder="Search" title="eg.(abc or >5 or <10 or>5<10)"/><br><button style="width:80px;background-color:grey;font-size: 10px;" title="Search for the criteria without applying limit" onclick="getFilteredFromDB(' + "'" + i + "'" + ')">Hit DB</button>';
-                            else criteriaTag = '<br><input type="text" autocomplete="off" value="' + criteriaValue + '" id="' + i + '" oninput="getFiltered(' + "'" + i + "'" + ')" placeholder="Search" title="eg.(abc or >5 or <10 or>5<10)"/><br><button style="width:80px;background-color:grey;font-size: 10px;" title="Search for the criteria without applying limit" onclick="getFilteredFromDB(' + "'" + i + "'" + ')">Hit DB</button>';
-                            tableHeader += "<th>" + i + criteriaTag + "</th>";
+                            if (isNetworklogsTable && urlColForNl && i === urlColForNl) continue;
+                            tableHeader += "<th>" + i + buildCriteriaTag(i) + "</th>";
                         }
                         tableOutput += tableHeader + "</tr></thead>";
 
@@ -1717,18 +4058,47 @@
                         }
 
                         for (var i in outputJson.query_output) {
-                            if (!isEmpty) tableRows += "<tr><td>" + (Number(i) + 1) + "</td>";
-                            else tableRows += "<tr><td></td>";
+                            var rowObj = outputJson.query_output[i];
+                            var rowAttr = isEmpty ? "" : ' data-row="' + escapeHtml(JSON.stringify(rowObj)) + '"';
+                            if (!isEmpty) {
+                                tableRows += "<tr" + rowAttr + "><td><input type=\"checkbox\" class=\"row-select-cb\" onchange=\"onRowCheckboxChange(this)\"></td><td>" + (Number(i) + 1) + "</td>";
+                            } else {
+                                tableRows += "<tr><td></td><td></td>";
+                            }
+                            if (isNetworklogsTable) {
+                                if (isEmpty) {
+                                    tableRows += "<td></td>";
+                                } else {
+                                    tableRows += '<td style="text-align:center;"><button type="button" class="nl-decrypt-btn" onclick="openNetworkLogDecryptPopup(this)">Decrypt</button></td>';
+                                }
+                            }
                             if (createdTimeCol) {
-                                const rawVal = outputJson.query_output[i][createdTimeCol];
+                                const rawVal = rowObj[createdTimeCol];
                                 tableRows += '<td><div class="cell-content">' + escapeHtml(formatEpochMs(rawVal)) + '</div></td>';
                             }
-                            if (lastModifiedTimeCol) {
-                                const rawVal = outputJson.query_output[i][lastModifiedTimeCol];
+                            if (isNetworklogsTable && urlColForNl) {
+                                var urlRaw = rowObj[urlColForNl];
+                                var urlDisplay = escapeHtml(urlRaw);
+                                if (isEmpty) {
+                                    tableRows += '<td><div class="cell-content">' + urlDisplay + '</div><button class="read-more-btn" onclick="toggleReadMore(this)">Read more</button></td>';
+                                } else {
+                                    var urlOriginal = (urlRaw === null || urlRaw === undefined) ? '' : String(urlRaw);
+                                    tableRows += '<td><div class="cell-content editable-cell" contenteditable="true" spellcheck="false" data-column="' + escapeHtml(urlColForNl) + '" data-original="' + escapeHtml(urlOriginal) + '" title="Edit · Enter to save · Esc to cancel">' + urlDisplay + '</div><button class="read-more-btn" onclick="toggleReadMore(this)">Read more</button><button type="button" class="cell-menu-btn" title="More actions" onclick="toggleCellMenu(event, this)">⋮</button></td>';
+                                }
+                            } else if (lastModifiedTimeCol) {
+                                const rawVal = rowObj[lastModifiedTimeCol];
                                 tableRows += '<td><div class="cell-content">' + escapeHtml(formatEpochMs(rawVal)) + '</div></td>';
                             }
-                            for (var j in outputJson.query_output[i]) {
-                                tableRows += '<td><div class="cell-content">' + escapeHtml(outputJson.query_output[i][j]) + '</div><button class="read-more-btn" onclick="toggleReadMore(this)">Read more</button></td>';
+                            for (var j in rowObj) {
+                                if (isNetworklogsTable && urlColForNl && j === urlColForNl) continue;
+                                var rawCell = rowObj[j];
+                                var displayCell = escapeHtml(rawCell);
+                                if (isEmpty) {
+                                    tableRows += '<td><div class="cell-content">' + displayCell + '</div><button class="read-more-btn" onclick="toggleReadMore(this)">Read more</button></td>';
+                                } else {
+                                    var originalForData = (rawCell === null || rawCell === undefined) ? '' : String(rawCell);
+                                    tableRows += '<td><div class="cell-content editable-cell" contenteditable="true" spellcheck="false" data-column="' + escapeHtml(j) + '" data-original="' + escapeHtml(originalForData) + '" title="Edit · Enter to save · Esc to cancel">' + displayCell + '</div><button class="read-more-btn" onclick="toggleReadMore(this)">Read more</button><button type="button" class="cell-menu-btn" title="More actions" onclick="toggleCellMenu(event, this)">⋮</button></td>';
+                                }
                             }
                             tableRows += "</tr>";
                         }
@@ -1736,6 +4106,18 @@
                         tableOutput += tableRows;
                         unHideElement("queryOutputContainer");
                         document.getElementById("queryOutput").innerHTML = tableOutput;
+
+                        // Re-apply row selections across re-renders (e.g. filter) so ticks survive
+                        document.querySelectorAll('#queryOutput tr[data-row]').forEach(function(tr) {
+                            try {
+                                var row = JSON.parse(tr.getAttribute('data-row'));
+                                if (SELECTED_ROWS.has(getRowKey(row))) {
+                                    var cb = tr.querySelector('.row-select-cb');
+                                    if (cb) cb.checked = true;
+                                }
+                            } catch (e) { /* ignore malformed row */ }
+                        });
+                        updateSelectionCounter();
 
                         document.querySelectorAll('.cell-content').forEach(function(el) {
                             if (el.scrollHeight > el.clientHeight) {
@@ -1823,9 +4205,14 @@
                         isEncrypted = true;
 
                         if (isProductSwitch) {
+                            clearRowSelection();
                             TABLE_LIST = [];
                             COLUMN_LIST = [];
-                            setElementValue("zsid", "admin");
+                            var cachedSession = dbtoolLoadSession();
+                            var cachedZsidForProduct = (cachedSession.zsidByProduct && cachedSession.zsidByProduct[product]) || '';
+                            var zsidToApply = cachedZsidForProduct || "admin";
+                            setElementValue("zsid", zsidToApply);
+                            dbtoolSaveSession({ product: product, zsid: zsidToApply });
                             hideElement("queryOutputContainer");
                             hideElement("tableSelection");
                             hideElement("pk");
@@ -1853,6 +4240,11 @@
                                 setElementValue("ip", "");
                                 setElementValue("user", "");
                                 setElementValue("password", "");
+
+                                var hdCustom = dbtoolHostDefaults();
+                                if (hdCustom.server) setElementChecked(hdCustom.server, true);
+                                if (hdCustom.user) setElementValue("user", hdCustom.user);
+                                if (hdCustom.ip) setElementValue("ip", hdCustom.ip);
                             }
 
                             if (getElementValue("ip").length != 0 && getElementValue("user").length != 0)
@@ -2010,5 +4402,6 @@
                         execute()
                     }
         </script>
+        </div>
     </body>
 </html>

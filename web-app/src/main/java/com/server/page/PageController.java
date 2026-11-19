@@ -93,9 +93,15 @@ public class PageController
 	}
 
 	@GetMapping("/sasstats")
-	public String sasstatsPage()
+	public String sasstatsLegacyPage()
 	{
-		return "forward:/sasstats.html";
+		return "redirect:/zoho/sasstats";
+	}
+
+	@GetMapping("/zoho/sasstats")
+	public String zohoSasstatsPage()
+	{
+		return "forward:/zoho/sasstats.html";
 	}
 
 	@GetMapping("/payoutlogs")

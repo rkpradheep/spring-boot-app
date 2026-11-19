@@ -304,7 +304,7 @@
         </div>
         <script>
         var QUERY_OUTPUT = "";
-        var CURRENT_TABLE_PK = "";
+        var CURRENT_TABLE_PK = [];
         var TABLE_LIST = [];
         var COLUMN_LIST = [];
 
@@ -679,7 +679,8 @@
 
         function getLimitAndOrderBy() {
             const createdTimeColForOrder = COLUMN_LIST.find(col => col.toUpperCase() === 'CREATEDTIME');
-            const orderByCol = createdTimeColForOrder !== undefined ? createdTimeColForOrder : CURRENT_TABLE_PK;
+            const pkFallback = Array.isArray(CURRENT_TABLE_PK) && CURRENT_TABLE_PK.length > 0 ? CURRENT_TABLE_PK[0] : "";
+            const orderByCol = createdTimeColForOrder !== undefined ? createdTimeColForOrder : pkFallback;
             const orderBy = orderByCol && orderByCol.length > 0 ? " Order By " + orderByCol + " DESC" : "";
             const limit = getElementValue("recordLimit");
             return orderBy + " LIMIT " + limit;
