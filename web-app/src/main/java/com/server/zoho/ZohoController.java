@@ -556,6 +556,23 @@ public class ZohoController
 		String dc = requestBody.get("dc");
 		String serviceId = AppProperties.getProperty("taskengine." + service + "-" + dc + ".service.id");
 		String queueName = requestBody.get("thread_pool");
+		String operation = requestBody.get("operation");
+
+		if(StringUtils.equals("get_all", operation))
+		{
+			if(StringUtils.isEmpty(queueName))
+			{
+				throw new AppException("Thread Pool Name is mandatory");
+			}
+			if(userId == -1L && customerId == -1L)
+			{
+				throw new AppException("Please provide DataSpace Name, User Id or Customer Id");
+			}
+			List<Map<String, Object>> jobs = TaskEngineService.getInstance(dc, serviceId, queueName).getAllJobsForUser(userId, customerId);
+			Map<String, Object> response = ApiResponseBuilder.success("Jobs fetched successfully", jobs);
+			return ResponseEntity.ok(response);
+		}
+
 		String className = requestBody.get("class_name");
 		Integer delaySeconds = StringUtils.isEmpty(requestBody.get("delay")) ? null : Integer.parseInt((requestBody.get("delay")));
 		List<Long> jobIdList = Arrays.stream(requestBody.get("job_id").split(",")).map(String::trim).map(Long::parseLong).toList();
@@ -563,8 +580,6 @@ public class ZohoController
 		String retryRepetition = requestBody.get("retry_repetition");
 		String repetition = requestBody.get("repetition");
 		boolean isRepetitive = Boolean.parseBoolean(requestBody.get("is_repetitive"));
-
-		String operation = requestBody.get("operation");
 
 		if(StringUtils.equals("get", operation))
 		{

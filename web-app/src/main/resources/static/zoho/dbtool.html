@@ -1630,7 +1630,12 @@
                     <button type="button" class="action-tab" id="jobTabAddUpdate" onclick="switchJobTab('addupdate')">ADD / UPDATE</button>
                     <button type="button" class="action-tab danger-tab" id="jobTabDelete" onclick="switchJobTab('delete')">DELETE</button>
                 </div>
-                <div class="form-row">
+                <div class="form-row" id="fetchAllJobsRow">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="fetch_all_jobs" onchange="toggleFetchAllJobs()"/> Fetch all jobs for user
+                    </label>
+                </div>
+                <div class="form-row" id="jobIdRow">
                     <span class="field-label-sm">Job ID</span>
                     <input type="text" id="job_id" class="inline-input-sm"/>
                 </div>
@@ -1721,6 +1726,19 @@
                         document.getElementById(btnMap[k]).style.display = k === tab ? '' : 'none';
                     }
                     document.getElementById('jobAddUpdateFields').style.display = tab === 'addupdate' ? '' : 'none';
+                    document.getElementById('fetchAllJobsRow').style.display = tab === 'fetch' ? '' : 'none';
+                    if (tab !== 'fetch') {
+                        document.getElementById('fetch_all_jobs').checked = false;
+                    }
+                    toggleFetchAllJobs();
+                }
+
+                function toggleFetchAllJobs() {
+                    var fetchAll = document.getElementById('fetch_all_jobs').checked;
+                    document.getElementById('jobIdRow').style.display = fetchAll ? 'none' : '';
+                    if (fetchAll) {
+                        document.getElementById('job_id').value = '';
+                    }
                 }
 
                 function switchRepTab(tab) {
@@ -2724,6 +2742,11 @@
             }
             function getJobDetails()
             {
+                           if(document.getElementById("fetch_all_jobs").checked)
+                           {
+                               getAllJobsForUser();
+                               return;
+                           }
 
                            const data = {
                                "service":getElementValue("taskengine_product").split("-")[0],
@@ -2768,6 +2791,92 @@
                                             output+="<b>" + key + "</b> : " + jsonObj[key] +"<br/><br/>";
                                         }
                                          document.getElementById("taskengine").innerHTML=output
+                                    })
+                                    .catch((error) => {
+                                        hideElement("loading");
+                                        console.log(error);
+                                        alert("Something went wrong. Please try again later.");
+                                    });
+            }
+
+            function getAllJobsForUser()
+            {
+                           const threadPool = getThreadPoolValue();
+                           if(!threadPool)
+                           {
+                               alert("Thread Pool Name is mandatory");
+                               return;
+                           }
+                           const zsid = getElementValue("dataspace_id");
+                           const userId = getElementValue("user_id");
+                           const customerId = getElementValue("customer_id");
+                           if(!zsid && !userId && !customerId)
+                           {
+                               alert("Please provide DataSpace Name, User Id or Customer Id");
+                               return;
+                           }
+                           const data = {
+                               "service":getElementValue("taskengine_product").split("-")[0],
+                               "dc": getElementValue("taskengine_product").split("-")[1],
+                               "zsid": zsid,
+                               "user_id": userId,
+                               "customer_id": customerId,
+                               "thread_pool": threadPool,
+                               "operation":"get_all"
+                           }
+
+                                unHideElement("loading");
+                                var res;
+                                fetch("/api/v1/zoho/jobs", {
+                                        method: "POST",
+                                 headers: {
+                                     'Content-Type': 'application/json'
+                                 },
+                                 body: JSON.stringify(data)
+                                    })
+                                    .then((response) => {
+                                        hideElement("loading");
+                                        return response.text();
+                                    })
+                                    .then((data) => {
+                                        res = JSON.parse(data)
+                                        if(handleRedirection(res))
+                                        {
+                                            return;
+                                        }
+                                        if (!res.success) {
+                                            alert(res.message || res.error || "An error occurred");
+                                            console.log(res.message || res.error);
+                                            document.getElementById("taskengine").innerHTML=""
+                                            return;
+                                        }
+
+                                        var output= ""
+                                        var jobs = res.data;
+                                        if(Array.isArray(jobs))
+                                        {
+                                            if(jobs.length === 0)
+                                            {
+                                                output = "No jobs found for the user.";
+                                            }
+                                            else
+                                            {
+                                                jobs.forEach(function(job, idx) {
+                                                    output += "<b>Job " + (idx + 1) + "</b><br/>";
+                                                    for (const key in job) {
+                                                        output += "<b>" + key + "</b> : " + job[key] + "<br/>";
+                                                    }
+                                                    output += "<br/>";
+                                                });
+                                            }
+                                        }
+                                        else if(jobs)
+                                        {
+                                            for (const key in jobs) {
+                                                output += "<b>" + key + "</b> : " + jobs[key] + "<br/><br/>";
+                                            }
+                                        }
+                                        document.getElementById("taskengine").innerHTML=output
                                     })
                                     .catch((error) => {
                                         hideElement("loading");

@@ -217,7 +217,7 @@ public class SASController
 
 			Map<String, Object> finalResponse = new LinkedHashMap<>();
 			finalResponse.put("sas_meta", responseMap);
-			sasService.handleQuery(query, server, clusterIP, schema, user, password, finalResponse, limits[0], limits[1], skipScoping, credentials.getString("service"));
+			sasService.handleQuery(query, server, clusterIP, schema, user, password, finalResponse, limits[0], limits[1], skipScoping, credentials.optString("service"));
 
 			return finalResponse;
 		}

@@ -77,6 +77,7 @@ public class TaskEngineService
 		serviceCredentials.put("user", user);
 		serviceCredentials.put("password", password);
 		serviceCredentials.put("zsid", "admin");
+		serviceCredentials.put("service", service);
 		serviceCredentials.put("query", AppProperties.getProperty("sas.customerid.and.userid.fetch.query").replace("{0}", payload.getString("zsid")));
 
 		Map output = (Map) ((List) SASController.handleSasRequestStatic(serviceCredentials).get("query_output")).get(0);
@@ -229,6 +230,38 @@ public class TaskEngineService
 		jobDetails.keySet().forEach(key -> jobResponse.put(getName.apply(key), StringUtils.equals(getName.apply(key), "SCHEDULED_TIME") ? DateUtil.getFormattedTime(jobDetails.getLong(key), DateUtil.DATE_WITH_TIME_FORMAT) : jobDetails.get(key)));
 
 		return jobResponse;
+	}
+
+	public List<Map<String, Object>> getAllJobsForUser(long userId, long customerId) throws Exception
+	{
+		JSONObject payload = new JSONObject()
+			.put("id", "j27")
+			.put("0", userId)
+			.put("1", customerId);
+
+		HttpResponse httpResponse = HttpService.makeNetworkCallStatic(taskEngineUrl, HttpPost.METHOD_NAME, headersMap, payload);
+		handleErrorResponse(httpResponse);
+
+		JSONArray jobsArray = new JSONArray(httpResponse.getStringResponse());
+		List<Map<String, Object>> jobs = new ArrayList<>();
+
+		for(int i = 0; i < jobsArray.length(); i++)
+		{
+			Object entry = jobsArray.get(i);
+			if(!(entry instanceof JSONObject jobDetails))
+			{
+				continue;
+			}
+			boolean isRepetitive = jobDetails.has("md") && jobDetails.remove("md").equals("2");
+
+			Function<String, String> getName = isRepetitive ? TaskEngineService::getNameForRepetitiveJob : TaskEngineService::getNameForOTJ;
+			Map<String, Object> jobResponse = new HashMap<>();
+			jobDetails.keySet().forEach(key -> jobResponse.put(getName.apply(key), StringUtils.equals(getName.apply(key), "SCHEDULED_TIME") ? DateUtil.getFormattedTime(jobDetails.getLong(key), DateUtil.DATE_WITH_TIME_FORMAT) : jobDetails.get(key)));
+
+			jobs.add(jobResponse);
+		}
+
+		return jobs;
 	}
 
 	public String addOrUpdateOTJ(List<Long> jobIdList, String className, String retryRepetition, Integer delaySeconds, long userId, long customerId) throws Exception
